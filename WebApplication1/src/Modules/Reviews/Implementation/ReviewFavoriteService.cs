@@ -2,6 +2,7 @@
 using Grpc.Core;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.Reviews.Implementation
 {
@@ -31,7 +32,6 @@ namespace Lander.src.Modules.Reviews.Implementation
 
             return new FavoriteResponse
             {
-               // FavoriteId = favorite.FavoriteId,
                 UserId = (int)favorite.UserId,
                 ApartmentId = (int)favorite.ApartmentId,
                 CreatedByGuid = favorite.CreatedByGuid.ToString(),
@@ -70,6 +70,36 @@ namespace Lander.src.Modules.Reviews.Implementation
                 ModifiedByGuid = review.ModifiedByGuid.ToString(),
                 ModifiedDate = Timestamp.FromDateTime((DateTime)review.ModifiedDate)
             };
+        }
+
+        public override async Task<ReviewResponse> GetReviewById(GetReviewByIdRequest request, ServerCallContext context)
+        {
+          
+                var review = await _context.Reviews
+                    .FirstOrDefaultAsync(r => r.ReviewId == request.ReviewId);
+
+                if (review == null)
+                {
+                    throw new RpcException(new Status(StatusCode.NotFound, $"Review with ID {request.ReviewId} not found"));
+                }
+
+                return new ReviewResponse
+                {
+                    ReviewId = review.ReviewId,
+                    TenantId = (int)review.TenantId,
+                    LandlordId = (int)review.LandlordId,
+                    Rating = (int)review.Rating,
+                    ReviewText = review.ReviewText,
+                    CreatedByGuid = review.CreatedByGuid.ToString(),
+                    CreatedDate = review.CreatedDate.HasValue
+                   ? Timestamp.FromDateTime(review.CreatedDate.Value.ToUniversalTime())
+                   : null,
+                    ModifiedByGuid = review.ModifiedByGuid.ToString(),
+                    ModifiedDate = review.ModifiedDate.HasValue
+                    ? Timestamp.FromDateTime(review.ModifiedDate.Value.ToUniversalTime())
+                    : null
+                };
+           
         }
     }
 }
