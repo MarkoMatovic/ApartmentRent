@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using Lander.src.Modules.Users.Models;
+﻿using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 
 namespace Lander.src.Modules.Reviews.Modules;
 
-public partial class Review
+public class Review
 {
     public int ReviewId { get; set; }
 

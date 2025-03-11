@@ -1,0 +1,46 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Lander.src.Modules.Reviews.proto";
+
+service ReviewFavoriteGrpcService {
+  rpc CreateFavorite (CreateFavoriteRequest) returns (FavoriteResponse);
+  rpc CreateReview (CreateReviewRequest) returns (ReviewResponse);
+}
+
+message CreateFavoriteRequest {
+  int32 user_id = 1;
+  int32 apartment_id = 2;
+  string created_by_guid = 3;
+}
+
+message FavoriteResponse {
+  int32 favorite_id = 1;
+  int32 user_id = 2;
+  int32 apartment_id = 3;
+  string created_by_guid = 4;
+  google.protobuf.Timestamp created_date = 5;
+  string modified_by_guid = 6;
+  google.protobuf.Timestamp modified_date = 7;
+}
+
+
+message CreateReviewRequest {
+  int32 tenant_id = 1;
+  int32 landlord_id = 2;
+  int32 rating = 3;
+  string review_text = 4;
+  string created_by_guid = 5;
+}
+
+message ReviewResponse {
+  int32 review_id = 1;
+  int32 tenant_id = 2;
+  int32 landlord_id = 3;
+  int32 rating = 4;
+  string review_text = 5;
+  string created_by_guid = 6;
+  google.protobuf.Timestamp created_date = 7;
+  string modified_by_guid = 8;
+  google.protobuf.Timestamp modified_date = 9;
+}

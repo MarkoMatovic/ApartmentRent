@@ -1,0 +1,26 @@
+﻿using Grpc.Net.Client;
+using Lander.src.Modules.Reviews.proto;
+
+namespace Lander.src.Modules.Reviews.Client;
+
+public class GrpcServiceClient
+{
+    private readonly GrpcChannel _channel;
+    private readonly ReviewFavoriteGrpcService.ReviewFavoriteGrpcServiceClient _client;
+
+    public GrpcServiceClient(string grpcAddress)
+    {
+        _channel = GrpcChannel.ForAddress(grpcAddress);
+        _client = new ReviewFavoriteGrpcService.ReviewFavoriteGrpcServiceClient(_channel);
+    }
+
+    public async Task<FavoriteResponse> CreateFavoriteAsync(CreateFavoriteRequest request)
+    {
+        return await _client.CreateFavoriteAsync(request);
+    }
+
+    public async Task<ReviewResponse> CreateReviewAsync(CreateReviewRequest request)
+    {
+        return await _client.CreateReviewAsync(request);
+    }
+}
