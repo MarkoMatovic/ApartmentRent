@@ -23,4 +23,13 @@ public class GrpcServiceClient
     {
         return await _client.CreateReviewAsync(request);
     }
+
+    public async Task<ReviewResponse> GetReviewByIdAsync(int reviewId)
+    {
+        var request = new GetReviewByIdRequest
+        {
+            ReviewId = reviewId
+        };
+        return await _client.GetReviewByIdAsync(request);
+    }
 }

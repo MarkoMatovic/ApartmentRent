@@ -26,5 +26,6 @@ public static class ApiActionsV1
     public const string Reviews = $"{V1}/reviews";
     public const string CreateReview = "create-review";
     public const string CreateFavorite = "create-favorite";
+    public const string GetReviewById = "get-review-by-id";
     #endregion
 }

@@ -1,4 +1,5 @@
-﻿using Lander.Helpers;
+﻿using Grpc.Core;
+using Lander.Helpers;
 using Lander.src.Modules.Reviews.Client;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +30,15 @@ namespace Lander.src.Modules.Reviews.Controllers
         {
             var response = await _grpcClient.CreateReviewAsync(request);
             return Ok(response);
+        }
+
+        [HttpGet(ApiActionsV1.GetReviewById, Name = nameof(ApiActionsV1.GetReviewById))]
+        public async Task<IActionResult> GetReviewById([FromQuery] int reviewId)
+        {
+           
+             var response = await _grpcClient.GetReviewByIdAsync(reviewId);
+             return Ok(response);
+           
         }
     }
 }
