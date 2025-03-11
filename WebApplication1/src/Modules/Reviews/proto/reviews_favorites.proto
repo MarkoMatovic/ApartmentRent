@@ -6,6 +6,7 @@ option csharp_namespace = "Lander.src.Modules.Reviews.proto";
 service ReviewFavoriteGrpcService {
   rpc CreateFavorite (CreateFavoriteRequest) returns (FavoriteResponse);
   rpc CreateReview (CreateReviewRequest) returns (ReviewResponse);
+  rpc GetReviewById (GetReviewByIdRequest) returns (ReviewResponse);
 }
 
 message CreateFavoriteRequest {
@@ -43,4 +44,8 @@ message ReviewResponse {
   google.protobuf.Timestamp created_date = 7;
   string modified_by_guid = 8;
   google.protobuf.Timestamp modified_date = 9;
+}
+
+message GetReviewByIdRequest {
+  int32 review_id = 1;
 }
