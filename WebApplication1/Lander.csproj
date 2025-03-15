@@ -42,4 +42,10 @@
     <Protobuf Include="src\Modules\Reviews\proto\reviews_favorites.proto" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="src\Modules\ApartmentApplications\Dtos\InputDto\" />
+    <Folder Include="src\Modules\ApartmentApplications\Interfaces\" />
+    <Folder Include="src\Modules\ApartmentApplications\Implementation\" />
+  </ItemGroup>
+
 </Project>

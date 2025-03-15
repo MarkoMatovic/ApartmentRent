@@ -1,9 +1,7 @@
 ﻿using Lander.Helpers;
-using Lander.src.Modules.ApartmentApplications.Interfaces;
 using Lander.src.Notifications.Dtos.Dto;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lander.src.Notifications.Controllers
@@ -23,12 +21,12 @@ namespace Lander.src.Notifications.Controllers
         #endregion
 
         [HttpGet(ApiActionsV1.GetUserNotifications, Name = nameof(ApiActionsV1.GetUserNotifications))]
-        public async Task<ActionResult<IEnumerable<NotificationDto>>> GetUserNotifications([FromQuery]int id)
+        public async Task<ActionResult<IEnumerable<NotificationDto>>> GetUserNotifications([FromQuery] int id)
         {
             return Ok(await _notificationService.GetUserNotificationsAsync(id));
         }
         [HttpPost(ApiActionsV1.SendNotification, Name = nameof(ApiActionsV1.SendNotification))]
-        public async Task<ActionResult<NotificationDto>> SendNotification([FromBody]CreateNotificationInputDto createNotificationInputDto)
+        public async Task<ActionResult<NotificationDto>> SendNotification([FromBody] CreateNotificationInputDto createNotificationInputDto)
         {
             return Ok(await _notificationService.SendNotificationAsync(createNotificationInputDto));
         }
