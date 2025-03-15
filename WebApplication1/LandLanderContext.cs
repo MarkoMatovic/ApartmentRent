@@ -15,10 +15,7 @@ public class ApplicationsContext : DbContext{    public ApplicationsContext(Db
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(50);
 
-            entity.HasOne(d => d.Apartment).WithMany(p => p.ApartmentApplications)
-                .HasForeignKey(d => d.ApartmentId)
-                .HasConstraintName("FK__ApartmentApplications__ApartmentId");
-
+           
             entity.HasOne(d => d.User).WithMany(p => p.ApartmentApplications)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__ApartmentApplications__UserId");
