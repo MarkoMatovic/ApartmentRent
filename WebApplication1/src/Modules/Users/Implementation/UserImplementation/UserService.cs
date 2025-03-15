@@ -27,11 +27,9 @@ public class UserService : IUserInterface
 
     public async Task<string>LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
     {
-        User? user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userRegistrationInputDto.Email);
-        if (user == null)
-        {
-            return "User not found";
-        }
+        User? user = await _context.Users
+         .Include(u => u.UserRole)
+         .FirstOrDefaultAsync(u => u.Email == userRegistrationInputDto.Email);
 
         string hashedInputPassword = HashPassword(userRegistrationInputDto.Password);
         if (user.Password != hashedInputPassword)
