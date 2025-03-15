@@ -1,7 +1,16 @@
-﻿namespace Lander.src.Modules.ApartmentApplications.Dtos.InputDto;
+﻿namespace Lander.src.Modules.Listings.Dtos.Dto;
 
-public class ApartmentInputDto
+public class ApartmentDto
 {
+    public int ApartmentId { get; set; }
+    public string Title { get; set; }
+    public decimal Rent { get; set; }
+    public string Address { get; set; }
+    public string City { get; set; }
+}
+public class GetApartmentDto
+{
+    public int ApartmentId { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }
     public decimal Rent { get; set; }
@@ -12,10 +21,4 @@ public class ApartmentInputDto
     public DateOnly AvailableUntil { get; set; }
     public int NumberOfRooms { get; set; }
     public bool RentIncludeUtilities { get; set; }
-    public List<string> ImageUrls { get; set; } 
-}
-
-public class ApartmentImageInputDto
-{
-    public string ImageUrl { get; set; }
 }

@@ -38,8 +38,6 @@ public partial class Apartment
 
     public DateTime? ModifiedDate { get; set; }
 
-    public virtual ICollection<ApartmentApplication> ApartmentApplications { get; set; } = new List<ApartmentApplication>();
-
     public virtual ICollection<ApartmentImage> ApartmentImages { get; set; } = new List<ApartmentImage>();
 
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();

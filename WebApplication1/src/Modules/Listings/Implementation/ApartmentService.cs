@@ -1,10 +1,12 @@
-﻿using System.Security.Claims;
-using Lander.src.Modules.ApartmentApplications.Dtos.Dto;
-using Lander.src.Modules.ApartmentApplications.Dtos.InputDto;
-using Lander.src.Modules.ApartmentApplications.Interfaces;
+﻿using System;
+using System.Security.Claims;
+using Lander.src.Modules.Listings.Dtos.Dto;
+using Lander.src.Modules.Listings.Dtos.InputDto;
+using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace Lander.src.Modules.ApartmentApplications.Implementation;
+namespace Lander.src.Modules.Listings.Implementation;
 
 public class ApartmentService : IApartmentService
 {
@@ -32,21 +34,21 @@ public class ApartmentService : IApartmentService
             AvailableUntil = apartmentInputDto.AvailableUntil,
             NumberOfRooms = apartmentInputDto.NumberOfRooms,
             RentIncludeUtilities = apartmentInputDto.RentIncludeUtilities,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             ModifiedDate = DateTime.UtcNow
         };
 
         _context.Apartments.Add(apartment);
-       
+
         var apartmentImages = apartmentInputDto.ImageUrls.Select(url => new ApartmentImage
         {
             ApartmentId = apartment.ApartmentId,
             ImageUrl = url,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             ModifiedDate = DateTime.UtcNow
         }).ToList();
 
@@ -61,6 +63,37 @@ public class ApartmentService : IApartmentService
             Address = apartment.Address,
             City = apartment.City
         };
+    }
+
+    public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
+    {
+        var apartment = await _context.Apartments
+            .Where(a => a.ApartmentId == apartmentId)
+            .FirstOrDefaultAsync();
+
+
+        if (apartment == null)
+        {
+            return null;
+        }
+
+
+        return new GetApartmentDto
+        {
+            ApartmentId = apartment.ApartmentId,
+            Title = apartment.Title,
+            Description = apartment.Description,
+            Rent = apartment.Rent,
+            Address = apartment.Address,
+            City = apartment.City,
+            PostalCode = apartment.PostalCode,
+            AvailableFrom = (DateOnly)apartment.AvailableFrom,
+            AvailableUntil = (DateOnly)apartment.AvailableUntil,
+            NumberOfRooms = (int)apartment.NumberOfRooms,
+            RentIncludeUtilities = (bool)apartment.RentIncludeUtilities
+        };
+
+    
     }
 }
 

@@ -13,6 +13,7 @@ public static class ApiActionsV1
     #region ApartmentActions
     public const string Rent = $"{V1}/rent";
     public const string CreateApartment = "create-apartment";
+    public const string GetApartment = "get-apartment";
     #endregion
 
     #region NotificationActions
