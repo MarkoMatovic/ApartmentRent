@@ -55,6 +55,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("LandlordPolicy", policy => policy.RequireRole("Landlord"));
+    options.AddPolicy("TenantPolicy", policy => policy.RequireRole("Tenant"));
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("BrokerPolicy", policy => policy.RequireRole("Broker"));
+    options.AddPolicy("GuestPolicy", policy => policy.RequireRole("Guest"));
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
