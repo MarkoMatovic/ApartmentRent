@@ -15,6 +15,7 @@ public static class ApiActionsV1
     public const string CreateApartment = "create-apartment";
     public const string GetApartment = "get-apartment";
     public const string DeleteApartment = "delete-apartment/{id}";
+    public const string ActivateApartment = "activate-apartment/{id}";
     #endregion
 
     #region NotificationActions

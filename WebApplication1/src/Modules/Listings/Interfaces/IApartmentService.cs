@@ -8,4 +8,5 @@ public interface IApartmentService
     Task<ApartmentDto> CreateApartmentAsync(ApartmentInputDto apartmentInputDto);
     Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId);
     Task<bool> DeleteApartmentAsync(int apartmentId);
+    Task<bool> ActivateApartmentAsync(int apartmentId);
 }
