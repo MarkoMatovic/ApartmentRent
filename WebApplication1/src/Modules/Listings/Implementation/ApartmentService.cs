@@ -18,6 +18,26 @@ public class ApartmentService : IApartmentService
         _context = context;
         _httpContextAccessor = httpContextAccessor;
     }
+
+    public async Task<bool> ActivateApartmentAsync(int apartmentId)
+    {
+        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var apartment = await _context.Apartments
+            .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId);
+
+
+        if (apartment == null) return false;
+
+        apartment.IsDeleted = false;
+        apartment.IsActive = true;
+        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid) ? parsedGuid : null;
+        apartment.ModifiedDate = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<ApartmentDto> CreateApartmentAsync(ApartmentInputDto apartmentInputDto)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
