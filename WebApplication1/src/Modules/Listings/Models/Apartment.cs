@@ -43,4 +43,6 @@ public partial class Apartment
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 
     public virtual User? Landlord { get; set; }
+    public bool IsDeleted { get; set; }
+    public bool IsActive { get; set; }
 }

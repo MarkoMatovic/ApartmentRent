@@ -3,11 +3,12 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lander.src.Modules.Listings.Controllers;
-
+[Authorize]
 [Route(ApiActionsV1.Rent)]
 [ApiController]
 public class ApartmentsController : ControllerBase
@@ -32,6 +33,12 @@ public class ApartmentsController : ControllerBase
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
         return Ok(await _apartmentServie.GetApartmentByIdAsync(id));
+    }
+    [HttpDelete(ApiActionsV1.DeleteApartment, Name = nameof(ApiActionsV1.DeleteApartment))]
+    [Authorize(Policy = "AdminPolicy")]
+    public async Task<ActionResult<bool>> DeleteApartment([FromRoute] int id)
+    {
+        return Ok(await _apartmentServie.DeleteApartmentAsync(id));
     }
 
 }
