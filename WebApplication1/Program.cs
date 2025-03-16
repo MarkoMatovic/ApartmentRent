@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lander;
 using Lander.Helpers;
+using Lander.src.Modules.Communication.Implementation;
+using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Reviews.Implementation;
@@ -28,6 +30,8 @@ builder.Services.AddDbContext<NotificationContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<ReviewsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<CommunicationsContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -39,6 +43,8 @@ builder.Services.AddGrpc();
 builder.Services.AddScoped<IUserInterface, UserService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
+builder.Services.AddScoped<ISmsService, SmsService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();
