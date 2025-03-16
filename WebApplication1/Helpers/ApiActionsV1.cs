@@ -29,4 +29,9 @@ public static class ApiActionsV1
     public const string CreateFavorite = "create-favorite";
     public const string GetReviewById = "get-review-by-id";
     #endregion
+
+    #region Sms
+    public const string Sms = $"{V1}/sms";
+    public const string SendSms = "send";
+    #endregion
 }
