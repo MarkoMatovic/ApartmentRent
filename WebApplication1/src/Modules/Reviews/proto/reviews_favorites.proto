@@ -7,6 +7,7 @@ service ReviewFavoriteGrpcService {
   rpc CreateFavorite (CreateFavoriteRequest) returns (FavoriteResponse);
   rpc CreateReview (CreateReviewRequest) returns (ReviewResponse);
   rpc GetReviewById (GetReviewByIdRequest) returns (ReviewResponse);
+  rpc GetFavorites (GetFavoritesRequest) returns (GetFavoritesResponse);
 }
 
 message CreateFavoriteRequest {
@@ -48,4 +49,11 @@ message ReviewResponse {
 
 message GetReviewByIdRequest {
   int32 review_id = 1;
+}
+
+message GetFavoritesRequest {
+  int32 limit = 1; 
+}
+message GetFavoritesResponse {
+  repeated FavoriteResponse favorites = 1;  
 }
