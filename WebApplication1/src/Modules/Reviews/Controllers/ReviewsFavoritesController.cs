@@ -9,6 +9,8 @@ namespace Lander.src.Modules.Reviews.Controllers
 {
     [Route(ApiActionsV1.Reviews)]
     [ApiController]
+
+    // hibrid, only for testing
     public class ReviewsFavoritesController : ControllerBase
     {
         private readonly GrpcServiceClient _grpcClient;
