@@ -17,4 +17,27 @@
         public string Email { get; set; }
         public string Password { get; set; }
     }
+
+    public class DeactivateUserInputDto
+    {
+        public Guid UserGuid { get; set; }
+    }
+
+    public class ReactivateUserInputDto
+    {
+        public Guid UserGuid { get; set; }
+    }
+
+    public class DeleteUserInputDto
+    {
+        public Guid UserGuid { get; set; }
+    }
+    public class ChangePasswordInputDto
+    {
+        public Guid UserId { get; set; }
+        public string OldPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+
 }
