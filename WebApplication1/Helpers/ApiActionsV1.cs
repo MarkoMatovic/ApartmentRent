@@ -1,4 +1,6 @@
-﻿namespace Lander.Helpers;
+﻿using Microsoft.Identity.Client;
+
+namespace Lander.Helpers;
 
 public static class ApiActionsV1
 {
@@ -8,6 +10,11 @@ public static class ApiActionsV1
     public const string Auth = $"{V1}/auth";
     public const string Register = "register";
     public const string Login = "login";
+    public const string Logout = "logout";
+    public const string DeleteUser = "delete-user";
+    public const string DeactivateUser = "deactivate-user";
+    public const string ReactivateUser = "reactivate-user";
+    public const string ChangePassword = "change-password";
     #endregion
 
     #region ApartmentActions
