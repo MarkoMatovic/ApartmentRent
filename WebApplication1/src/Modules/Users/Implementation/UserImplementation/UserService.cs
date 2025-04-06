@@ -6,6 +6,8 @@ using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,6 +72,13 @@ public class UserService : IUserInterface
      
        
     }
+
+    public Task LogoutUserAsync()
+    {
+        _httpContextAccessor.HttpContext?.SignOutAsync();
+
+        return Task.CompletedTask;
+    }
     private string HashPassword(string password)
     {
         using (var sha256 = SHA256.Create())
@@ -78,4 +87,49 @@ public class UserService : IUserInterface
             return Convert.ToBase64String(hashedBytes);
         }
     }
+
+    public async Task DeactivateUserAsync(DeactivateUserInputDto deactivateUserInputDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deactivateUserInputDto.UserGuid);
+        if (user != null)
+        {
+            user.IsActive = false;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ReactivateUserAsync(ReactivateUserInputDto reactivateUserInputDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == reactivateUserInputDto.UserGuid);
+        if (user != null)
+        {
+            user.IsActive = true;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> DeleteUserAsync(DeleteUserInputDto deleteUserInputDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deleteUserInputDto.UserGuid);
+        if (user != null)
+        {
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+        return true;
+    }
+
+    public async  Task ChangePasswordAsync(ChangePasswordInputDto changePasswordInputDto)
+    {
+        var userGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == Guid.Parse(userGuid));
+
+        if (user == null || HashPassword(changePasswordInputDto.OldPassword) != user.Password)
+            throw new Exception("Incorrect old password.");
+
+        user.Password = HashPassword(changePasswordInputDto.NewPassword);
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+    }
+
 }

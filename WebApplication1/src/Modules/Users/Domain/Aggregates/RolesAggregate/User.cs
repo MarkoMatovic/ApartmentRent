@@ -19,6 +19,7 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
 
         public string Email { get; set; } = null!;
         public string Password { get; set; }
+        public bool IsActive { get; set; }
         public DateTime? DateOfBirth { get; set; }
 
         public string? PhoneNumber { get; set; }
