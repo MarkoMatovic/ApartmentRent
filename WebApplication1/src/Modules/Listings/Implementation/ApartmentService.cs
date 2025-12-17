@@ -5,6 +5,7 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Lander.src.Modules.Listings.Implementation;
 
@@ -102,6 +103,23 @@ public class ApartmentService : IApartmentService
 
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<IEnumerable<ApartmentDto>> GetAllApartmentsAsync()
+    {
+        var apartments = await _context.Apartments
+            .Where(a => !a.IsDeleted && a.IsActive)
+            .Select(a => new ApartmentDto
+            {
+                ApartmentId = a.ApartmentId,
+                Title = a.Title,
+                Rent = a.Rent,
+                Address = a.Address,
+                City = a.City ?? string.Empty
+            })
+            .ToListAsync();
+
+        return apartments;
     }
 
     public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)

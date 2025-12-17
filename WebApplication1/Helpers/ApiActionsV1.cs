@@ -21,6 +21,7 @@ public static class ApiActionsV1
     public const string Rent = $"{V1}/rent";
     public const string CreateApartment = "create-apartment";
     public const string GetApartment = "get-apartment";
+    public const string GetAllApartments = "get-all-apartments";
     public const string DeleteApartment = "delete-apartment/{id}";
     public const string ActivateApartment = "activate-apartment/{id}";
     #endregion
