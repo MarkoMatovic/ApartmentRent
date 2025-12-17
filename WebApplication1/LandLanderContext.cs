@@ -1,8 +1,31 @@
-﻿using System.Data;using Lander.Helpers;using Lander.src.Modules.ApartmentApplications.Models;using Lander.src.Modules.Communication.Models;using Lander.src.Modules.Listings.Models;using Lander.src.Modules.Reviews.Modules;using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;using Lander.src.Notifications.Models;using Microsoft.EntityFrameworkCore;using Microsoft.EntityFrameworkCore.Storage;namespace Lander;
+﻿using System.Data;
+using Lander.Helpers;
+using Lander.src.Modules.ApartmentApplications.Models;
+using Lander.src.Modules.Communication.Models;
+using Lander.src.Modules.Listings.Models;
+using Lander.src.Modules.Reviews.Modules;
+using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
+using Lander.src.Notifications.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+
+namespace Lander;
 
 
-public class ApplicationsContext : DbContext{    public ApplicationsContext(DbContextOptions<ApplicationsContext> options)        : base(options)    { }    public DbSet<ApartmentApplication> ApartmentApplications { get; set; }    public DbSet<SearchPreference> SearchPreferences { get; set; }    protected override void OnModelCreating(ModelBuilder modelBuilder)    {
-        modelBuilder.HasDefaultSchema("Applications");        modelBuilder.Entity<ApartmentApplication>(entity =>        {
+public class ApplicationsContext : DbContext
+{
+    public ApplicationsContext(DbContextOptions<ApplicationsContext> options)
+        : base(options)
+    { }
+
+    public DbSet<ApartmentApplication> ApartmentApplications { get; set; }
+    public DbSet<SearchPreference> SearchPreferences { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("Applications");
+        modelBuilder.Entity<ApartmentApplication>(entity =>
+        {
             entity.HasKey(e => e.ApplicationId).HasName("PK__ApartmentApplications__C93A4C99A9D487DE");
             entity.ToTable("ApartmentApplications", "Applications");
 
@@ -14,13 +37,21 @@ public class ApplicationsContext : DbContext{    public ApplicationsContext(Db
                 .HasColumnType("datetime");
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.ApartmentId).HasColumnName("ApartmentId");
 
-           
-            entity.HasOne(d => d.User).WithMany(p => p.ApartmentApplications)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__ApartmentApplications__UserId");
-        });        modelBuilder.Entity<SearchPreference>(entity =>        {
-            entity.HasKey(e => e.PreferenceId).HasName("PK__SearchPr__E228496FC715AE79");            entity.ToTable("SearchPreferences", "Applications");
+            // User je cross-context - navigacioni property je NotMapped
+            // Foreign key constraint će biti kreiran ručno u migraciji ka UsersRoles.Users
+            entity.HasIndex(e => e.UserId);
+            
+            // ApartmentId je cross-context foreign key - navigacioni property je NotMapped u modelu
+            // Foreign key constraint će biti kreiran ručno u migraciji ka Listings.Apartments
+            entity.HasIndex(e => e.ApartmentId);
+        });
+
+        modelBuilder.Entity<SearchPreference>(entity =>
+        {
+            entity.HasKey(e => e.PreferenceId).HasName("PK__SearchPr__E228496FC715AE79");
+            entity.ToTable("SearchPreferences", "Applications");
 
             entity.Property(e => e.City).HasMaxLength(100);
             entity.Property(e => e.CreatedDate)
@@ -31,8 +62,11 @@ public class ApplicationsContext : DbContext{    public ApplicationsContext(Db
 
             entity.HasOne(d => d.User).WithMany(p => p.SearchPreferences)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK__SearchPre__UserI__787EE5A0");
-        });    }}
+                .HasConstraintName("FK__SearchPre__UserI__787EE5A0")
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+}
 public partial class NotificationContext : DbContext
 {
     public NotificationContext()
@@ -52,12 +86,43 @@ public partial class NotificationContext : DbContext
         modelBuilder.HasDefaultSchema("Notification");
         modelBuilder.Entity<Notification>(entity =>
         {
+            entity.HasKey(e => e.Id);
             entity.ToTable("Notifications", "Notification");
 
-            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.ActionType).HasMaxLength(50);
-            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.ActionTarget).HasMaxLength(255);
             entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.Message).HasColumnType("text");
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SenderUserId);
+            entity.Property(e => e.RecipientUserId);
+            entity.Property(e => e.CreatedByGuid);
+
+            // Cross-context foreign keys - navigacioni property-je nisu definisani
+            entity.HasIndex(e => e.RecipientUserId);
+            entity.HasIndex(e => e.SenderUserId);
+        });
+
+        modelBuilder.Entity<ReadNotification>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("ReadNotifications", "Notification");
+
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.ActionType).HasMaxLength(50);
+            entity.Property(e => e.ActionTarget).HasMaxLength(255);
+            entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.Message).HasColumnType("text");
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SenderUserId);
+            entity.Property(e => e.RecipientUserId);
+            entity.Property(e => e.CreatedByGuid);
+
+            entity.HasIndex(e => e.RecipientUserId);
+            entity.HasIndex(e => e.SenderUserId);
         });
 
         OnModelCreatingPartial(modelBuilder);
@@ -95,11 +160,13 @@ public class CommunicationsContext : DbContext
 
             entity.HasOne(d => d.Receiver).WithMany(p => p.MessageReceivers)
                 .HasForeignKey(d => d.ReceiverId)
-                .HasConstraintName("FK__Messages__Receiv__6383C8BA");
+                .HasConstraintName("FK__Messages__Receiv__6383C8BA")
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.Sender).WithMany(p => p.MessageSenders)
                 .HasForeignKey(d => d.SenderId)
-                .HasConstraintName("FK__Messages__Sender__628FA481");
+                .HasConstraintName("FK__Messages__Sender__628FA481")
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
@@ -131,10 +198,16 @@ public class ListingsContext : DbContext
             entity.Property(e => e.PostalCode).HasMaxLength(10);
             entity.Property(e => e.Rent).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.AvailableFrom).HasColumnType("date");
+            entity.Property(e => e.AvailableUntil).HasColumnType("date");
+            entity.Property(e => e.NumberOfRooms);
+            entity.Property(e => e.RentIncludeUtilities).HasDefaultValue(false);
 
-            entity.HasOne(d => d.Landlord).WithMany(p => p.Apartments)
-                .HasForeignKey(d => d.LandlordId)
-                .HasConstraintName("FK__Apartment__Landl__59063A47");
+            // Landlord (User) je cross-context - navigacioni property je NotMapped
+            // Foreign key constraint će biti kreiran ručno u migraciji ka UsersRoles.Users
+            entity.HasIndex(e => e.LandlordId);
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
@@ -151,7 +224,8 @@ public class ListingsContext : DbContext
 
             entity.HasOne(d => d.Apartment).WithMany(p => p.ApartmentImages)
                 .HasForeignKey(d => d.ApartmentId)
-                .HasConstraintName("FK__Apartment__Apart__5CD6CB2B");
+                .HasConstraintName("FK__Apartment__Apart__5CD6CB2B")
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
 
@@ -180,14 +254,17 @@ public class ReviewsContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.ReviewText).HasColumnType("text");
+            entity.Property(e => e.Rating).HasMaxLength(5);
 
             entity.HasOne(d => d.Landlord).WithMany(p => p.ReviewLandlords)
                 .HasForeignKey(d => d.LandlordId)
-                .HasConstraintName("FK__Reviews__Landlor__6E01572D");
+                .HasConstraintName("FK__Reviews__Landlor__6E01572D")
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(d => d.Tenant).WithMany(p => p.ReviewTenants)
                 .HasForeignKey(d => d.TenantId)
-                .HasConstraintName("FK__Reviews__TenantI__6D0D32F4");
+                .HasConstraintName("FK__Reviews__TenantI__6D0D32F4")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Favorite>(entity =>
@@ -201,13 +278,12 @@ public class ReviewsContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
 
-            //entity.HasOne(d => d.Apartment).WithMany(p => p.Favorites)
-            //    .HasForeignKey(d => d.ApartmentId)
-            //    .HasConstraintName("FK__Favorites__Apart__68487DD7");
-
-            //entity.HasOne(d => d.User).WithMany(p => p.Favorites)
-            //    .HasForeignKey(d => d.UserId)
-            //    .HasConstraintName("FK__Favorites__UserI__6754599E");
+            // Cross-context foreign keys - navigacioni property-je su NotMapped u modelima
+            // Foreign key constraint-e će biti kreirani kroz migracije
+            // ApartmentId i UserId će biti indeksirani za performanse
+            entity.HasIndex(e => e.ApartmentId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.ApartmentId }).IsUnique();
         });
     }
 }
@@ -302,7 +378,8 @@ public class UsersContext : DbContext, IUnitofWork
 
             entity.HasOne(d => d.UserRole).WithMany(p => p.Users)
                 .HasForeignKey(d => d.UserRoleId)
-                .HasConstraintName("FK__Users__UserRoleI__5535A963");
+                .HasConstraintName("FK__Users__UserRoleI__5535A963")
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasMany(u => u.MessageSenders)
       .WithOne(m => m.Sender) 
       .HasForeignKey(m => m.SenderId)
