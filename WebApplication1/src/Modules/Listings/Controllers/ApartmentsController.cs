@@ -29,6 +29,12 @@ public class ApartmentsController : ControllerBase
         return Ok(await _apartmentServie.CreateApartmentAsync(apartmentInputDto));
     }
 
+    [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
+    public async Task<ActionResult<IEnumerable<ApartmentDto>>> GetAllApartments()
+    {
+        return Ok(await _apartmentServie.GetAllApartmentsAsync());
+    }
+
     [HttpGet(ApiActionsV1.GetApartment, Name = nameof(ApiActionsV1.GetApartment))]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
