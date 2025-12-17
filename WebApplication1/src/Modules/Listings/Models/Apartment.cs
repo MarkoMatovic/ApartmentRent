@@ -40,8 +40,10 @@ public partial class Apartment
 
     public virtual ICollection<ApartmentImage> ApartmentImages { get; set; } = new List<ApartmentImage>();
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual User? Landlord { get; set; }
     public bool IsDeleted { get; set; }
     public bool IsActive { get; set; }
