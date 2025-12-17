@@ -23,7 +23,9 @@ public partial class ApartmentApplication
 
     public DateTime? ModifiedDate { get; set; }
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual Apartment? Apartment { get; set; }
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual User? User { get; set; }
 }
