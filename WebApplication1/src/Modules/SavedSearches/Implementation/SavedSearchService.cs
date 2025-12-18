@@ -79,8 +79,18 @@ public class SavedSearchService : ISavedSearchService
             ModifiedDate = DateTime.UtcNow
         };
 
-        _context.SavedSearches.Add(savedSearch);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.SavedSearches.Add(savedSearch);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new Exception("Failed to create saved search");
     }
@@ -102,7 +112,17 @@ public class SavedSearchService : ISavedSearchService
         savedSearch.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
         savedSearch.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new Exception("Failed to update saved search");
     }
@@ -114,8 +134,18 @@ public class SavedSearchService : ISavedSearchService
 
         if (savedSearch == null) return false;
 
-        savedSearch.IsActive = false;
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            savedSearch.IsActive = false;
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return true;
     }
