@@ -1,0 +1,18 @@
+{
+  "title": "Сообщения",
+  "messages": "Сообщения",
+  "noMessages": "У вас нет сообщений",
+  "typeMessage": "Введите сообщение...",
+  "send": "Отправить",
+  "online": "В сети",
+  "offline": "Не в сети",
+  "newMessage": "Новое сообщение",
+  "conversations": "Разговоры",
+  "noConversations": "У вас нет разговоров",
+  "searchConversations": "Поиск разговоров",
+  "markAsRead": "Отметить как прочитанное",
+  "delete": "Удалить",
+  "today": "Сегодня",
+  "yesterday": "Вчера"
+}
+

@@ -1,0 +1,18 @@
+{
+  "title": "Messages",
+  "messages": "Messages",
+  "noMessages": "You have no messages",
+  "typeMessage": "Type a message...",
+  "send": "Send",
+  "online": "Online",
+  "offline": "Offline",
+  "newMessage": "New Message",
+  "conversations": "Conversations",
+  "noConversations": "You have no conversations",
+  "searchConversations": "Search conversations",
+  "markAsRead": "Mark as read",
+  "delete": "Delete",
+  "today": "Today",
+  "yesterday": "Yesterday"
+}
+
