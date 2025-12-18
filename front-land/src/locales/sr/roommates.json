@@ -27,6 +27,15 @@
   "veryClean": "Vrlo čisto",
   "clean": "Čisto",
   "moderate": "Umereno",
-  "guestsAllowed": "Gosti dozvoljeni"
+  "guestsAllowed": "Gosti dozvoljeni",
+  "createProfile": "Kreiraj profil cimera",
+  "profileCreated": "Profil cimera je uspešno kreiran!",
+  "hobbies": "Hobi",
+  "profession": "Profesija",
+  "roomType": "Tip sobe",
+  "apartmentType": "Tip stana",
+  "lookingFor": "Šta tražim",
+  "availability": "Dostupnost",
+  "budgetIncludes": "Budžet uključuje"
 }
 
