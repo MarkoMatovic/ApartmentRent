@@ -27,7 +27,8 @@ public class RoommateService : IRoommateService
         decimal? maxBudget = null,
         bool? smokingAllowed = null, 
         bool? petFriendly = null, 
-        string? lifestyle = null)
+        string? lifestyle = null,
+        int? apartmentId = null)
     {
         var query = _context.Roommates
             .Where(r => r.IsActive)
@@ -63,6 +64,11 @@ public class RoommateService : IRoommateService
             query = query.Where(r => r.Lifestyle == lifestyle);
         }
 
+        if (apartmentId.HasValue)
+        {
+            query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
+        }
+
         var roommates = await query.ToListAsync();
         var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
         var users = await _usersContext.Users
@@ -96,6 +102,7 @@ public class RoommateService : IRoommateService
             LookingForRoomType = r.LookingForRoomType,
             LookingForApartmentType = r.LookingForApartmentType,
             PreferredLocation = r.PreferredLocation,
+            LookingForApartmentId = r.LookingForApartmentId,
             IsActive = r.IsActive
         });
     }
@@ -178,6 +185,7 @@ public class RoommateService : IRoommateService
             LookingForRoomType = input.LookingForRoomType,
             LookingForApartmentType = input.LookingForApartmentType,
             PreferredLocation = input.PreferredLocation,
+            LookingForApartmentId = input.LookingForApartmentId,
             IsActive = true,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,

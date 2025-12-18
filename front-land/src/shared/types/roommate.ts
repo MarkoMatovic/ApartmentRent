@@ -25,6 +25,7 @@ export interface Roommate {
   lookingForRoomType?: string;
   lookingForApartmentType?: string;
   preferredLocation?: string;
+  lookingForApartmentId?: number;
   isActive?: boolean;
 }
 
@@ -35,5 +36,6 @@ export interface RoommateFilters {
   smokingAllowed?: boolean;
   petFriendly?: boolean;
   lifestyle?: string;
+  apartmentId?: number;
 }
 

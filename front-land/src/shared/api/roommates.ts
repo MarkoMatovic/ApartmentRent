@@ -31,6 +31,7 @@ export const roommatesApi = {
     if (filters?.smokingAllowed !== undefined) params.smokingAllowed = filters.smokingAllowed;
     if (filters?.petFriendly !== undefined) params.petFriendly = filters.petFriendly;
     if (filters?.lifestyle) params.lifestyle = filters.lifestyle;
+    if (filters?.apartmentId) params.apartmentId = filters.apartmentId;
     
     const response = await apiClient.get<Roommate[]>(`/api/v1/roommates/get-all-roommates`, {
       params,

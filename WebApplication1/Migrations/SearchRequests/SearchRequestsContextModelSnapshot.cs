@@ -8,28 +8,28 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Lander.Migrations.Roommates
+namespace Lander.Migrations.SearchRequests
 {
-    [DbContext(typeof(RoommatesContext))]
-    partial class RoommatesContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(SearchRequestsContext))]
+    partial class SearchRequestsContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("Roommates")
+                .HasDefaultSchema("SearchRequests")
                 .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Lander.src.Modules.Roommates.Models.Roommate", b =>
+            modelBuilder.Entity("Lander.src.Modules.SearchRequests.Models.SearchRequest", b =>
                 {
-                    b.Property<int>("RoommateId")
+                    b.Property<int>("SearchRequestId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoommateId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SearchRequestId"));
 
                     b.Property<DateOnly?>("AvailableFrom")
                         .HasColumnType("date");
@@ -37,22 +37,15 @@ namespace Lander.Migrations.Roommates
                     b.Property<DateOnly?>("AvailableUntil")
                         .HasColumnType("date");
 
-                    b.Property<string>("Bio")
-                        .HasColumnType("text");
-
-                    b.Property<string>("BudgetIncludes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<decimal?>("BudgetMax")
                         .HasColumnType("decimal(10, 2)");
 
                     b.Property<decimal?>("BudgetMin")
                         .HasColumnType("decimal(10, 2)");
 
-                    b.Property<string>("Cleanliness")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<Guid?>("CreatedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -62,38 +55,28 @@ namespace Lander.Migrations.Roommates
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
-                    b.Property<bool?>("GuestsAllowed")
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HasBalcony")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Hobbies")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                    b.Property<bool?>("HasParking")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<string>("Lifestyle")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<bool?>("IsFurnished")
+                        .HasColumnType("bit");
 
-                    b.Property<int?>("LookingForApartmentId")
-                        .HasColumnType("int");
+                    b.Property<bool?>("LookingForPetFriendly")
+                        .HasColumnType("bit");
 
-                    b.Property<string>("LookingForApartmentType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("LookingForRoomType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int?>("MaximumStayMonths")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MinimumStayMonths")
-                        .HasColumnType("int");
+                    b.Property<bool?>("LookingForSmokingAllowed")
+                        .HasColumnType("bit");
 
                     b.Property<Guid?>("ModifiedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -101,29 +84,47 @@ namespace Lander.Migrations.Roommates
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime");
 
+                    b.Property<int?>("NumberOfRooms")
+                        .HasColumnType("int");
+
                     b.Property<bool?>("PetFriendly")
                         .HasColumnType("bit");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("PreferredLifestyle")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("PreferredLocation")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<string>("Profession")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int>("RequestType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SizeSquareMeters")
+                        .HasColumnType("int");
 
                     b.Property<bool?>("SmokingAllowed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
-                    b.HasKey("RoommateId")
-                        .HasName("PK__Roommates__RoommateId");
+                    b.HasKey("SearchRequestId")
+                        .HasName("PK__SearchRequests__SearchRequestId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Roommates", "Roommates");
+                    b.ToTable("SearchRequests", "SearchRequests");
                 });
 #pragma warning restore 612, 618
         }
