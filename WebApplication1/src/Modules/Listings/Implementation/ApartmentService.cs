@@ -55,6 +55,27 @@ public class ApartmentService : IApartmentService
             AvailableUntil = apartmentInputDto.AvailableUntil,
             NumberOfRooms = apartmentInputDto.NumberOfRooms,
             RentIncludeUtilities = apartmentInputDto.RentIncludeUtilities,
+            // Location (for maps & search)
+            Latitude = apartmentInputDto.Latitude,
+            Longitude = apartmentInputDto.Longitude,
+            // Apartment characteristics (filters)
+            SizeSquareMeters = apartmentInputDto.SizeSquareMeters,
+            ApartmentType = apartmentInputDto.ApartmentType ?? ApartmentType.Studio,
+            // Furnishing & amenities
+            IsFurnished = apartmentInputDto.IsFurnished ?? false,
+            HasBalcony = apartmentInputDto.HasBalcony ?? false,
+            HasElevator = apartmentInputDto.HasElevator ?? false,
+            HasParking = apartmentInputDto.HasParking ?? false,
+            HasInternet = apartmentInputDto.HasInternet ?? false,
+            HasAirCondition = apartmentInputDto.HasAirCondition ?? false,
+            // Rules
+            IsPetFriendly = apartmentInputDto.IsPetFriendly ?? false,
+            IsSmokingAllowed = apartmentInputDto.IsSmokingAllowed ?? false,
+            // Availability & rental terms
+            DepositAmount = apartmentInputDto.DepositAmount,
+            MinimumStayMonths = apartmentInputDto.MinimumStayMonths,
+            MaximumStayMonths = apartmentInputDto.MaximumStayMonths,
+            IsImmediatelyAvailable = apartmentInputDto.IsImmediatelyAvailable ?? false,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
@@ -82,7 +103,14 @@ public class ApartmentService : IApartmentService
             Title = apartment.Title,
             Rent = apartment.Rent,
             Address = apartment.Address,
-            City = apartment.City
+            City = apartment.City,
+            // Extended fields (optional for backward compatibility)
+            Latitude = apartment.Latitude,
+            Longitude = apartment.Longitude,
+            SizeSquareMeters = apartment.SizeSquareMeters,
+            ApartmentType = apartment.ApartmentType,
+            IsFurnished = apartment.IsFurnished,
+            IsImmediatelyAvailable = apartment.IsImmediatelyAvailable
         };
     }
 
@@ -115,7 +143,14 @@ public class ApartmentService : IApartmentService
                 Title = a.Title,
                 Rent = a.Rent,
                 Address = a.Address,
-                City = a.City ?? string.Empty
+                City = a.City ?? string.Empty,
+                // Extended fields (optional for backward compatibility)
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
+                SizeSquareMeters = a.SizeSquareMeters,
+                ApartmentType = a.ApartmentType,
+                IsFurnished = a.IsFurnished,
+                IsImmediatelyAvailable = a.IsImmediatelyAvailable
             })
             .ToListAsync();
 
@@ -147,7 +182,28 @@ public class ApartmentService : IApartmentService
             AvailableFrom = (DateOnly)apartment.AvailableFrom,
             AvailableUntil = (DateOnly)apartment.AvailableUntil,
             NumberOfRooms = (int)apartment.NumberOfRooms,
-            RentIncludeUtilities = (bool)apartment.RentIncludeUtilities
+            RentIncludeUtilities = (bool)apartment.RentIncludeUtilities,
+            // Location (for maps & search)
+            Latitude = apartment.Latitude,
+            Longitude = apartment.Longitude,
+            // Apartment characteristics (filters)
+            SizeSquareMeters = apartment.SizeSquareMeters,
+            ApartmentType = apartment.ApartmentType,
+            // Furnishing & amenities
+            IsFurnished = apartment.IsFurnished,
+            HasBalcony = apartment.HasBalcony,
+            HasElevator = apartment.HasElevator,
+            HasParking = apartment.HasParking,
+            HasInternet = apartment.HasInternet,
+            HasAirCondition = apartment.HasAirCondition,
+            // Rules
+            IsPetFriendly = apartment.IsPetFriendly,
+            IsSmokingAllowed = apartment.IsSmokingAllowed,
+            // Availability & rental terms
+            DepositAmount = apartment.DepositAmount,
+            MinimumStayMonths = apartment.MinimumStayMonths,
+            MaximumStayMonths = apartment.MaximumStayMonths,
+            IsImmediatelyAvailable = apartment.IsImmediatelyAvailable
         };
 
     
