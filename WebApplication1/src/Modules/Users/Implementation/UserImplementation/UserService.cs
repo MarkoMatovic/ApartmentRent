@@ -61,16 +61,24 @@ public class UserService : IUserInterface
 
         };
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        return new UserRegistrationDto
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Users.Add(user);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+            
+            return new UserRegistrationDto
         {
             FirstName = userRegistrationInputDto.FirstName,
             Email = userRegistrationInputDto.Email,
-        };
-
-     
-       
+            };
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
     }
 
     public Task LogoutUserAsync()
@@ -93,8 +101,18 @@ public class UserService : IUserInterface
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deactivateUserInputDto.UserGuid);
         if (user != null)
         {
-            user.IsActive = false;
-            await _context.SaveChangesAsync();
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                user.IsActive = false;
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
         }
     }
 
@@ -103,8 +121,18 @@ public class UserService : IUserInterface
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == reactivateUserInputDto.UserGuid);
         if (user != null)
         {
-            user.IsActive = true;
-            await _context.SaveChangesAsync();
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                user.IsActive = true;
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
         }
     }
 
@@ -113,8 +141,18 @@ public class UserService : IUserInterface
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deleteUserInputDto.UserGuid);
         if (user != null)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                _context.Users.Remove(user);
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
         }
         return true;
     }
@@ -127,9 +165,19 @@ public class UserService : IUserInterface
         if (user == null || HashPassword(changePasswordInputDto.OldPassword) != user.Password)
             throw new Exception("Incorrect old password.");
 
-        user.Password = HashPassword(changePasswordInputDto.NewPassword);
-        user.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            user.Password = HashPassword(changePasswordInputDto.NewPassword);
+            user.ModifiedDate = DateTime.UtcNow;
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
     }
 
     public async Task<User?> GetUserByGuidAsync(Guid userGuid)

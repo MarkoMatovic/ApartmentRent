@@ -9,20 +9,75 @@ using Lander.src.Modules.SearchRequests.Models;
 using Lander.src.Modules.SavedSearches.Models;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications.Models;
+using Lander.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Lander;
 
 
-public class ApplicationsContext : DbContext
+public class ApplicationsContext : DbContext, IUnitofWork
 {
     public ApplicationsContext(DbContextOptions<ApplicationsContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<ApartmentApplication> ApartmentApplications { get; set; }
     public DbSet<SearchPreference> SearchPreferences { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,7 +125,7 @@ public class ApplicationsContext : DbContext
         });
     }
 }
-public partial class NotificationContext : DbContext
+public partial class NotificationContext : DbContext, IUnitofWork
 {
     public NotificationContext()
     {
@@ -80,9 +135,63 @@ public partial class NotificationContext : DbContext
         : base(options)
     {
     }
-
+    private IDbContextTransaction? _currentTransaction;
     public virtual DbSet<Notification> Notifications { get; set; }
     public virtual DbSet<ReadNotification> ReadNotifications { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -134,13 +243,67 @@ public partial class NotificationContext : DbContext
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
 
-public class CommunicationsContext : DbContext
+public class CommunicationsContext : DbContext, IUnitofWork
 {
     public CommunicationsContext(DbContextOptions<CommunicationsContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<Message> Messages { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -173,14 +336,68 @@ public class CommunicationsContext : DbContext
         });
     }
 }
-public class ListingsContext : DbContext
+public class ListingsContext : DbContext, IUnitofWork
 {
     public ListingsContext(DbContextOptions<ListingsContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<Apartment> Apartments { get; set; }
     public DbSet<ApartmentImage> ApartmentImages { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -264,14 +481,68 @@ public class ListingsContext : DbContext
 
     }
 }
-public class ReviewsContext : DbContext
+public class ReviewsContext : DbContext, IUnitofWork
 {
     public ReviewsContext(DbContextOptions<ReviewsContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<Review> Reviews { get; set; }
     public DbSet<Favorite> Favorites { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -462,13 +733,67 @@ public class UsersContext : DbContext, IUnitofWork
     }
 }
 
-public class RoommatesContext : DbContext
+public class RoommatesContext : DbContext, IUnitofWork
 {
     public RoommatesContext(DbContextOptions<RoommatesContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<Roommate> Roommates { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -506,13 +831,67 @@ public class RoommatesContext : DbContext
     }
 }
 
-public class SearchRequestsContext : DbContext
+public class SearchRequestsContext : DbContext, IUnitofWork
 {
     public SearchRequestsContext(DbContextOptions<SearchRequestsContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<SearchRequest> SearchRequests { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -550,13 +929,67 @@ public class SearchRequestsContext : DbContext
     }
 }
 
-public class SavedSearchesContext : DbContext
+public class SavedSearchesContext : DbContext, IUnitofWork
 {
     public SavedSearchesContext(DbContextOptions<SavedSearchesContext> options)
         : base(options)
     { }
-
+    private IDbContextTransaction? _currentTransaction;
     public DbSet<SavedSearch> SavedSearches { get; set; }
+
+    public async Task<IDbContextTransaction?> BeginTransactionAsync()
+    {
+        if (_currentTransaction is not null) return null;
+        _currentTransaction = await Database.BeginTransactionAsync(isolationLevel: IsolationLevel.ReadCommitted);
+        return _currentTransaction;
+    }
+
+    public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+    {
+        if (transaction is null) throw new ArgumentNullException(paramName: nameof(transaction));
+        if (transaction != _currentTransaction)
+            throw new InvalidOperationException(message: $"Transaction {transaction?.TransactionId} is not current transaction.");
+
+        try
+        {
+            await SaveChangesAsync();
+            await transaction?.CommitAsync();
+        }
+        catch
+        {
+            RollBackTransaction();
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public void RollBackTransaction()
+    {
+        try
+        {
+            _currentTransaction?.Rollback();
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default)
+    {
+        return await base.SaveChangesAsync(cancellationToken: cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
