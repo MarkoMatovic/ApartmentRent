@@ -193,8 +193,18 @@ public class RoommateService : IRoommateService
             ModifiedDate = DateTime.UtcNow
         };
 
-        _context.Roommates.Add(roommate);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Roommates.Add(roommate);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new Exception("Failed to create roommate");
     }
@@ -230,7 +240,17 @@ public class RoommateService : IRoommateService
         roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
         roommate.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new Exception("Failed to update roommate");
     }
@@ -242,8 +262,18 @@ public class RoommateService : IRoommateService
 
         if (roommate == null) return false;
 
-        roommate.IsActive = false;
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            roommate.IsActive = false;
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return true;
     }

@@ -63,10 +63,19 @@ public class NotificationService : INotificationService
                 SenderUserId = notification.SenderUserId,
                 RecipientUserId = notification.RecipientUserId
             };
-            await _context.ReadNotifications.AddAsync(readNotification);
-            _context.Notifications.Remove(notification);
-
-            await _context.SaveChangesAsync();
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                await _context.ReadNotifications.AddAsync(readNotification);
+                _context.Notifications.Remove(notification);
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
            
         }
     }
@@ -88,8 +97,18 @@ public class NotificationService : INotificationService
             CreatedDate = DateTime.UtcNow,
         };
 
-        _context.Notifications.Add(notification);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Notifications.Add(notification);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         
         var notificationDto = new NotificationDto
