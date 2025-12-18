@@ -11,7 +11,7 @@ namespace Lander.src.Modules.Users.Infrastructure.Repository
 
         private readonly UsersContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
-        public IUnitofWork UnitOfWork => throw new NotImplementedException();
+        public IUnitofWork UnitOfWork => _context;
 
         public Role Add(Role entity)
         {

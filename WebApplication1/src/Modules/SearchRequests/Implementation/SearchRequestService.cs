@@ -209,8 +209,18 @@ public class SearchRequestService : ISearchRequestService
             ModifiedDate = DateTime.UtcNow
         };
 
-        _context.SearchRequests.Add(searchRequest);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.SearchRequests.Add(searchRequest);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to create search request");
     }
@@ -248,7 +258,17 @@ public class SearchRequestService : ISearchRequestService
         searchRequest.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
         searchRequest.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to update search request");
     }
@@ -260,8 +280,18 @@ public class SearchRequestService : ISearchRequestService
 
         if (searchRequest == null) return false;
 
-        searchRequest.IsActive = false;
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            searchRequest.IsActive = false;
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return true;
     }

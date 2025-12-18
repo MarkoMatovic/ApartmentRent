@@ -35,7 +35,17 @@ public class ApartmentService : IApartmentService
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid) ? parsedGuid : null;
         apartment.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
         return true;
     }
 
@@ -94,8 +104,18 @@ public class ApartmentService : IApartmentService
             ModifiedDate = DateTime.UtcNow
         }).ToList();
 
-        _context.ApartmentImages.AddRange(apartmentImages);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.ApartmentImages.AddRange(apartmentImages);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         return new ApartmentDto
         {
@@ -129,7 +149,17 @@ public class ApartmentService : IApartmentService
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid)? parsedGuid : null;
         apartment.ModifiedDate = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
         return true;
     }
 

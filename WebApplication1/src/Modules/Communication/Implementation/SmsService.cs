@@ -34,9 +34,18 @@ public class SmsService : ISmsService
             CreatedDate = DateTime.UtcNow
         };
 
-       
-        _context.Messages.Add(message);
-        await _context.SaveChangesAsync();
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Messages.Add(message);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
 
         TwilioClient.Init(_twilioSettings.AccountSid, _twilioSettings.AuthToken);
 
