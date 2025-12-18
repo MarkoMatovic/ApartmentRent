@@ -27,6 +27,15 @@
   "veryClean": "Очень чисто",
   "clean": "Чисто",
   "moderate": "Умеренно",
-  "guestsAllowed": "Гости разрешены"
+  "guestsAllowed": "Гости разрешены",
+  "createProfile": "Создать профиль соседа",
+  "profileCreated": "Профиль соседа успешно создан!",
+  "hobbies": "Хобби",
+  "profession": "Профессия",
+  "roomType": "Тип комнаты",
+  "apartmentType": "Тип квартиры",
+  "lookingFor": "Что я ищу",
+  "availability": "Доступность",
+  "budgetIncludes": "Бюджет включает"
 }
 

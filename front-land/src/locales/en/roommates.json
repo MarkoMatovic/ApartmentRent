@@ -27,6 +27,15 @@
   "veryClean": "Very Clean",
   "clean": "Clean",
   "moderate": "Moderate",
-  "guestsAllowed": "Guests Allowed"
+  "guestsAllowed": "Guests Allowed",
+  "createProfile": "Create Roommate Profile",
+  "profileCreated": "Roommate profile created successfully!",
+  "hobbies": "Hobbies",
+  "profession": "Profession",
+  "roomType": "Room Type",
+  "apartmentType": "Apartment Type",
+  "lookingFor": "What I'm looking for",
+  "availability": "Availability",
+  "budgetIncludes": "Budget Includes"
 }
 

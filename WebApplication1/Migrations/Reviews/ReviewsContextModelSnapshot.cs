@@ -48,6 +48,12 @@ namespace Lander.Migrations.Reviews
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime");
 
+                    b.Property<int?>("RoommateId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SearchRequestId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
@@ -56,11 +62,23 @@ namespace Lander.Migrations.Reviews
 
                     b.HasIndex("ApartmentId");
 
+                    b.HasIndex("RoommateId");
+
+                    b.HasIndex("SearchRequestId");
+
                     b.HasIndex("UserId");
 
                     b.HasIndex("UserId", "ApartmentId")
                         .IsUnique()
                         .HasFilter("[UserId] IS NOT NULL AND [ApartmentId] IS NOT NULL");
+
+                    b.HasIndex("UserId", "RoommateId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL AND [RoommateId] IS NOT NULL");
+
+                    b.HasIndex("UserId", "SearchRequestId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL AND [SearchRequestId] IS NOT NULL");
 
                     b.ToTable("Favorites", "ReviewsFavorites");
                 });

@@ -132,4 +132,10 @@ public class UserService : IUserInterface
         await _context.SaveChangesAsync();
     }
 
+    public async Task<User?> GetUserByGuidAsync(Guid userGuid)
+    {
+        return await _context.Users
+            .FirstOrDefaultAsync(u => u.UserGuid == userGuid);
+    }
+
 }
