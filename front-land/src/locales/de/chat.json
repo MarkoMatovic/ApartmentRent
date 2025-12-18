@@ -1,0 +1,18 @@
+{
+  "title": "Nachrichten",
+  "messages": "Nachrichten",
+  "noMessages": "Sie haben keine Nachrichten",
+  "typeMessage": "Nachricht eingeben...",
+  "send": "Senden",
+  "online": "Online",
+  "offline": "Offline",
+  "newMessage": "Neue Nachricht",
+  "conversations": "Unterhaltungen",
+  "noConversations": "Sie haben keine Unterhaltungen",
+  "searchConversations": "Unterhaltungen durchsuchen",
+  "markAsRead": "Als gelesen markieren",
+  "delete": "Löschen",
+  "today": "Heute",
+  "yesterday": "Gestern"
+}
+
