@@ -204,10 +204,40 @@ public class ListingsContext : DbContext
             entity.Property(e => e.AvailableUntil).HasColumnType("date");
             entity.Property(e => e.NumberOfRooms);
             entity.Property(e => e.RentIncludeUtilities).HasDefaultValue(false);
+            
+            // Location (for maps & search)
+            entity.Property(e => e.Latitude).HasColumnType("decimal(9,6)");
+            entity.Property(e => e.Longitude).HasColumnType("decimal(9,6)");
+            
+            // Apartment characteristics (filters)
+            entity.Property(e => e.SizeSquareMeters);
+            entity.Property(e => e.ApartmentType)
+                .HasConversion<int>();
+            
+            // Furnishing & amenities
+            entity.Property(e => e.IsFurnished).HasDefaultValue(false);
+            entity.Property(e => e.HasBalcony).HasDefaultValue(false);
+            entity.Property(e => e.HasElevator).HasDefaultValue(false);
+            entity.Property(e => e.HasParking).HasDefaultValue(false);
+            entity.Property(e => e.HasInternet).HasDefaultValue(false);
+            entity.Property(e => e.HasAirCondition).HasDefaultValue(false);
+            
+            // Rules
+            entity.Property(e => e.IsPetFriendly).HasDefaultValue(false);
+            entity.Property(e => e.IsSmokingAllowed).HasDefaultValue(false);
+            
+            // Availability & rental terms
+            entity.Property(e => e.DepositAmount).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.MinimumStayMonths);
+            entity.Property(e => e.MaximumStayMonths);
+            entity.Property(e => e.IsImmediatelyAvailable).HasDefaultValue(false);
 
             // Landlord (User) je cross-context - navigacioni property je NotMapped
             // Foreign key constraint će biti kreiran ručno u migraciji ka UsersRoles.Users
             entity.HasIndex(e => e.LandlordId);
+            entity.HasIndex(e => new { e.Latitude, e.Longitude });
+            entity.HasIndex(e => e.ApartmentType);
+            entity.HasIndex(e => e.IsImmediatelyAvailable);
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
