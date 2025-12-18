@@ -54,4 +54,23 @@ public static class ApiActionsV1
     public const string UpdateRoommate = "update-roommate/{id}";
     public const string DeleteRoommate = "delete-roommate/{id}";
     #endregion
+
+    #region SearchRequests (Gesuche)
+    public const string SearchRequests = $"{V1}/search-requests";
+    public const string GetAllSearchRequests = "get-all-search-requests";
+    public const string GetSearchRequest = "get-search-request";
+    public const string GetSearchRequestsByUserId = "get-search-requests-by-user-id";
+    public const string CreateSearchRequest = "create-search-request";
+    public const string UpdateSearchRequest = "update-search-request/{id}";
+    public const string DeleteSearchRequest = "delete-search-request/{id}";
+    #endregion
+
+    #region SavedSearches
+    public const string SavedSearches = $"{V1}/saved-searches";
+    public const string GetSavedSearchesByUserId = "get-saved-searches-by-user-id";
+    public const string GetSavedSearch = "get-saved-search";
+    public const string CreateSavedSearch = "create-saved-search";
+    public const string UpdateSavedSearch = "update-saved-search/{id}";
+    public const string DeleteSavedSearch = "delete-saved-search/{id}";
+    #endregion
 }

@@ -47,6 +47,7 @@ const CreateRoommatePage: React.FC = () => {
     lookingForRoomType: '',
     lookingForApartmentType: '',
     preferredLocation: '',
+    lookingForApartmentId: undefined,
   });
 
   const createMutation = useMutation({

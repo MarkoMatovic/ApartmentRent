@@ -15,7 +15,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
+import { roommatesApi } from '../shared/api/roommates';
 import ApartmentMap from '../components/Map/ApartmentMap';
+import RoommateCard from '../components/Roommate/RoommateCard';
 import {
   Home as HomeIcon,
   LocationOn as LocationIcon,
@@ -32,6 +34,12 @@ const ApartmentDetailPage: React.FC = () => {
   const { data: apartment, isLoading } = useQuery({
     queryKey: ['apartment', id],
     queryFn: () => apartmentsApi.getById(Number(id)),
+    enabled: !!id,
+  });
+
+  const { data: roommatesLookingForThisApartment } = useQuery({
+    queryKey: ['roommates', 'apartment', id],
+    queryFn: () => roommatesApi.getAll({ apartmentId: Number(id) } as any),
     enabled: !!id,
   });
 
@@ -109,6 +117,32 @@ const ApartmentDetailPage: React.FC = () => {
                 longitude={apartment.longitude!}
                 address={apartment.address}
               />
+            </Paper>
+          )}
+
+          {/* Roommates Looking for Room in This Apartment */}
+          {roommatesLookingForThisApartment && roommatesLookingForThisApartment.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                {t('roommates:lookingForRoomInThisApartment', { defaultValue: 'Roommates Looking for Room in This Apartment' })}
+              </Typography>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                {roommatesLookingForThisApartment.slice(0, 3).map((roommate) => (
+                  <Grid item xs={12} sm={6} md={4} key={roommate.userId}>
+                    <RoommateCard roommate={roommate} />
+                  </Grid>
+                ))}
+              </Grid>
+              {roommatesLookingForThisApartment.length > 3 && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate(`/roommates?apartmentId=${id}`)}
+                  >
+                    {t('roommates:viewAll', { defaultValue: 'View All' })} ({roommatesLookingForThisApartment.length})
+                  </Button>
+                </Box>
+              )}
             </Paper>
           )}
 

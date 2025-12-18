@@ -10,6 +10,8 @@ public class Favorite
     public int? UserId { get; set; }
 
     public int? ApartmentId { get; set; }
+    public int? RoommateId { get; set; } // For favoriting roommates
+    public int? SearchRequestId { get; set; } // For favoriting search requests
 
     public Guid? CreatedByGuid { get; set; }
 

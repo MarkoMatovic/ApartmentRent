@@ -30,10 +30,11 @@ public class RoommatesController : ControllerBase
         [FromQuery] decimal? maxBudget = null,
         [FromQuery] bool? smokingAllowed = null,
         [FromQuery] bool? petFriendly = null,
-        [FromQuery] string? lifestyle = null)
+        [FromQuery] string? lifestyle = null,
+        [FromQuery] int? apartmentId = null)
     {
         var roommates = await _roommateService.GetAllRoommatesAsync(
-            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle);
+            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, apartmentId);
         return Ok(roommates);
     }
 

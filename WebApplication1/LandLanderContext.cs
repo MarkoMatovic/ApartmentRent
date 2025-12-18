@@ -5,6 +5,8 @@ using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Roommates.Models;
+using Lander.src.Modules.SearchRequests.Models;
+using Lander.src.Modules.SavedSearches.Models;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications.Models;
 using Microsoft.EntityFrameworkCore;
@@ -311,10 +313,14 @@ public class ReviewsContext : DbContext
 
             // Cross-context foreign keys - navigacioni property-je su NotMapped u modelima
             // Foreign key constraint-e će biti kreirani kroz migracije
-            // ApartmentId i UserId će biti indeksirani za performanse
+            // ApartmentId, RoommateId, SearchRequestId i UserId će biti indeksirani za performanse
             entity.HasIndex(e => e.ApartmentId);
+            entity.HasIndex(e => e.RoommateId);
+            entity.HasIndex(e => e.SearchRequestId);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.UserId, e.ApartmentId }).IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.RoommateId }).IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.SearchRequestId }).IsUnique();
         });
     }
 }
@@ -495,6 +501,82 @@ public class RoommatesContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             // Cross-context foreign key - UserId references UsersRoles.Users
+            entity.HasIndex(e => e.UserId);
+        });
+    }
+}
+
+public class SearchRequestsContext : DbContext
+{
+    public SearchRequestsContext(DbContextOptions<SearchRequestsContext> options)
+        : base(options)
+    { }
+
+    public DbSet<SearchRequest> SearchRequests { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("SearchRequests");
+        modelBuilder.Entity<SearchRequest>(entity =>
+        {
+            entity.HasKey(e => e.SearchRequestId).HasName("PK__SearchRequests__SearchRequestId");
+            entity.ToTable("SearchRequests", "SearchRequests");
+
+            entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnType("text");
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.PostalCode).HasMaxLength(10);
+            entity.Property(e => e.PreferredLocation).HasMaxLength(255);
+            entity.Property(e => e.PreferredLifestyle).HasMaxLength(50);
+            
+            entity.Property(e => e.BudgetMin).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.BudgetMax).HasColumnType("decimal(10, 2)");
+            
+            entity.Property(e => e.AvailableFrom).HasColumnType("date");
+            entity.Property(e => e.AvailableUntil).HasColumnType("date");
+            
+            entity.Property(e => e.RequestType)
+                .HasConversion<int>();
+            
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            // Cross-context foreign key - UserId references UsersRoles.Users
+            entity.HasIndex(e => e.UserId);
+        });
+    }
+}
+
+public class SavedSearchesContext : DbContext
+{
+    public SavedSearchesContext(DbContextOptions<SavedSearchesContext> options)
+        : base(options)
+    { }
+
+    public DbSet<SavedSearch> SavedSearches { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("SavedSearches");
+        modelBuilder.Entity<SavedSearch>(entity =>
+        {
+            entity.HasKey(e => e.SavedSearchId).HasName("PK__SavedSearches__SavedSearchId");
+            entity.ToTable("SavedSearches", "SavedSearches");
+
+            entity.Property(e => e.Name).HasMaxLength(255);
+            entity.Property(e => e.SearchType).HasMaxLength(50);
+            entity.Property(e => e.FiltersJson).HasColumnType("nvarchar(max)");
+            
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+            entity.Property(e => e.LastNotificationSent).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
             entity.HasIndex(e => e.UserId);
         });
     }

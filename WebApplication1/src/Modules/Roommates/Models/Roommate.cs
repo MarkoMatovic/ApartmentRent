@@ -32,6 +32,7 @@ public class Roommate
     public string? LookingForRoomType { get; set; } // 'single', 'shared'
     public string? LookingForApartmentType { get; set; }
     public string? PreferredLocation { get; set; }
+    public int? LookingForApartmentId { get; set; } // Link to specific apartment
     
     // Status
     public bool IsActive { get; set; } = true;
