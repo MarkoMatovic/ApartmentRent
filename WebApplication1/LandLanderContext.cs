@@ -4,6 +4,7 @@ using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Reviews.Modules;
+using Lander.src.Modules.Roommates.Models;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications.Models;
 using Microsoft.EntityFrameworkCore;
@@ -451,6 +452,50 @@ public class UsersContext : DbContext, IUnitofWork
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.RoleName).HasMaxLength(100);
+        });
+    }
+}
+
+public class RoommatesContext : DbContext
+{
+    public RoommatesContext(DbContextOptions<RoommatesContext> options)
+        : base(options)
+    { }
+
+    public DbSet<Roommate> Roommates { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("Roommates");
+        modelBuilder.Entity<Roommate>(entity =>
+        {
+            entity.HasKey(e => e.RoommateId).HasName("PK__Roommates__RoommateId");
+            entity.ToTable("Roommates", "Roommates");
+
+            entity.Property(e => e.Bio).HasColumnType("text");
+            entity.Property(e => e.Hobbies).HasMaxLength(500);
+            entity.Property(e => e.Profession).HasMaxLength(100);
+            entity.Property(e => e.Lifestyle).HasMaxLength(50);
+            entity.Property(e => e.Cleanliness).HasMaxLength(50);
+            entity.Property(e => e.BudgetIncludes).HasMaxLength(500);
+            entity.Property(e => e.LookingForRoomType).HasMaxLength(50);
+            entity.Property(e => e.LookingForApartmentType).HasMaxLength(100);
+            entity.Property(e => e.PreferredLocation).HasMaxLength(255);
+            
+            entity.Property(e => e.BudgetMin).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.BudgetMax).HasColumnType("decimal(10, 2)");
+            
+            entity.Property(e => e.AvailableFrom).HasColumnType("date");
+            entity.Property(e => e.AvailableUntil).HasColumnType("date");
+            
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            // Cross-context foreign key - UserId references UsersRoles.Users
+            entity.HasIndex(e => e.UserId);
         });
     }
 }

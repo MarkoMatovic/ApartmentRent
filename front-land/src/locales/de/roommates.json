@@ -27,6 +27,15 @@
   "veryClean": "Sehr sauber",
   "clean": "Sauber",
   "moderate": "Mäßig",
-  "guestsAllowed": "Gäste erlaubt"
+  "guestsAllowed": "Gäste erlaubt",
+  "createProfile": "Mitbewohner-Profil erstellen",
+  "profileCreated": "Mitbewohner-Profil erfolgreich erstellt!",
+  "hobbies": "Hobbys",
+  "profession": "Beruf",
+  "roomType": "Zimmertyp",
+  "apartmentType": "Wohnungstyp",
+  "lookingFor": "Was ich suche",
+  "availability": "Verfügbarkeit",
+  "budgetIncludes": "Budget beinhaltet"
 }
 

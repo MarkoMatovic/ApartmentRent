@@ -8,6 +8,8 @@ using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Reviews.Implementation;
+using Lander.src.Modules.Roommates.Implementation;
+using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Lander.src.Notifications.Implementation;
@@ -36,6 +38,8 @@ builder.Services.AddDbContext<ReviewsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<CommunicationsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<RoommatesContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // CORS configuration for frontend access
 builder.Services.AddCors(options =>
@@ -63,6 +67,7 @@ builder.Services.AddGrpc();
 builder.Services.AddScoped<IUserInterface, UserService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IRoommateService, RoommateService>();
 builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
 builder.Services.AddScoped<ISmsService, SmsService>();
 
