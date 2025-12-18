@@ -13,6 +13,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ChatPage from './pages/ChatPage';
 import RoommateListPage from './pages/RoommateListPage';
+import RoommateDetailPage from './pages/RoommateDetailPage';
+import CreateRoommatePage from './pages/CreateRoommatePage';
 import ProfilePage from './pages/ProfilePage';
 import MyApartmentsPage from './pages/MyApartmentsPage';
 
@@ -33,6 +35,8 @@ function App() {
                 <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
                 <Route path="/messages" element={<ChatPage />} />
                 <Route path="/roommates" element={<RoommateListPage />} />
+                <Route path="/roommates/:id" element={<RoommateDetailPage />} />
+                <Route path="/roommates/create" element={<CreateRoommatePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-apartments" element={<MyApartmentsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

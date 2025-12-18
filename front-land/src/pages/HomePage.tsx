@@ -46,7 +46,7 @@ const HomePage: React.FC = () => {
     },
     {
       title: t('findRoommates'),
-      description: t('apartments:connectWithRoommates', { ns: 'apartments' }),
+      description: t('roommates:connectWithRoommates', { ns: 'roommates' }),
       icon: <PeopleIcon sx={{ fontSize: 40 }} />,
       path: '/roommates',
       color: '#4caf50',

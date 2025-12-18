@@ -44,4 +44,14 @@ public static class ApiActionsV1
     public const string Sms = $"{V1}/sms";
     public const string SendSms = "send";
     #endregion
+
+    #region Roommates
+    public const string Roommates = $"{V1}/roommates";
+    public const string GetAllRoommates = "get-all-roommates";
+    public const string GetRoommate = "get-roommate";
+    public const string GetRoommateByUserId = "get-roommate-by-user-id";
+    public const string CreateRoommate = "create-roommate";
+    public const string UpdateRoommate = "update-roommate/{id}";
+    public const string DeleteRoommate = "delete-roommate/{id}";
+    #endregion
 }
