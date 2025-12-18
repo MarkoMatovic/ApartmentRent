@@ -31,7 +31,11 @@ const LoginPage: React.FC = () => {
       await login(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data || t('invalidCredentials'));
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
+        setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
+      } else {
+        setError(err.response?.data || t('invalidCredentials'));
+      }
     } finally {
       setLoading(false);
     }

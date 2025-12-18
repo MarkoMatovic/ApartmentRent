@@ -60,7 +60,11 @@ const RegisterPage: React.FC = () => {
       });
       navigate('/login');
     } catch (err: any) {
-      setError(err.response?.data || 'Registration failed');
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
+        setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
+      } else {
+        setError(err.response?.data || err.message || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }

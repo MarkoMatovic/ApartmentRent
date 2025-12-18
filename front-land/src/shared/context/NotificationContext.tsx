@@ -28,7 +28,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(import.meta.env.VITE_SIGNALR_URL || 'http://localhost:5197/notificationsHub')
+      .withUrl(import.meta.env.VITE_SIGNALR_URL || 'https://localhost:5002/notificationsHub')
       .withAutomaticReconnect()
       .build();
 
@@ -38,7 +38,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         console.log('SignalR Connected');
       })
       .catch((err) => {
-        console.error('SignalR Connection Error: ', err);
+        // Silently fail if backend is not available - this is expected in development
+        if (import.meta.env.DEV) {
+          console.warn('SignalR: Backend not available. Notifications will not work until backend is started.');
+        } else {
+          console.error('SignalR Connection Error: ', err);
+        }
       });
 
     newConnection.on('ReceiveNotification', (title: string, message: string, type: string) => {

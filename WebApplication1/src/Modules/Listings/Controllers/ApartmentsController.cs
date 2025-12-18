@@ -8,8 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lander.src.Modules.Listings.Controllers;
-// TEMPORARY: Auth disabled for development - commenting out [Authorize] to allow public access
-// [Authorize]
+
 [Route(ApiActionsV1.Rent)]
 [ApiController]
 public class ApartmentsController : ControllerBase
