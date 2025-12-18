@@ -37,6 +37,22 @@ builder.Services.AddDbContext<ReviewsContext>(options =>
 builder.Services.AddDbContext<CommunicationsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// CORS configuration for frontend access
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173", 
+                "http://127.0.0.1:5173",
+                "https://localhost:5173"  // Dodaj HTTPS origin ako frontend koristi HTTPS
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -56,7 +72,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
-        o.RequireHttpsMetadata = true;
+        o.RequireHttpsMetadata = true;  // OK za HTTPS mode
         o.TokenValidationParameters = new TokenValidationParameters
         {        
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
@@ -114,6 +130,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// CORS must be before UseAuthentication and UseAuthorization
+app.UseCors("AllowFrontend");
+
+// Enable HTTPS redirection for HTTPS mode
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

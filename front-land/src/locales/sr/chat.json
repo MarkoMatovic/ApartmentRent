@@ -1,0 +1,18 @@
+{
+  "title": "Poruke",
+  "messages": "Poruke",
+  "noMessages": "Nemate poruka",
+  "typeMessage": "Unesite poruku...",
+  "send": "Pošalji",
+  "online": "Na mreži",
+  "offline": "Van mreže",
+  "newMessage": "Nova poruka",
+  "conversations": "Razgovori",
+  "noConversations": "Nemate razgovora",
+  "searchConversations": "Pretraži razgovore",
+  "markAsRead": "Označi kao pročitano",
+  "delete": "Obriši",
+  "today": "Danas",
+  "yesterday": "Juče"
+}
+
