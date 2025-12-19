@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Lander;
+using Lander.src.Common;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -32,7 +33,7 @@ public class RoommateService : IRoommateService
     {
         var query = _context.Roommates
             .Where(r => r.IsActive)
-            .AsQueryable();
+            .AsNoTracking();
 
         if (!string.IsNullOrEmpty(location))
         {
@@ -69,52 +70,150 @@ public class RoommateService : IRoommateService
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
 
-        var roommates = await query.ToListAsync();
-        var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
-        var users = await _usersContext.Users
-            .Where(u => userIds.Contains(u.UserId))
-            .ToDictionaryAsync(u => u.UserId);
+        var result = await (from r in query
+                           join u in _usersContext.Users on r.UserId equals u.UserId
+                           select new RoommateDto
+                           {
+                               RoommateId = r.RoommateId,
+                               UserId = r.UserId,
+                               FirstName = u.FirstName,
+                               LastName = u.LastName,
+                               ProfilePicture = u.ProfilePicture,
+                               DateOfBirth = u.DateOfBirth,
+                               PhoneNumber = u.PhoneNumber,
+                               Bio = r.Bio,
+                               Hobbies = r.Hobbies,
+                               Profession = r.Profession,
+                               SmokingAllowed = r.SmokingAllowed,
+                               PetFriendly = r.PetFriendly,
+                               Lifestyle = r.Lifestyle,
+                               Cleanliness = r.Cleanliness,
+                               GuestsAllowed = r.GuestsAllowed,
+                               BudgetMin = r.BudgetMin,
+                               BudgetMax = r.BudgetMax,
+                               BudgetIncludes = r.BudgetIncludes,
+                               AvailableFrom = r.AvailableFrom,
+                               AvailableUntil = r.AvailableUntil,
+                               MinimumStayMonths = r.MinimumStayMonths,
+                               MaximumStayMonths = r.MaximumStayMonths,
+                               LookingForRoomType = r.LookingForRoomType,
+                               LookingForApartmentType = r.LookingForApartmentType,
+                               PreferredLocation = r.PreferredLocation,
+                               LookingForApartmentId = r.LookingForApartmentId,
+                               IsActive = r.IsActive
+                           }).ToListAsync();
 
-        return roommates.Select(r => new RoommateDto
+        return result;
+    }
+
+    public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(
+        string? location, 
+        decimal? minBudget, 
+        decimal? maxBudget,
+        bool? smokingAllowed, 
+        bool? petFriendly, 
+        string? lifestyle,
+        int? apartmentId,
+        int page = 1,
+        int pageSize = 20)
+    {
+        var query = _context.Roommates
+            .Where(r => r.IsActive)
+            .AsNoTracking();
+
+        if (!string.IsNullOrEmpty(location))
         {
-            RoommateId = r.RoommateId,
-            UserId = r.UserId,
-            FirstName = users.ContainsKey(r.UserId) ? users[r.UserId].FirstName : "",
-            LastName = users.ContainsKey(r.UserId) ? users[r.UserId].LastName : "",
-            ProfilePicture = users.ContainsKey(r.UserId) ? users[r.UserId].ProfilePicture : null,
-            DateOfBirth = users.ContainsKey(r.UserId) ? users[r.UserId].DateOfBirth : null,
-            PhoneNumber = users.ContainsKey(r.UserId) ? users[r.UserId].PhoneNumber : null,
-            Bio = r.Bio,
-            Hobbies = r.Hobbies,
-            Profession = r.Profession,
-            SmokingAllowed = r.SmokingAllowed,
-            PetFriendly = r.PetFriendly,
-            Lifestyle = r.Lifestyle,
-            Cleanliness = r.Cleanliness,
-            GuestsAllowed = r.GuestsAllowed,
-            BudgetMin = r.BudgetMin,
-            BudgetMax = r.BudgetMax,
-            BudgetIncludes = r.BudgetIncludes,
-            AvailableFrom = r.AvailableFrom,
-            AvailableUntil = r.AvailableUntil,
-            MinimumStayMonths = r.MinimumStayMonths,
-            MaximumStayMonths = r.MaximumStayMonths,
-            LookingForRoomType = r.LookingForRoomType,
-            LookingForApartmentType = r.LookingForApartmentType,
-            PreferredLocation = r.PreferredLocation,
-            LookingForApartmentId = r.LookingForApartmentId,
-            IsActive = r.IsActive
-        });
+            query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(location));
+        }
+
+        if (minBudget.HasValue)
+        {
+            query = query.Where(r => r.BudgetMax == null || r.BudgetMax >= minBudget.Value);
+        }
+
+        if (maxBudget.HasValue)
+        {
+            query = query.Where(r => r.BudgetMin == null || r.BudgetMin <= maxBudget.Value);
+        }
+
+        if (smokingAllowed.HasValue)
+        {
+            query = query.Where(r => r.SmokingAllowed == smokingAllowed.Value);
+        }
+
+        if (petFriendly.HasValue)
+        {
+            query = query.Where(r => r.PetFriendly == petFriendly.Value);
+        }
+
+        if (!string.IsNullOrEmpty(lifestyle))
+        {
+            query = query.Where(r => r.Lifestyle == lifestyle);
+        }
+
+        if (apartmentId.HasValue)
+        {
+            query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var result = await (from r in query
+                           join u in _usersContext.Users on r.UserId equals u.UserId
+                           orderby r.CreatedDate descending
+                           select new RoommateDto
+                           {
+                               RoommateId = r.RoommateId,
+                               UserId = r.UserId,
+                               FirstName = u.FirstName,
+                               LastName = u.LastName,
+                               ProfilePicture = u.ProfilePicture,
+                               DateOfBirth = u.DateOfBirth,
+                               PhoneNumber = u.PhoneNumber,
+                               Bio = r.Bio,
+                               Hobbies = r.Hobbies,
+                               Profession = r.Profession,
+                               SmokingAllowed = r.SmokingAllowed,
+                               PetFriendly = r.PetFriendly,
+                               Lifestyle = r.Lifestyle,
+                               Cleanliness = r.Cleanliness,
+                               GuestsAllowed = r.GuestsAllowed,
+                               BudgetMin = r.BudgetMin,
+                               BudgetMax = r.BudgetMax,
+                               BudgetIncludes = r.BudgetIncludes,
+                               AvailableFrom = r.AvailableFrom,
+                               AvailableUntil = r.AvailableUntil,
+                               MinimumStayMonths = r.MinimumStayMonths,
+                               MaximumStayMonths = r.MaximumStayMonths,
+                               LookingForRoomType = r.LookingForRoomType,
+                               LookingForApartmentType = r.LookingForApartmentType,
+                               PreferredLocation = r.PreferredLocation,
+                               LookingForApartmentId = r.LookingForApartmentId,
+                               IsActive = r.IsActive
+                           })
+                           .Skip((page - 1) * pageSize)
+                           .Take(pageSize)
+                           .ToListAsync();
+
+        return new PagedResult<RoommateDto>
+        {
+            Items = result,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
     }
 
     public async Task<RoommateDto?> GetRoommateByIdAsync(int id)
     {
         var roommate = await _context.Roommates
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.IsActive);
 
         if (roommate == null) return null;
 
         var user = await _usersContext.Users
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == roommate.UserId);
 
         if (user == null) return null;
@@ -153,6 +252,7 @@ public class RoommateService : IRoommateService
     public async Task<RoommateDto?> GetRoommateByUserIdAsync(int userId)
     {
         var roommate = await _context.Roommates
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
 
         if (roommate == null) return null;
