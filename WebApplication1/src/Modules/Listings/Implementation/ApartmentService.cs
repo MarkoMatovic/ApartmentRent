@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Security.Claims;
+using Lander.src.Common;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
@@ -167,6 +168,7 @@ public class ApartmentService : IApartmentService
     {
         var apartments = await _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
+            .AsNoTracking()
             .Select(a => new ApartmentDto
             {
                 ApartmentId = a.ApartmentId,
@@ -174,7 +176,6 @@ public class ApartmentService : IApartmentService
                 Rent = a.Rent,
                 Address = a.Address,
                 City = a.City ?? string.Empty,
-                // Extended fields (optional for backward compatibility)
                 Latitude = a.Latitude,
                 Longitude = a.Longitude,
                 SizeSquareMeters = a.SizeSquareMeters,
@@ -187,9 +188,102 @@ public class ApartmentService : IApartmentService
         return apartments;
     }
 
+    public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
+    {
+        var query = _context.Apartments
+            .Where(a => !a.IsDeleted && a.IsActive)
+            .AsNoTracking();
+
+        if (!string.IsNullOrEmpty(filters.City))
+        {
+            query = query.Where(a => a.City != null && a.City.Contains(filters.City));
+        }
+
+        if (filters.MinRent.HasValue)
+        {
+            query = query.Where(a => a.Rent >= filters.MinRent.Value);
+        }
+
+        if (filters.MaxRent.HasValue)
+        {
+            query = query.Where(a => a.Rent <= filters.MaxRent.Value);
+        }
+
+        if (filters.NumberOfRooms.HasValue)
+        {
+            query = query.Where(a => a.NumberOfRooms == filters.NumberOfRooms.Value);
+        }
+
+        if (filters.ApartmentType.HasValue)
+        {
+            query = query.Where(a => a.ApartmentType == filters.ApartmentType.Value);
+        }
+
+        if (filters.IsFurnished.HasValue)
+        {
+            query = query.Where(a => a.IsFurnished == filters.IsFurnished.Value);
+        }
+
+        if (filters.IsPetFriendly.HasValue)
+        {
+            query = query.Where(a => a.IsPetFriendly == filters.IsPetFriendly.Value);
+        }
+
+        if (filters.IsSmokingAllowed.HasValue)
+        {
+            query = query.Where(a => a.IsSmokingAllowed == filters.IsSmokingAllowed.Value);
+        }
+
+        if (filters.HasParking.HasValue)
+        {
+            query = query.Where(a => a.HasParking == filters.HasParking.Value);
+        }
+
+        if (filters.HasBalcony.HasValue)
+        {
+            query = query.Where(a => a.HasBalcony == filters.HasBalcony.Value);
+        }
+
+        if (filters.IsImmediatelyAvailable.HasValue)
+        {
+            query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(a => a.Rent)
+            .Skip((filters.Page - 1) * filters.PageSize)
+            .Take(filters.PageSize)
+            .Select(a => new ApartmentDto
+            {
+                ApartmentId = a.ApartmentId,
+                Title = a.Title,
+                Rent = a.Rent,
+                Address = a.Address,
+                City = a.City ?? string.Empty,
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
+                SizeSquareMeters = a.SizeSquareMeters,
+                ApartmentType = a.ApartmentType,
+                IsFurnished = a.IsFurnished,
+                IsImmediatelyAvailable = a.IsImmediatelyAvailable
+            })
+            .ToListAsync();
+
+        return new PagedResult<ApartmentDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = filters.Page,
+            PageSize = filters.PageSize
+        };
+    }
+
     public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
     {
         var apartment = await _context.Apartments
+            .AsNoTracking()
             .Where(a => a.ApartmentId == apartmentId)
             .FirstOrDefaultAsync();
 
@@ -213,23 +307,18 @@ public class ApartmentService : IApartmentService
             AvailableUntil = (DateOnly)apartment.AvailableUntil,
             NumberOfRooms = (int)apartment.NumberOfRooms,
             RentIncludeUtilities = (bool)apartment.RentIncludeUtilities,
-            // Location (for maps & search)
             Latitude = apartment.Latitude,
             Longitude = apartment.Longitude,
-            // Apartment characteristics (filters)
             SizeSquareMeters = apartment.SizeSquareMeters,
             ApartmentType = apartment.ApartmentType,
-            // Furnishing & amenities
             IsFurnished = apartment.IsFurnished,
             HasBalcony = apartment.HasBalcony,
             HasElevator = apartment.HasElevator,
             HasParking = apartment.HasParking,
             HasInternet = apartment.HasInternet,
             HasAirCondition = apartment.HasAirCondition,
-            // Rules
             IsPetFriendly = apartment.IsPetFriendly,
             IsSmokingAllowed = apartment.IsSmokingAllowed,
-            // Availability & rental terms
             DepositAmount = apartment.DepositAmount,
             MinimumStayMonths = apartment.MinimumStayMonths,
             MaximumStayMonths = apartment.MaximumStayMonths,
