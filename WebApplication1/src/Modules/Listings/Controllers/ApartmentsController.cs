@@ -32,10 +32,14 @@ public class ApartmentsController : ControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
-    // TEMPORARY: Auth disabled - allowing public access to apartment listings
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<ApartmentDto>>> GetAllApartments()
+    public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
+        if (filters != null && (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue))
+        {
+            return Ok(await _apartmentServie.GetAllApartmentsAsync(filters));
+        }
+        
         return Ok(await _apartmentServie.GetAllApartmentsAsync());
     }
 
