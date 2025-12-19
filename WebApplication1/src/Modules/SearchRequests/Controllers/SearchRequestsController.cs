@@ -25,12 +25,21 @@ public class SearchRequestsController : ControllerBase
 
     [HttpGet(ApiActionsV1.GetAllSearchRequests, Name = nameof(ApiActionsV1.GetAllSearchRequests))]
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<SearchRequestDto>>> GetAllSearchRequests(
+    public async Task<ActionResult> GetAllSearchRequests(
         [FromQuery] SearchRequestType? requestType = null,
         [FromQuery] string? city = null,
         [FromQuery] decimal? minBudget = null,
-        [FromQuery] decimal? maxBudget = null)
+        [FromQuery] decimal? maxBudget = null,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
+        if (page.HasValue && pageSize.HasValue)
+        {
+            var pagedResult = await _searchRequestService.GetAllSearchRequestsAsync(
+                requestType, city, minBudget, maxBudget, page.Value, pageSize.Value);
+            return Ok(pagedResult);
+        }
+        
         var searchRequests = await _searchRequestService.GetAllSearchRequestsAsync(
             requestType, city, minBudget, maxBudget);
         return Ok(searchRequests);

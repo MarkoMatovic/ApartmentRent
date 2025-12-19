@@ -24,15 +24,24 @@ public class RoommatesController : ControllerBase
 
     [HttpGet(ApiActionsV1.GetAllRoommates, Name = nameof(ApiActionsV1.GetAllRoommates))]
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<RoommateDto>>> GetAllRoommates(
+    public async Task<ActionResult> GetAllRoommates(
         [FromQuery] string? location = null,
         [FromQuery] decimal? minBudget = null,
         [FromQuery] decimal? maxBudget = null,
         [FromQuery] bool? smokingAllowed = null,
         [FromQuery] bool? petFriendly = null,
         [FromQuery] string? lifestyle = null,
-        [FromQuery] int? apartmentId = null)
+        [FromQuery] int? apartmentId = null,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
+        if (page.HasValue && pageSize.HasValue)
+        {
+            var pagedResult = await _roommateService.GetAllRoommatesAsync(
+                location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, apartmentId, page.Value, pageSize.Value);
+            return Ok(pagedResult);
+        }
+        
         var roommates = await _roommateService.GetAllRoommatesAsync(
             location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, apartmentId);
         return Ok(roommates);
