@@ -16,7 +16,9 @@ public class ApartmentDto
     public ApartmentType? ApartmentType { get; set; }
     public bool? IsFurnished { get; set; }
     public bool? IsImmediatelyAvailable { get; set; }
+    public List<ApartmentImageDto> ApartmentImages { get; set; } = new();
 }
+
 public class GetApartmentDto
 {
     public int ApartmentId { get; set; }
@@ -51,4 +53,12 @@ public class GetApartmentDto
     public int? MinimumStayMonths { get; set; }
     public int? MaximumStayMonths { get; set; }
     public bool IsImmediatelyAvailable { get; set; }
+    public List<ApartmentImageDto> ApartmentImages { get; set; } = new();
+}
+
+public class ApartmentImageDto
+{
+    public int ImageId { get; set; }
+    public int ApartmentId { get; set; }
+    public string ImageUrl { get; set; }
 }

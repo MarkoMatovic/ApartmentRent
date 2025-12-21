@@ -60,6 +60,9 @@ const ApartmentDetailPage: React.FC = () => {
   }
 
   const hasLocation = apartment.latitude && apartment.longitude;
+  const firstImageUrl = apartment.apartmentImages && apartment.apartmentImages.length > 0
+    ? apartment.apartmentImages[0].imageUrl
+    : undefined;
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -89,9 +92,12 @@ const ApartmentDetailPage: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          backgroundImage: firstImageUrl ? `url(${firstImageUrl})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       >
-        <HomeIcon sx={{ fontSize: 100, color: 'grey.500' }} />
+        {!firstImageUrl && <HomeIcon sx={{ fontSize: 100, color: 'grey.500' }} />}
       </Box>
 
       <Grid container spacing={3}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Grid,
@@ -21,7 +21,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
-import { ApartmentDto, ApartmentType } from '../shared/types/apartment';
 import { Home as HomeIcon, LocationOn as LocationIcon } from '@mui/icons-material';
 
 const ApartmentListPage: React.FC = () => {
@@ -179,9 +178,16 @@ const ApartmentListPage: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        backgroundImage: apartment.apartmentImages && apartment.apartmentImages.length > 0
+                          ? `url(${apartment.apartmentImages[0].imageUrl})`
+                          : undefined,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
                       }}
                     >
-                      <HomeIcon sx={{ fontSize: 60, color: 'grey.500' }} />
+                      {(!apartment.apartmentImages || apartment.apartmentImages.length === 0) && (
+                        <HomeIcon sx={{ fontSize: 60, color: 'grey.500' }} />
+                      )}
                     </CardMedia>
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Typography variant="h6" component="h2" gutterBottom>
