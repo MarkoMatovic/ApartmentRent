@@ -44,7 +44,7 @@ export interface ApartmentImage {
   imageId: number;
   apartmentId: number;
   imageUrl: string;
-  isPrimary: boolean;
+  isPrimary?: boolean;
 }
 
 export interface ApartmentDto {
@@ -59,6 +59,7 @@ export interface ApartmentDto {
   apartmentType?: ApartmentType;
   isFurnished?: boolean;
   isImmediatelyAvailable?: boolean;
+  apartmentImages?: ApartmentImage[];
 }
 
 export interface GetApartmentDto {
@@ -89,6 +90,7 @@ export interface GetApartmentDto {
   minimumStayMonths?: number;
   maximumStayMonths?: number;
   isImmediatelyAvailable: boolean;
+  apartmentImages?: ApartmentImage[];
 }
 
 export interface ApartmentFilters {
