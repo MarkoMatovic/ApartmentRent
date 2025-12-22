@@ -55,10 +55,12 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     {
         var review = new Review
         {
-            TenantId = request.TenantId,
-            LandlordId = request.LandlordId,
+            TenantId = request.UserId,
+            ApartmentId = request.ApartmentId,
             Rating = request.Rating,
-            ReviewText = request.ReviewText,
+            ReviewText = request.Comment,
+            IsAnonymous = request.IsAnonymous,
+            IsPublic = request.IsPublic,
             CreatedByGuid = Guid.Parse(request.CreatedByGuid),
             CreatedDate = DateTime.UtcNow,
             ModifiedByGuid = Guid.Parse(request.CreatedByGuid),
@@ -78,48 +80,103 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             throw;
         }
 
+        // Load user info
+        var user = await _context.Users.FindAsync(request.UserId);
+
         return new ReviewResponse
         {
             ReviewId = review.ReviewId,
-            TenantId = (int)review.TenantId,
-            LandlordId = (int)review.LandlordId,
+            UserId = (int)review.TenantId,
+            ApartmentId = (int)review.ApartmentId,
             Rating = (int)review.Rating,
-            ReviewText = review.ReviewText,
+            Comment = review.ReviewText,
+            IsAnonymous = review.IsAnonymous,
+            IsPublic = review.IsPublic,
             CreatedByGuid = review.CreatedByGuid.ToString(),
             CreatedDate = Timestamp.FromDateTime((DateTime)review.CreatedDate),
             ModifiedByGuid = review.ModifiedByGuid.ToString(),
-            ModifiedDate = Timestamp.FromDateTime((DateTime)review.ModifiedDate)
+            ModifiedDate = Timestamp.FromDateTime((DateTime)review.ModifiedDate),
+            User = user != null ? new UserInfo
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                ProfilePicture = user.ProfilePicture ?? string.Empty
+            } : null
         };
     }
 
     public override async Task<ReviewResponse> GetReviewById(GetReviewByIdRequest request, ServerCallContext context)
     {
-      
-            var review = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.ReviewId == request.ReviewId);
+        var review = await _context.Reviews
+            .Include(r => r.Tenant)
+            .FirstOrDefaultAsync(r => r.ReviewId == request.ReviewId);
 
-            if (review == null)
-            {
-                throw new RpcException(new Status(StatusCode.NotFound, $"Review with ID {request.ReviewId} not found"));
-            }
+        if (review == null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, $"Review with ID {request.ReviewId} not found"));
+        }
 
-            return new ReviewResponse
-            {
-                ReviewId = review.ReviewId,
-                TenantId = (int)review.TenantId,
-                LandlordId = (int)review.LandlordId,
-                Rating = (int)review.Rating,
-                ReviewText = review.ReviewText,
-                CreatedByGuid = review.CreatedByGuid.ToString(),
-                CreatedDate = review.CreatedDate.HasValue
-               ? Timestamp.FromDateTime(review.CreatedDate.Value.ToUniversalTime())
-               : null,
-                ModifiedByGuid = review.ModifiedByGuid.ToString(),
-                ModifiedDate = review.ModifiedDate.HasValue
+        return new ReviewResponse
+        {
+            ReviewId = review.ReviewId,
+            UserId = (int)review.TenantId,
+            ApartmentId = review.ApartmentId ?? 0,
+            Rating = (int)review.Rating,
+            Comment = review.ReviewText,
+            IsAnonymous = review.IsAnonymous,
+            IsPublic = review.IsPublic,
+            CreatedByGuid = review.CreatedByGuid.ToString(),
+            CreatedDate = review.CreatedDate.HasValue
+                ? Timestamp.FromDateTime(review.CreatedDate.Value.ToUniversalTime())
+                : null,
+            ModifiedByGuid = review.ModifiedByGuid.ToString(),
+            ModifiedDate = review.ModifiedDate.HasValue
                 ? Timestamp.FromDateTime(review.ModifiedDate.Value.ToUniversalTime())
-                : null
-            };
-       
+                : null,
+            User = review.Tenant != null ? new UserInfo
+            {
+                FirstName = review.Tenant.FirstName,
+                LastName = review.Tenant.LastName,
+                ProfilePicture = review.Tenant.ProfilePicture ?? string.Empty
+            } : null
+        };
+    }
+
+    public override async Task<GetReviewsResponse> GetReviewsByApartmentId(GetReviewsByApartmentIdRequest request, ServerCallContext context)
+    {
+        var reviews = await _context.Reviews
+            .Include(r => r.Tenant)
+            .Where(r => r.ApartmentId == request.ApartmentId && r.IsPublic)
+            .OrderByDescending(r => r.CreatedDate)
+            .Select(r => new ReviewResponse
+            {
+                ReviewId = r.ReviewId,
+                UserId = (int)r.TenantId,
+                ApartmentId = (int)r.ApartmentId,
+                Rating = (int)r.Rating,
+                Comment = r.ReviewText,
+                IsAnonymous = r.IsAnonymous,
+                IsPublic = r.IsPublic,
+                CreatedByGuid = r.CreatedByGuid.ToString(),
+                CreatedDate = r.CreatedDate.HasValue
+                    ? Timestamp.FromDateTime(r.CreatedDate.Value.ToUniversalTime())
+                    : null,
+                ModifiedByGuid = r.ModifiedByGuid.ToString(),
+                ModifiedDate = r.ModifiedDate.HasValue
+                    ? Timestamp.FromDateTime(r.ModifiedDate.Value.ToUniversalTime())
+                    : null,
+                User = r.Tenant != null ? new UserInfo
+                {
+                    FirstName = r.Tenant.FirstName,
+                    LastName = r.Tenant.LastName,
+                    ProfilePicture = r.Tenant.ProfilePicture ?? string.Empty
+                } : null
+            })
+            .ToListAsync();
+
+        var response = new GetReviewsResponse();
+        response.Reviews.AddRange(reviews);
+        return response;
     }
 
     public override async Task<GetFavoritesResponse> GetFavorites(GetFavoritesRequest request, ServerCallContext context)

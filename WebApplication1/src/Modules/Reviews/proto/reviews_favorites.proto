@@ -7,6 +7,7 @@ service ReviewFavoriteGrpcService {
   rpc CreateFavorite (CreateFavoriteRequest) returns (FavoriteResponse);
   rpc CreateReview (CreateReviewRequest) returns (ReviewResponse);
   rpc GetReviewById (GetReviewByIdRequest) returns (ReviewResponse);
+  rpc GetReviewsByApartmentId (GetReviewsByApartmentIdRequest) returns (GetReviewsResponse);
   rpc GetFavorites (GetFavoritesRequest) returns (GetFavoritesResponse);
 }
 
@@ -28,27 +29,46 @@ message FavoriteResponse {
 
 
 message CreateReviewRequest {
-  int32 tenant_id = 1;
-  int32 landlord_id = 2;
+  int32 user_id = 1;
+  int32 apartment_id = 2;
   int32 rating = 3;
-  string review_text = 4;
-  string created_by_guid = 5;
+  string comment = 4;
+  bool is_anonymous = 5;
+  bool is_public = 6;
+  string created_by_guid = 7;
 }
 
 message ReviewResponse {
   int32 review_id = 1;
-  int32 tenant_id = 2;
-  int32 landlord_id = 3;
+  int32 user_id = 2;
+  int32 apartment_id = 3;
   int32 rating = 4;
-  string review_text = 5;
-  string created_by_guid = 6;
-  google.protobuf.Timestamp created_date = 7;
-  string modified_by_guid = 8;
-  google.protobuf.Timestamp modified_date = 9;
+  string comment = 5;
+  bool is_anonymous = 6;
+  bool is_public = 7;
+  string created_by_guid = 8;
+  google.protobuf.Timestamp created_date = 9;
+  string modified_by_guid = 10;
+  google.protobuf.Timestamp modified_date = 11;
+  UserInfo user = 12;
+}
+
+message UserInfo {
+  string first_name = 1;
+  string last_name = 2;
+  string profile_picture = 3;
 }
 
 message GetReviewByIdRequest {
   int32 review_id = 1;
+}
+
+message GetReviewsByApartmentIdRequest {
+  int32 apartment_id = 1;
+}
+
+message GetReviewsResponse {
+  repeated ReviewResponse reviews = 1;
 }
 
 message GetFavoritesRequest {

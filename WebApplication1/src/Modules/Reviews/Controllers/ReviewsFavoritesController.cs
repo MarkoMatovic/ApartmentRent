@@ -37,10 +37,15 @@ namespace Lander.src.Modules.Reviews.Controllers
         [HttpGet(ApiActionsV1.GetReviewById, Name = nameof(ApiActionsV1.GetReviewById))]
         public async Task<IActionResult> GetReviewById([FromQuery] int reviewId)
         {
-           
-             var response = await _grpcClient.GetReviewByIdAsync(reviewId);
-             return Ok(response);
-           
+            var response = await _grpcClient.GetReviewByIdAsync(reviewId);
+            return Ok(response);
+        }
+
+        [HttpGet("apartment/{apartmentId}")]
+        public async Task<IActionResult> GetReviewsByApartmentId(int apartmentId)
+        {
+            var response = await _grpcClient.GetReviewsByApartmentIdAsync(apartmentId);
+            return Ok(response.Reviews);
         }
     }
 }

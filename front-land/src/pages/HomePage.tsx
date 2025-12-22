@@ -95,7 +95,7 @@ const HomePage: React.FC = () => {
               elevation={3}
               sx={{
                 p: 3,
-                bgcolor: 'white',
+                bgcolor: 'background.paper',
                 borderRadius: 2,
                 maxWidth: 900,
                 mx: 'auto',
@@ -109,6 +109,11 @@ const HomePage: React.FC = () => {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     variant="outlined"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        bgcolor: 'background.default',
+                      },
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} md={3}>
@@ -120,6 +125,11 @@ const HomePage: React.FC = () => {
                       textField: {
                         fullWidth: true,
                         variant: 'outlined',
+                        sx: {
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'background.default',
+                          },
+                        },
                       },
                     }}
                   />
@@ -133,6 +143,11 @@ const HomePage: React.FC = () => {
                       textField: {
                         fullWidth: true,
                         variant: 'outlined',
+                        sx: {
+                          '& .MuiOutlinedInput-root': {
+                            bgcolor: 'background.default',
+                          },
+                        },
                       },
                     }}
                   />
