@@ -11,6 +11,8 @@ public partial class ApartmentImage
 
     public string? ImageUrl { get; set; }
 
+    public bool IsPrimary { get; set; }
+
     public Guid? CreatedByGuid { get; set; }
 
     public DateTime? CreatedDate { get; set; }

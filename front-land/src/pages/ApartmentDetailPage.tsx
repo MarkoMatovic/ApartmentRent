@@ -18,8 +18,10 @@ import { apartmentsApi } from '../shared/api/apartments';
 import { roommatesApi } from '../shared/api/roommates';
 import ApartmentMap from '../components/Map/ApartmentMap';
 import RoommateCard from '../components/Roommate/RoommateCard';
+import ApartmentImageGallery from '../components/Apartment/ApartmentImageGallery';
+import ReviewsSection from '../components/Review/ReviewsSection';
+import StarRating from '../components/Review/StarRating';
 import {
-  Home as HomeIcon,
   LocationOn as LocationIcon,
   Euro as EuroIcon,
   Bed as BedIcon,
@@ -67,11 +69,22 @@ const ApartmentDetailPage: React.FC = () => {
         {apartment.title}
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-        <LocationIcon color="action" />
-        <Typography variant="h6" color="text.secondary">
-          {apartment.address}, {apartment.city}
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LocationIcon color="action" />
+          <Typography variant="h6" color="text.secondary">
+            {apartment.address}, {apartment.city}
+          </Typography>
+        </Box>
+        
+        {apartment.averageRating !== undefined && apartment.reviewCount !== undefined && apartment.reviewCount > 0 && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <StarRating rating={apartment.averageRating} size="medium" showNumber />
+            <Typography variant="body2" color="text.secondary">
+              ({apartment.reviewCount} {t('reviews:reviews', { defaultValue: 'reviews' })})
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       <Typography variant="h5" color="primary" sx={{ mb: 3 }}>
@@ -79,19 +92,13 @@ const ApartmentDetailPage: React.FC = () => {
         {apartment.rent}/mo
       </Typography>
 
-      {/* Image Gallery Placeholder */}
-      <Box
-        sx={{
-          height: 400,
-          bgcolor: 'grey.300',
-          borderRadius: 2,
-          mb: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <HomeIcon sx={{ fontSize: 100, color: 'grey.500' }} />
+      {/* Image Gallery */}
+      <Box sx={{ mb: 4 }}>
+        <ApartmentImageGallery
+          images={apartment.apartmentImages}
+          title={apartment.title}
+          isLookingForRoommate={(apartment as any).isLookingForRoommate}
+        />
       </Box>
 
       <Grid container spacing={3}>
@@ -203,6 +210,11 @@ const ApartmentDetailPage: React.FC = () => {
                 <Chip label={t('apartments:smokingAllowed')} size="small" />
               )}
             </Box>
+          </Paper>
+
+          {/* Reviews Section */}
+          <Paper sx={{ p: 3, mt: 3 }}>
+            <ReviewsSection apartmentId={Number(id)} />
           </Paper>
         </Grid>
 

@@ -32,4 +32,13 @@ public class GrpcServiceClient
         };
         return await _client.GetReviewByIdAsync(request);
     }
+
+    public async Task<GetReviewsResponse> GetReviewsByApartmentIdAsync(int apartmentId)
+    {
+        var request = new GetReviewsByApartmentIdRequest
+        {
+            ApartmentId = apartmentId
+        };
+        return await _client.GetReviewsByApartmentIdAsync(request);
+    }
 }
