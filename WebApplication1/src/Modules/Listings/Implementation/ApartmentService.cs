@@ -168,6 +168,7 @@ public class ApartmentService : IApartmentService
     {
         var apartments = await _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
+            .Include(a => a.ApartmentImages)
             .AsNoTracking()
             .Select(a => new ApartmentDto
             {
@@ -181,7 +182,14 @@ public class ApartmentService : IApartmentService
                 SizeSquareMeters = a.SizeSquareMeters,
                 ApartmentType = a.ApartmentType,
                 IsFurnished = a.IsFurnished,
-                IsImmediatelyAvailable = a.IsImmediatelyAvailable
+                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+                ApartmentImages = a.ApartmentImages.Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
             })
             .ToListAsync();
 
@@ -252,6 +260,7 @@ public class ApartmentService : IApartmentService
         var totalCount = await query.CountAsync();
 
         var items = await query
+            .Include(a => a.ApartmentImages)
             .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
@@ -267,7 +276,14 @@ public class ApartmentService : IApartmentService
                 SizeSquareMeters = a.SizeSquareMeters,
                 ApartmentType = a.ApartmentType,
                 IsFurnished = a.IsFurnished,
-                IsImmediatelyAvailable = a.IsImmediatelyAvailable
+                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+                ApartmentImages = a.ApartmentImages.Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
             })
             .ToListAsync();
 
@@ -283,6 +299,7 @@ public class ApartmentService : IApartmentService
     public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
     {
         var apartment = await _context.Apartments
+            .Include(a => a.ApartmentImages)
             .AsNoTracking()
             .Where(a => a.ApartmentId == apartmentId)
             .FirstOrDefaultAsync();
@@ -322,7 +339,13 @@ public class ApartmentService : IApartmentService
             DepositAmount = apartment.DepositAmount,
             MinimumStayMonths = apartment.MinimumStayMonths,
             MaximumStayMonths = apartment.MaximumStayMonths,
-            IsImmediatelyAvailable = apartment.IsImmediatelyAvailable
+            IsImmediatelyAvailable = apartment.IsImmediatelyAvailable,
+            ApartmentImages = apartment.ApartmentImages?.Select(img => new ApartmentImageDto
+            {
+                ImageId = img.ImageId,
+                ApartmentId = img.ApartmentId,
+                ImageUrl = img.ImageUrl
+            }).ToList()
         };
 
     

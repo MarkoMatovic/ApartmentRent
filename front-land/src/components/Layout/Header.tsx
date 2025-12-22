@@ -66,9 +66,9 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await logout();
     handleMenuClose();
-    navigate('/');
+    await logout();
+    navigate('/', { replace: true });
   };
 
   const handleSearch = () => {

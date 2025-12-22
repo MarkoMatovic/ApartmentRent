@@ -10,9 +10,15 @@ public class Review
 
     public int? LandlordId { get; set; }
 
+    public int? ApartmentId { get; set; }
+
     public int? Rating { get; set; }
 
     public string? ReviewText { get; set; }
+
+    public bool IsAnonymous { get; set; } = false;
+
+    public bool IsPublic { get; set; } = true;
 
     public Guid? CreatedByGuid { get; set; }
 

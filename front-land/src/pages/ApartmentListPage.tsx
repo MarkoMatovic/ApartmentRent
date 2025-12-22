@@ -10,11 +10,6 @@ import {
   FormControl,
   InputLabel,
   Button,
-  Card,
-  CardMedia,
-  CardContent,
-  CardActions,
-  Chip,
   Skeleton,
 } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -22,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentDto, ApartmentType } from '../shared/types/apartment';
-import { Home as HomeIcon, LocationOn as LocationIcon } from '@mui/icons-material';
+import ApartmentCard from '../components/Apartment/ApartmentCard';
 
 const ApartmentListPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
@@ -161,56 +156,7 @@ const ApartmentListPage: React.FC = () => {
             <Grid container spacing={3}>
               {sortedApartments.map((apartment) => (
                 <Grid item xs={12} sm={6} key={apartment.apartmentId}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      cursor: 'pointer',
-                      '&:hover': { boxShadow: 4 },
-                    }}
-                    onClick={() => navigate(`/apartments/${apartment.apartmentId}`)}
-                  >
-                    <CardMedia
-                      component="div"
-                      sx={{
-                        height: 200,
-                        bgcolor: 'grey.300',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <HomeIcon sx={{ fontSize: 60, color: 'grey.500' }} />
-                    </CardMedia>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" component="h2" gutterBottom>
-                        {apartment.title}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <LocationIcon fontSize="small" color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {apartment.address}, {apartment.city}
-                        </Typography>
-                      </Box>
-                      <Typography variant="h5" color="primary" sx={{ mt: 1 }}>
-                        €{apartment.rent}/mo
-                      </Typography>
-                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {apartment.isFurnished && (
-                          <Chip label={t('apartments:furnished')} size="small" />
-                        )}
-                        {apartment.isImmediatelyAvailable && (
-                          <Chip label={t('apartments:immediatelyAvailable')} size="small" color="success" />
-                        )}
-                      </Box>
-                    </CardContent>
-                    <CardActions>
-                      <Button size="small" color="secondary">
-                        {t('view')}
-                      </Button>
-                    </CardActions>
-                  </Card>
+                  <ApartmentCard apartment={apartment} />
                 </Grid>
               ))}
             </Grid>

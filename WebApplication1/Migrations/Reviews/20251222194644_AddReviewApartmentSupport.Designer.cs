@@ -4,6 +4,7 @@ using Lander;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lander.Migrations.Reviews
 {
     [DbContext(typeof(ReviewsContext))]
-    partial class ReviewsContextModelSnapshot : ModelSnapshot
+    [Migration("20251222194644_AddReviewApartmentSupport")]
+    partial class AddReviewApartmentSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
