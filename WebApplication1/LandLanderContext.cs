@@ -489,6 +489,7 @@ public class ReviewsContext : DbContext, IUnitofWork
     private IDbContextTransaction? _currentTransaction;
     public DbSet<Review> Reviews { get; set; }
     public DbSet<Favorite> Favorites { get; set; }
+    public DbSet<User> Users { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -559,6 +560,8 @@ public class ReviewsContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.ReviewText).HasColumnType("text");
             entity.Property(e => e.Rating).HasMaxLength(5);
+            entity.Property(e => e.IsAnonymous).HasDefaultValue(false);
+            entity.Property(e => e.IsPublic).HasDefaultValue(true);
 
             entity.HasOne(d => d.Landlord).WithMany(p => p.ReviewLandlords)
                 .HasForeignKey(d => d.LandlordId)
@@ -592,6 +595,14 @@ public class ReviewsContext : DbContext, IUnitofWork
             entity.HasIndex(e => new { e.UserId, e.ApartmentId }).IsUnique();
             entity.HasIndex(e => new { e.UserId, e.RoommateId }).IsUnique();
             entity.HasIndex(e => new { e.UserId, e.SearchRequestId }).IsUnique();
+        });
+
+        // Map User entity to existing UsersRoles.Users table (cross-context reference)
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("Users", "UsersRoles");
+            entity.HasKey(e => e.UserId);
+            entity.Metadata.SetIsTableExcludedFromMigrations(true); // Don't create/modify this table in migrations
         });
     }
 }

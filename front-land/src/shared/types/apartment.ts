@@ -59,6 +59,10 @@ export interface ApartmentDto {
   apartmentType?: ApartmentType;
   isFurnished?: boolean;
   isImmediatelyAvailable?: boolean;
+  apartmentImages?: ApartmentImage[];
+  isLookingForRoommate?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface GetApartmentDto {
@@ -89,6 +93,10 @@ export interface GetApartmentDto {
   minimumStayMonths?: number;
   maximumStayMonths?: number;
   isImmediatelyAvailable: boolean;
+  apartmentImages?: ApartmentImage[];
+  isLookingForRoommate?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface ApartmentFilters {
