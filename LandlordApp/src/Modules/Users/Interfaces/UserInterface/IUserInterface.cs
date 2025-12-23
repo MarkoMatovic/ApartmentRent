@@ -14,4 +14,5 @@ public interface IUserInterface
     Task<bool> DeleteUserAsync(DeleteUserInputDto deleteUserInputDto);
     Task ChangePasswordAsync(ChangePasswordInputDto changePasswordInputDto);
     Task<User?> GetUserByGuidAsync(Guid userGuid);
+    Task UpdateRoommateStatusAsync(UpdateRoommateStatusInputDto updateRoommateStatusInputDto);
 }

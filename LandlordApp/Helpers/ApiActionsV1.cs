@@ -15,6 +15,7 @@ public static class ApiActionsV1
     public const string DeactivateUser = "deactivate-user";
     public const string ReactivateUser = "reactivate-user";
     public const string ChangePassword = "change-password";
+    public const string UpdateRoommateStatus = "update-roommate-status";
     #endregion
 
     #region ApartmentActions

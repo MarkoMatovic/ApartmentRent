@@ -42,6 +42,7 @@
   "sortPriceDesc": "Preis (hoch bis niedrig)",
   "sortDateNewest": "Datum (neueste)",
   "sortDateOldest": "Datum (älteste)",
-  "sortRooms": "Anzahl der Zimmer"
+  "sortRooms": "Anzahl der Zimmer",
+  "lookingForRoommate": "Suche Mitbewohner"
 }
 

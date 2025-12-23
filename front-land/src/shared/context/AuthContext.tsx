@@ -8,11 +8,44 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: User) => void;
   isAuthenticated: boolean;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Helper function to decode JWT token
+const decodeToken = (token: string): User | null => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    
+    const payload = JSON.parse(jsonPayload);
+    
+    // Map JWT claims to User object
+    return {
+      userId: parseInt(payload.userId) || 0,
+      userGuid: payload.sub || '',
+      firstName: payload.given_name || '',
+      lastName: payload.family_name || '',
+      email: payload.email || '',
+      phoneNumber: payload.phone_number,
+      isActive: payload.isActive === 'true' || payload.isActive === true,
+      isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
+      userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
+    };
+  } catch (error) {
+    console.error('Failed to decode token:', error);
+    return null;
+  }
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,9 +57,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const storedToken = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('user');
     
-    if (storedToken && storedUser) {
+    if (storedToken) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        // Decode token to get user data
+        const decodedUser = decodeToken(storedToken);
+        if (decodedUser) {
+          setUser(decodedUser);
+          localStorage.setItem('user', JSON.stringify(decodedUser));
+        }
+      }
     }
     setLoading(false);
   }, []);
@@ -37,8 +79,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setToken(token);
       localStorage.setItem('authToken', token);
       
-      // Fetch user data if needed (you might need to add this endpoint)
-      // For now, we'll just store the token
+      // Decode token to extract user data
+      const decodedUser = decodeToken(token);
+      if (decodedUser) {
+        setUser(decodedUser);
+        localStorage.setItem('user', JSON.stringify(decodedUser));
+      }
     } catch (error) {
       throw error;
     }
@@ -67,12 +113,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const value: AuthContextType = {
     user,
     token,
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!token,
     loading,
   };
