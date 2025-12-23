@@ -32,6 +32,8 @@
   "markAsRead": "Als gelesen markieren",
   "darkMode": "Dunkler Modus",
   "lightMode": "Heller Modus",
-  "language": "Sprache"
+  "language": "Sprache",
+  "lookingForRoommate": "Suche Mitbewohner",
+  "lookingForRoommateDescription": "Aktivieren Sie dies, um anderen zu zeigen, dass Sie einen Mitbewohner suchen"
 }
 

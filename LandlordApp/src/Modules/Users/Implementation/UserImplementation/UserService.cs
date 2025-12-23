@@ -70,8 +70,17 @@ public class UserService : IUserInterface
             
             return new UserRegistrationDto
         {
-            FirstName = userRegistrationInputDto.FirstName,
-            Email = userRegistrationInputDto.Email,
+            UserId = user.UserId,
+            UserGuid = user.UserGuid.ToString(),
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            ProfilePicture = user.ProfilePicture,
+            UserRoleId = user.UserRoleId,
+            DateOfBirth = user.DateOfBirth,
+            IsActive = user.IsActive,
+            IsLookingForRoommate = user.IsLookingForRoommate
             };
         }
         catch
@@ -184,6 +193,27 @@ public class UserService : IUserInterface
     {
         return await _context.Users
             .FirstOrDefaultAsync(u => u.UserGuid == userGuid);
+    }
+
+    public async Task UpdateRoommateStatusAsync(UpdateRoommateStatusInputDto updateRoommateStatusInputDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == updateRoommateStatusInputDto.UserGuid);
+        if (user != null)
+        {
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                user.IsLookingForRoommate = updateRoommateStatusInputDto.IsLookingForRoommate;
+                user.ModifiedDate = DateTime.UtcNow;
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
+        }
     }
 
 }

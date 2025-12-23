@@ -26,6 +26,8 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
 
         public string? ProfilePicture { get; set; }
 
+        public bool IsLookingForRoommate { get; set; } = false;
+
         public int? UserRoleId { get; set; }
 
         public Guid? CreatedByGuid { get; set; }

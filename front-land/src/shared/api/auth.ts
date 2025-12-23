@@ -23,5 +23,9 @@ export const authApi = {
   resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
     await apiClient.post(`/api/v1/auth/reset-password`, data);
   },
+
+  updateRoommateStatus: async (userGuid: string, isLookingForRoommate: boolean): Promise<void> => {
+    await apiClient.post(`/api/v1/auth/update-roommate-status`, { userGuid, isLookingForRoommate });
+  },
 };
 

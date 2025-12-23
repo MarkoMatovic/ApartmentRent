@@ -32,6 +32,8 @@
   "markAsRead": "Označi kao pročitano",
   "darkMode": "Tamni režim",
   "lightMode": "Svetli režim",
-  "language": "Jezik"
+  "language": "Jezik",
+  "lookingForRoommate": "Tražim cimera",
+  "lookingForRoommateDescription": "Uključite ovo da biste pokazali drugima da tražite cimera"
 }
 

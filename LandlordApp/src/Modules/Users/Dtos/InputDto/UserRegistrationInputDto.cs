@@ -39,5 +39,10 @@
         public string NewPassword { get; set; } = string.Empty;
     }
 
+    public class UpdateRoommateStatusInputDto
+    {
+        public Guid UserGuid { get; set; }
+        public bool IsLookingForRoommate { get; set; }
+    }
 
 }
