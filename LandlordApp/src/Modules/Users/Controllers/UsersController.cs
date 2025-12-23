@@ -70,5 +70,21 @@ namespace Lander.src.Modules.Users.Controllers
             await _userInterface.UpdateRoommateStatusAsync(updateRoommateStatusInputDto);
             return Ok("Roommate status updated successfully.");
         }
+
+        [HttpGet(ApiActionsV1.GetUserProfile, Name = nameof(ApiActionsV1.GetUserProfile))]
+        public async Task<ActionResult<UserProfileDto>> GetUserProfile([FromRoute] int userId)
+        {
+            var profile = await _userInterface.GetUserProfileAsync(userId);
+            if (profile == null)
+                return NotFound("User not found");
+            return Ok(profile);
+        }
+
+        [HttpPut(ApiActionsV1.UpdateUserProfile, Name = nameof(ApiActionsV1.UpdateUserProfile))]
+        public async Task<ActionResult<UserProfileDto>> UpdateUserProfile([FromRoute] int userId, [FromBody] UserProfileUpdateInputDto updateDto)
+        {
+            var profile = await _userInterface.UpdateUserProfileAsync(userId, updateDto);
+            return Ok(profile);
+        }
     }
 }

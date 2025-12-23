@@ -15,4 +15,6 @@ public interface IUserInterface
     Task ChangePasswordAsync(ChangePasswordInputDto changePasswordInputDto);
     Task<User?> GetUserByGuidAsync(Guid userGuid);
     Task UpdateRoommateStatusAsync(UpdateRoommateStatusInputDto updateRoommateStatusInputDto);
+    Task<UserProfileDto?> GetUserProfileAsync(int userId);
+    Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto);
 }

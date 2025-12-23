@@ -41,4 +41,31 @@ public class GrpcServiceClient
         };
         return await _client.GetReviewsByApartmentIdAsync(request);
     }
+
+    public async Task<DeleteResponse> DeleteReviewAsync(int reviewId)
+    {
+        var request = new DeleteReviewRequest
+        {
+            ReviewId = reviewId
+        };
+        return await _client.DeleteReviewAsync(request);
+    }
+
+    public async Task<DeleteResponse> DeleteFavoriteAsync(int favoriteId)
+    {
+        var request = new DeleteFavoriteRequest
+        {
+            FavoriteId = favoriteId
+        };
+        return await _client.DeleteFavoriteAsync(request);
+    }
+
+    public async Task<GetFavoritesResponse> GetUserFavoritesAsync(int userId)
+    {
+        var request = new GetUserFavoritesRequest
+        {
+            UserId = userId
+        };
+        return await _client.GetUserFavoritesAsync(request);
+    }
 }
