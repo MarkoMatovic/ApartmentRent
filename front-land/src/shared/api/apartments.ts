@@ -25,14 +25,16 @@ export const apartmentsApi = {
     
     console.log('[apartmentsApi] Sending params:', params);
     
-    const response = await apiClient.get<ApartmentDto[]>(`/api/v1/rent/get-all-apartments`, {
+    const response = await apiClient.get<any>(`/api/v1/rent/get-all-apartments`, {
       params,
     });
     
-    console.log('[apartmentsApi] Received apartments count:', response.data.length);
-    console.log('[apartmentsApi] First 3 apartments:', response.data.slice(0, 3).map(a => ({ id: a.apartmentId, title: a.title, rent: a.rent })));
+    const apartments = response.data.items || response.data;
     
-    return response.data;
+    console.log('[apartmentsApi] Received apartments count:', apartments.length);
+    console.log('[apartmentsApi] First 3 apartments:', apartments.slice(0, 3).map((a: any) => ({ id: a.apartmentId, title: a.title, rent: a.rent })));
+    
+    return apartments;
   },
 
   getById: async (id: number): Promise<GetApartmentDto> => {

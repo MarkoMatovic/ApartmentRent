@@ -164,12 +164,14 @@ public class ApartmentService : IApartmentService
         return true;
     }
 
-    public async Task<IEnumerable<ApartmentDto>> GetAllApartmentsAsync()
+    public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync()
     {
         var apartments = await _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
             .AsNoTracking()
             .AsSplitQuery()
+            .OrderBy(a => a.Rent)
+            .Take(100)
             .Select(a => new ApartmentDto
             {
                 ApartmentId = a.ApartmentId,
@@ -186,6 +188,7 @@ public class ApartmentService : IApartmentService
                 ApartmentImages = a.ApartmentImages
                     .Where(img => !img.IsDeleted)
                     .OrderByDescending(img => img.IsPrimary)
+                    .Take(5)
                     .Select(img => new ApartmentImageDto
                     {
                         ImageId = img.ImageId,
@@ -196,7 +199,13 @@ public class ApartmentService : IApartmentService
             })
             .ToListAsync();
 
-        return apartments;
+        return new PagedResult<ApartmentDto>
+        {
+            Items = apartments,
+            TotalCount = apartments.Count,
+            Page = 1,
+            PageSize = 100
+        };
     }
 
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
