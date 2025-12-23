@@ -38,6 +38,22 @@ namespace Lander.src.Notifications.Controllers
             return Ok();
         }
 
+        [HttpDelete(ApiActionsV1.DeleteNotification, Name = nameof(ApiActionsV1.DeleteNotification))]
+        public async Task<ActionResult<bool>> DeleteNotification([FromRoute] int id)
+        {
+            var result = await _notificationService.DeleteNotificationAsync(id);
+            if (!result)
+                return NotFound("Notification not found");
+            return Ok(result);
+        }
+
+        [HttpPost(ApiActionsV1.MarkAllAsRead, Name = nameof(ApiActionsV1.MarkAllAsRead))]
+        public async Task<ActionResult<bool>> MarkAllAsRead([FromBody] int userId)
+        {
+            var result = await _notificationService.MarkAllAsReadAsync(userId);
+            return Ok(result);
+        }
+
 
     }
 }

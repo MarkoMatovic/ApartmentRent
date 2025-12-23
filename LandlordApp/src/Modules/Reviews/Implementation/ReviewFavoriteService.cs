@@ -207,4 +207,96 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
         response.Favorites.AddRange(favorites);
         return response;
     }
+
+    public override async Task<DeleteResponse> DeleteReview(DeleteReviewRequest request, ServerCallContext context)
+    {
+        var review = await _context.Reviews.FindAsync(request.ReviewId);
+        
+        if (review == null)
+        {
+            return new DeleteResponse
+            {
+                Success = false,
+                Message = "Review not found"
+            };
+        }
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Reviews.Remove(review);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return new DeleteResponse
+        {
+            Success = true,
+            Message = "Review deleted successfully"
+        };
+    }
+
+    public override async Task<DeleteResponse> DeleteFavorite(DeleteFavoriteRequest request, ServerCallContext context)
+    {
+        var favorite = await _context.Favorites.FindAsync(request.FavoriteId);
+        
+        if (favorite == null)
+        {
+            return new DeleteResponse
+            {
+                Success = false,
+                Message = "Favorite not found"
+            };
+        }
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Favorites.Remove(favorite);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return new DeleteResponse
+        {
+            Success = true,
+            Message = "Favorite deleted successfully"
+        };
+    }
+
+    public override async Task<GetFavoritesResponse> GetUserFavorites(GetUserFavoritesRequest request, ServerCallContext context)
+    {
+        var favorites = await _context.Favorites
+            .Where(f => f.UserId == request.UserId)
+            .OrderByDescending(f => f.CreatedDate)
+            .Select(f => new FavoriteResponse
+            {
+                FavoriteId = f.FavoriteId,
+                UserId = (int)f.UserId,
+                ApartmentId = (int)f.ApartmentId,
+                CreatedByGuid = f.CreatedByGuid.ToString(),
+                CreatedDate = f.CreatedDate.HasValue
+                    ? Timestamp.FromDateTime(f.CreatedDate.Value.ToUniversalTime())
+                    : null,
+                ModifiedByGuid = f.ModifiedByGuid.ToString(),
+                ModifiedDate = f.ModifiedDate.HasValue
+                    ? Timestamp.FromDateTime(f.ModifiedDate.Value.ToUniversalTime())
+                    : null
+            })
+            .ToListAsync();
+
+        var response = new GetFavoritesResponse();
+        response.Favorites.AddRange(favorites);
+        return response;
+    }
 }
