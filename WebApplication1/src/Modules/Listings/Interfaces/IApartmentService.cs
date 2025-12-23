@@ -8,7 +8,7 @@ public interface IApartmentService
 {
     Task<ApartmentDto> CreateApartmentAsync(ApartmentInputDto apartmentInputDto);
     Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId);
-    Task<IEnumerable<ApartmentDto>> GetAllApartmentsAsync();
+    Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync();
     Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters);
     Task<bool> DeleteApartmentAsync(int apartmentId);
     Task<bool> ActivateApartmentAsync(int apartmentId);
