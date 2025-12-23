@@ -15,10 +15,12 @@ export interface Review {
 }
 
 export interface CreateReviewRequest {
+  userId: number;
   apartmentId: number;
   rating: number;
   comment?: string;
   isAnonymous?: boolean;
   isPublic?: boolean;
+  createdByGuid: string;
 }
 
