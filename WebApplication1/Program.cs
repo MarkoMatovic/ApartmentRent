@@ -65,12 +65,48 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddGrpc();
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(builder => builder.Cache());
+    options.AddPolicy("ApartmentsList", builder => 
+        builder.Expire(TimeSpan.FromMinutes(5))
+               .SetVaryByQuery(new[] { "City", "MinRent", "MaxRent", "Page", "PageSize", 
+                                       "NumberOfRooms", "ApartmentType", "IsFurnished", 
+                                       "IsPetFriendly", "IsSmokingAllowed", "HasParking", 
+                                       "HasBalcony", "IsImmediatelyAvailable" })
+               .Tag("apartments"));
+    options.AddPolicy("ApartmentDetail", builder => 
+        builder.Expire(TimeSpan.FromMinutes(10))
+               .SetVaryByRouteValue(new[] { "id" })
+               .Tag("apartments"));
+});
 
 builder.Services.AddScoped<IUserInterface, UserService>();
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
@@ -138,17 +174,17 @@ builder.Services.AddSwaggerGen(c =>
 });
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// CORS must be before UseAuthentication and UseAuthorization
+app.UseResponseCompression();
+app.UseOutputCache();
+
 app.UseCors("AllowFrontend");
 
-// Enable HTTPS redirection for HTTPS mode
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

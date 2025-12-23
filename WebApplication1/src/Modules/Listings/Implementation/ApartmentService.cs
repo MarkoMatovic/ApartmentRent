@@ -164,12 +164,14 @@ public class ApartmentService : IApartmentService
         return true;
     }
 
-    public async Task<IEnumerable<ApartmentDto>> GetAllApartmentsAsync()
+    public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync()
     {
         var apartments = await _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
-            .Include(a => a.ApartmentImages)
             .AsNoTracking()
+            .AsSplitQuery()
+            .OrderBy(a => a.Rent)
+            .Take(100)
             .Select(a => new ApartmentDto
             {
                 ApartmentId = a.ApartmentId,
@@ -183,37 +185,52 @@ public class ApartmentService : IApartmentService
                 ApartmentType = a.ApartmentType,
                 IsFurnished = a.IsFurnished,
                 IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-                ApartmentImages = a.ApartmentImages.Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList()
+                ApartmentImages = a.ApartmentImages
+                    .Where(img => !img.IsDeleted)
+                    .OrderByDescending(img => img.IsPrimary)
+                    .Take(5)
+                    .Select(img => new ApartmentImageDto
+                    {
+                        ImageId = img.ImageId,
+                        ApartmentId = img.ApartmentId,
+                        ImageUrl = img.ImageUrl,
+                        IsPrimary = img.IsPrimary
+                    }).ToList()
             })
             .ToListAsync();
 
-        return apartments;
+        return new PagedResult<ApartmentDto>
+        {
+            Items = apartments,
+            TotalCount = apartments.Count,
+            Page = 1,
+            PageSize = 100
+        };
     }
 
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
+        Console.WriteLine($"[ApartmentService] Filters received - City: '{filters.City}', MinRent: {filters.MinRent}, MaxRent: {filters.MaxRent}, Page: {filters.Page}, PageSize: {filters.PageSize}");
+        
         var query = _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
             .AsNoTracking();
 
         if (!string.IsNullOrEmpty(filters.City))
         {
+            Console.WriteLine($"[ApartmentService] Applying City filter: {filters.City}");
             query = query.Where(a => a.City != null && a.City.Contains(filters.City));
         }
 
         if (filters.MinRent.HasValue)
         {
+            Console.WriteLine($"[ApartmentService] Applying MinRent filter: {filters.MinRent.Value}");
             query = query.Where(a => a.Rent >= filters.MinRent.Value);
         }
 
         if (filters.MaxRent.HasValue)
         {
+            Console.WriteLine($"[ApartmentService] Applying MaxRent filter: {filters.MaxRent.Value}");
             query = query.Where(a => a.Rent <= filters.MaxRent.Value);
         }
 
@@ -260,10 +277,10 @@ public class ApartmentService : IApartmentService
         var totalCount = await query.CountAsync();
 
         var items = await query
-            .Include(a => a.ApartmentImages)
             .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
+            .AsSplitQuery()
             .Select(a => new ApartmentDto
             {
                 ApartmentId = a.ApartmentId,
@@ -277,13 +294,17 @@ public class ApartmentService : IApartmentService
                 ApartmentType = a.ApartmentType,
                 IsFurnished = a.IsFurnished,
                 IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-                ApartmentImages = a.ApartmentImages.Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList()
+                ApartmentImages = a.ApartmentImages
+                    .Where(img => !img.IsDeleted)
+                    .OrderByDescending(img => img.IsPrimary)
+                    .Take(5)
+                    .Select(img => new ApartmentImageDto
+                    {
+                        ImageId = img.ImageId,
+                        ApartmentId = img.ApartmentId,
+                        ImageUrl = img.ImageUrl,
+                        IsPrimary = img.IsPrimary
+                    }).ToList()
             })
             .ToListAsync();
 

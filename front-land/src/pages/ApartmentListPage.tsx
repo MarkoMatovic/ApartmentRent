@@ -26,8 +26,8 @@ const ApartmentListPage: React.FC = () => {
   
   const [filters, setFilters] = useState({
     city: searchParams.get('location') || '',
-    minPrice: '',
-    maxPrice: '',
+    minRent: '',
+    maxRent: '',
     numberOfRooms: '',
     apartmentType: '',
     isFurnished: '',
@@ -87,8 +87,8 @@ const ApartmentListPage: React.FC = () => {
               fullWidth
               label={`${t('apartments:price')} (Min)`}
               type="number"
-              value={filters.minPrice}
-              onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+              value={filters.minRent}
+              onChange={(e) => handleFilterChange('minRent', e.target.value)}
               margin="normal"
               size="small"
             />
@@ -97,8 +97,8 @@ const ApartmentListPage: React.FC = () => {
               fullWidth
               label={`${t('apartments:price')} (Max)`}
               type="number"
-              value={filters.maxPrice}
-              onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+              value={filters.maxRent}
+              onChange={(e) => handleFilterChange('maxRent', e.target.value)}
               margin="normal"
               size="small"
             />
