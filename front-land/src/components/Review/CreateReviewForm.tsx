@@ -28,7 +28,7 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation(['common', 'reviews']);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
   
   const [isOpen, setIsOpen] = useState(false);
@@ -61,12 +61,19 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
       return;
     }
 
+    if (!user) {
+      setError(t('reviews:userNotFound', { defaultValue: 'User not authenticated' }));
+      return;
+    }
+
     createReviewMutation.mutate({
+      userId: user.userId,
       apartmentId,
       rating,
       comment: comment.trim() || undefined,
       isAnonymous,
       isPublic,
+      createdByGuid: user.userGuid,
     });
   };
 
