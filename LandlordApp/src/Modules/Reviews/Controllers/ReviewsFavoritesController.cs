@@ -16,7 +16,7 @@ namespace Lander.src.Modules.Reviews.Controllers
         private readonly GrpcServiceClient _grpcClient;
         public ReviewsFavoritesController(IConfiguration configuration)
         {
-            string grpcServerUrl = configuration["Kestrel:Endpoints:Grpc:Url"];
+            string grpcServerUrl = configuration["GrpcServerUrl"];
             _grpcClient = new GrpcServiceClient(grpcServerUrl);
         }
 

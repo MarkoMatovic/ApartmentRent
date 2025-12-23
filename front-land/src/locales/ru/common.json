@@ -32,6 +32,8 @@
   "markAsRead": "Отметить как прочитанное",
   "darkMode": "Темный режим",
   "lightMode": "Светлый режим",
-  "language": "Язык"
+  "language": "Язык",
+  "lookingForRoommate": "Ищу соседа",
+  "lookingForRoommateDescription": "Включите это, чтобы показать другим, что вы ищете соседа"
 }
 

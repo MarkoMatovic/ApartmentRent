@@ -32,6 +32,8 @@
   "markAsRead": "Mark as read",
   "darkMode": "Dark Mode",
   "lightMode": "Light Mode",
-  "language": "Language"
+  "language": "Language",
+  "lookingForRoommate": "Looking for Roommate",
+  "lookingForRoommateDescription": "Enable this to show others that you're looking for a roommate"
 }
 

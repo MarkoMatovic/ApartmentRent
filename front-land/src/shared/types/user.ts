@@ -10,6 +10,7 @@ export interface User {
   userRole?: UserRole;
   dateOfBirth?: string;
   isActive: boolean;
+  isLookingForRoommate?: boolean;
 }
 
 export interface UserRole {
