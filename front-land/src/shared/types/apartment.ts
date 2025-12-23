@@ -101,16 +101,18 @@ export interface GetApartmentDto {
 
 export interface ApartmentFilters {
   city?: string;
-  minPrice?: number;
-  maxPrice?: number;
+  minRent?: number;
+  maxRent?: number;
   numberOfRooms?: number;
   apartmentType?: ApartmentType;
   isFurnished?: boolean;
   hasParking?: boolean;
   hasBalcony?: boolean;
   isPetFriendly?: boolean;
-  moveInDate?: string;
-  moveOutDate?: string;
+  isSmokingAllowed?: boolean;
+  isImmediatelyAvailable?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface ApartmentSearchParams {

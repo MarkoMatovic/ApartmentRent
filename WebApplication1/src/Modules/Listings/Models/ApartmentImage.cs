@@ -13,6 +13,8 @@ public partial class ApartmentImage
 
     public bool IsPrimary { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public Guid? CreatedByGuid { get; set; }
 
     public DateTime? CreatedDate { get; set; }
