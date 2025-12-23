@@ -63,5 +63,12 @@ namespace Lander.src.Modules.Users.Controllers
             await _userInterface.ReactivateUserAsync(reactivateUserInputDto);
             return Ok("User reactivated successfully.");
         }
+
+        [HttpPost(ApiActionsV1.UpdateRoommateStatus, Name = nameof(ApiActionsV1.UpdateRoommateStatus))]
+        public async Task<IActionResult> UpdateRoommateStatus([FromBody] UpdateRoommateStatusInputDto updateRoommateStatusInputDto)
+        {
+            await _userInterface.UpdateRoommateStatusAsync(updateRoommateStatusInputDto);
+            return Ok("Roommate status updated successfully.");
+        }
     }
 }

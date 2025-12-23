@@ -16,15 +16,32 @@ public sealed class TokenProvider(IConfiguration configuration)
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        
+        var claims = new List<Claim>
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.UserGuid.ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
+            new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName),
+            new Claim(ClaimTypes.Role, user.UserRole?.RoleName ?? "Guest"),
+            new Claim("userId", user.UserId.ToString()),
+            new Claim("isActive", user.IsActive.ToString()),
+            new Claim("isLookingForRoommate", user.IsLookingForRoommate.ToString())
+        };
+
+        if (!string.IsNullOrEmpty(user.PhoneNumber))
+        {
+            claims.Add(new Claim("phone_number", user.PhoneNumber));
+        }
+
+        if (user.UserRoleId.HasValue)
+        {
+            claims.Add(new Claim("userRoleId", user.UserRoleId.Value.ToString()));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new System.Security.Claims.ClaimsIdentity(
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserGuid.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.UserRole?.RoleName ?? "Guest")
-
-            ]),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(60),
             SigningCredentials = credentials,
             Issuer = configuration["Jwt:Issuer"],

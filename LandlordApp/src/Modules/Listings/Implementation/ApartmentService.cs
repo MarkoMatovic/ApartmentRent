@@ -5,6 +5,7 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
+using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
@@ -13,11 +14,13 @@ namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
     private readonly ListingsContext _context;
+    private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public ApartmentService(ListingsContext context, IHttpContextAccessor httpContextAccessor)
+    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
+        _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -172,37 +175,51 @@ public class ApartmentService : IApartmentService
             .AsSplitQuery()
             .OrderBy(a => a.Rent)
             .Take(100)
-            .Select(a => new ApartmentDto
+            .Select(a => new
             {
-                ApartmentId = a.ApartmentId,
-                Title = a.Title,
-                Rent = a.Rent,
-                Address = a.Address,
-                City = a.City ?? string.Empty,
-                Latitude = a.Latitude,
-                Longitude = a.Longitude,
-                SizeSquareMeters = a.SizeSquareMeters,
-                ApartmentType = a.ApartmentType,
-                IsFurnished = a.IsFurnished,
-                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-                ApartmentImages = a.ApartmentImages
-                    .Where(img => !img.IsDeleted)
-                    .OrderByDescending(img => img.IsPrimary)
-                    .Take(5)
-                    .Select(img => new ApartmentImageDto
-                    {
-                        ImageId = img.ImageId,
-                        ApartmentId = img.ApartmentId,
-                        ImageUrl = img.ImageUrl,
-                        IsPrimary = img.IsPrimary
-                    }).ToList()
+                Apartment = a,
+                LandlordId = a.LandlordId
             })
             .ToListAsync();
 
+        var landlordIds = apartments.Where(a => a.LandlordId.HasValue).Select(a => a.LandlordId!.Value).Distinct().ToList();
+        
+        var landlordLookingForRoommate = await _usersContext.Users
+            .Where(u => landlordIds.Contains(u.UserId) && u.IsLookingForRoommate)
+            .Select(u => u.UserId)
+            .ToListAsync();
+
+        var apartmentDtos = apartments.Select(a => new ApartmentDto
+        {
+            ApartmentId = a.Apartment.ApartmentId,
+            Title = a.Apartment.Title,
+            Rent = a.Apartment.Rent,
+            Address = a.Apartment.Address,
+            City = a.Apartment.City ?? string.Empty,
+            Latitude = a.Apartment.Latitude,
+            Longitude = a.Apartment.Longitude,
+            SizeSquareMeters = a.Apartment.SizeSquareMeters,
+            ApartmentType = a.Apartment.ApartmentType,
+            IsFurnished = a.Apartment.IsFurnished,
+            IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
+            IsLookingForRoommate = a.LandlordId.HasValue && landlordLookingForRoommate.Contains(a.LandlordId.Value),
+            ApartmentImages = a.Apartment.ApartmentImages
+                .Where(img => !img.IsDeleted)
+                .OrderByDescending(img => img.IsPrimary)
+                .Take(5)
+                .Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
+        }).ToList();
+
         return new PagedResult<ApartmentDto>
         {
-            Items = apartments,
-            TotalCount = apartments.Count,
+            Items = apartmentDtos,
+            TotalCount = apartmentDtos.Count,
             Page = 1,
             PageSize = 100
         };
@@ -276,37 +293,51 @@ public class ApartmentService : IApartmentService
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
+        var apartments = await query
             .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
             .AsSplitQuery()
-            .Select(a => new ApartmentDto
+            .Select(a => new
             {
-                ApartmentId = a.ApartmentId,
-                Title = a.Title,
-                Rent = a.Rent,
-                Address = a.Address,
-                City = a.City ?? string.Empty,
-                Latitude = a.Latitude,
-                Longitude = a.Longitude,
-                SizeSquareMeters = a.SizeSquareMeters,
-                ApartmentType = a.ApartmentType,
-                IsFurnished = a.IsFurnished,
-                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-                ApartmentImages = a.ApartmentImages
-                    .Where(img => !img.IsDeleted)
-                    .OrderByDescending(img => img.IsPrimary)
-                    .Take(5)
-                    .Select(img => new ApartmentImageDto
-                    {
-                        ImageId = img.ImageId,
-                        ApartmentId = img.ApartmentId,
-                        ImageUrl = img.ImageUrl,
-                        IsPrimary = img.IsPrimary
-                    }).ToList()
+                Apartment = a,
+                LandlordId = a.LandlordId
             })
             .ToListAsync();
+
+        var landlordIds = apartments.Where(a => a.LandlordId.HasValue).Select(a => a.LandlordId!.Value).Distinct().ToList();
+        
+        var landlordLookingForRoommate = await _usersContext.Users
+            .Where(u => landlordIds.Contains(u.UserId) && u.IsLookingForRoommate)
+            .Select(u => u.UserId)
+            .ToListAsync();
+
+        var items = apartments.Select(a => new ApartmentDto
+        {
+            ApartmentId = a.Apartment.ApartmentId,
+            Title = a.Apartment.Title,
+            Rent = a.Apartment.Rent,
+            Address = a.Apartment.Address,
+            City = a.Apartment.City ?? string.Empty,
+            Latitude = a.Apartment.Latitude,
+            Longitude = a.Apartment.Longitude,
+            SizeSquareMeters = a.Apartment.SizeSquareMeters,
+            ApartmentType = a.Apartment.ApartmentType,
+            IsFurnished = a.Apartment.IsFurnished,
+            IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
+            IsLookingForRoommate = a.LandlordId.HasValue && landlordLookingForRoommate.Contains(a.LandlordId.Value),
+            ApartmentImages = a.Apartment.ApartmentImages
+                .Where(img => !img.IsDeleted)
+                .OrderByDescending(img => img.IsPrimary)
+                .Take(5)
+                .Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
+        }).ToList();
 
         return new PagedResult<ApartmentDto>
         {
@@ -331,6 +362,13 @@ public class ApartmentService : IApartmentService
             return null;
         }
 
+        bool isLookingForRoommate = false;
+        if (apartment.LandlordId.HasValue)
+        {
+            isLookingForRoommate = await _usersContext.Users
+                .Where(u => u.UserId == apartment.LandlordId.Value && u.IsLookingForRoommate)
+                .AnyAsync();
+        }
 
         return new GetApartmentDto
         {
@@ -361,6 +399,7 @@ public class ApartmentService : IApartmentService
             MinimumStayMonths = apartment.MinimumStayMonths,
             MaximumStayMonths = apartment.MaximumStayMonths,
             IsImmediatelyAvailable = apartment.IsImmediatelyAvailable,
+            IsLookingForRoommate = isLookingForRoommate,
             ApartmentImages = apartment.ApartmentImages?.Select(img => new ApartmentImageDto
             {
                 ImageId = img.ImageId,
