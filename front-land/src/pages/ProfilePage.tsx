@@ -35,7 +35,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -44,7 +44,7 @@ const ProfilePage: React.FC = () => {
     dateOfBirth: user?.dateOfBirth || '',
     profilePicture: user?.profilePicture || ''
   });
-  
+
   const [isLookingForRoommate, setIsLookingForRoommate] = useState(user?.isLookingForRoommate ?? false);
   const [imagePreview, setImagePreview] = useState(user?.profilePicture || '');
 
@@ -75,7 +75,7 @@ const ProfilePage: React.FC = () => {
         setError('Image size must be less than 5MB');
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
@@ -127,8 +127,8 @@ const ProfilePage: React.FC = () => {
         updateData.dateOfBirth = formData.dateOfBirth;
       }
 
-      const response = await apiClient.put(`/auth/update-profile/${user.userId}`, updateData);
-      
+      const response = await apiClient.put(`/api/v1/auth/update-profile/${user.userId}`, updateData);
+
       if (updateUser) {
         updateUser(response.data);
       }
