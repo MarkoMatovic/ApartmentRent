@@ -250,6 +250,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
     { }
     private IDbContextTransaction? _currentTransaction;
     public DbSet<Message> Messages { get; set; }
+    public DbSet<EmailLog> EmailLogs { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -333,6 +334,26 @@ public class CommunicationsContext : DbContext, IUnitofWork
                 .HasForeignKey(d => d.SenderId)
                 .HasConstraintName("FK__Messages__Sender__628FA481")
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmailLog>(entity =>
+        {
+            entity.HasKey(e => e.EmailLogId).HasName("PK__EmailLogs__C87C0C9D");
+            entity.ToTable("EmailLogs", "Communication");
+
+            entity.Property(e => e.RecipientEmail).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.HtmlContent).HasColumnType("text");
+            entity.Property(e => e.TemplateId).HasMaxLength(100);
+            entity.Property(e => e.SentAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.IsDelivered).HasDefaultValue(false);
+            entity.Property(e => e.SendGridMessageId).HasMaxLength(255);
+            entity.Property(e => e.ErrorMessage).HasColumnType("text");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
         });
     }
 }

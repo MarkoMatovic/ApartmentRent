@@ -28,7 +28,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   useEffect(() => {
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(import.meta.env.VITE_SIGNALR_URL || 'https://localhost:5002/notificationsHub')
+      .withUrl(import.meta.env.VITE_SIGNALR_URL || 'https://localhost:7092/notificationHub')
       .withAutomaticReconnect()
       .build();
 
