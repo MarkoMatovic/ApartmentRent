@@ -126,5 +126,70 @@ public class NotificationService : INotificationService
 
     }
 
+    public async Task<bool> DeleteNotificationAsync(int notificationId)
+    {
+        var notification = await _context.Notifications
+            .FirstOrDefaultAsync(n => n.Id == notificationId);
+
+        if (notification == null) return false;
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.Notifications.Remove(notification);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return true;
+    }
+
+    public async Task<bool> MarkAllAsReadAsync(int userId)
+    {
+        var notifications = await _context.Notifications
+            .Where(n => n.RecipientUserId == userId && !n.IsRead)
+            .ToListAsync();
+
+        if (!notifications.Any()) return true;
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            foreach (var notification in notifications)
+            {
+                var readNotification = new ReadNotification
+                {
+                    Id = notification.Id,
+                    Title = notification.Title,
+                    Message = notification.Message,
+                    ActionType = notification.ActionType,
+                    ActionTarget = notification.ActionTarget,
+                    IsRead = true,
+                    CreatedDate = notification.CreatedDate,
+                    CreatedByGuid = notification.CreatedByGuid,
+                    SenderUserId = notification.SenderUserId,
+                    RecipientUserId = notification.RecipientUserId
+                };
+                await _context.ReadNotifications.AddAsync(readNotification);
+            }
+
+            _context.Notifications.RemoveRange(notifications);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return true;
+    }
+
 }
 

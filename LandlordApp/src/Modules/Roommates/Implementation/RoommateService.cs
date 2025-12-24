@@ -70,38 +70,55 @@ public class RoommateService : IRoommateService
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
 
-        var result = await (from r in query
-                           join u in _usersContext.Users on r.UserId equals u.UserId
-                           select new RoommateDto
-                           {
-                               RoommateId = r.RoommateId,
-                               UserId = r.UserId,
-                               FirstName = u.FirstName,
-                               LastName = u.LastName,
-                               ProfilePicture = u.ProfilePicture,
-                               DateOfBirth = u.DateOfBirth,
-                               PhoneNumber = u.PhoneNumber,
-                               Bio = r.Bio,
-                               Hobbies = r.Hobbies,
-                               Profession = r.Profession,
-                               SmokingAllowed = r.SmokingAllowed,
-                               PetFriendly = r.PetFriendly,
-                               Lifestyle = r.Lifestyle,
-                               Cleanliness = r.Cleanliness,
-                               GuestsAllowed = r.GuestsAllowed,
-                               BudgetMin = r.BudgetMin,
-                               BudgetMax = r.BudgetMax,
-                               BudgetIncludes = r.BudgetIncludes,
-                               AvailableFrom = r.AvailableFrom,
-                               AvailableUntil = r.AvailableUntil,
-                               MinimumStayMonths = r.MinimumStayMonths,
-                               MaximumStayMonths = r.MaximumStayMonths,
-                               LookingForRoomType = r.LookingForRoomType,
-                               LookingForApartmentType = r.LookingForApartmentType,
-                               PreferredLocation = r.PreferredLocation,
-                               LookingForApartmentId = r.LookingForApartmentId,
-                               IsActive = r.IsActive
-                           }).ToListAsync();
+        var roommates = await query.ToListAsync();
+        
+        // Get user IDs
+        var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
+        
+        // Fetch users separately
+        var users = await _usersContext.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .AsNoTracking()
+            .ToListAsync();
+        
+        // Create dictionary for fast lookup
+        var userDict = users.ToDictionary(u => u.UserId);
+        
+        // Map to DTOs
+        var result = roommates.Select(r =>
+        {
+            var user = userDict.GetValueOrDefault(r.UserId);
+            return new RoommateDto
+            {
+                RoommateId = r.RoommateId,
+                UserId = r.UserId,
+                FirstName = user?.FirstName ?? string.Empty,
+                LastName = user?.LastName ?? string.Empty,
+                ProfilePicture = user?.ProfilePicture,
+                DateOfBirth = user?.DateOfBirth,
+                PhoneNumber = user?.PhoneNumber,
+                Bio = r.Bio,
+                Hobbies = r.Hobbies,
+                Profession = r.Profession,
+                SmokingAllowed = r.SmokingAllowed,
+                PetFriendly = r.PetFriendly,
+                Lifestyle = r.Lifestyle,
+                Cleanliness = r.Cleanliness,
+                GuestsAllowed = r.GuestsAllowed,
+                BudgetMin = r.BudgetMin,
+                BudgetMax = r.BudgetMax,
+                BudgetIncludes = r.BudgetIncludes,
+                AvailableFrom = r.AvailableFrom,
+                AvailableUntil = r.AvailableUntil,
+                MinimumStayMonths = r.MinimumStayMonths,
+                MaximumStayMonths = r.MaximumStayMonths,
+                LookingForRoomType = r.LookingForRoomType,
+                LookingForApartmentType = r.LookingForApartmentType,
+                PreferredLocation = r.PreferredLocation,
+                LookingForApartmentId = r.LookingForApartmentId,
+                IsActive = r.IsActive
+            };
+        }).ToList();
 
         return result;
     }
@@ -158,42 +175,59 @@ public class RoommateService : IRoommateService
 
         var totalCount = await query.CountAsync();
 
-        var result = await (from r in query
-                           join u in _usersContext.Users on r.UserId equals u.UserId
-                           orderby r.CreatedDate descending
-                           select new RoommateDto
-                           {
-                               RoommateId = r.RoommateId,
-                               UserId = r.UserId,
-                               FirstName = u.FirstName,
-                               LastName = u.LastName,
-                               ProfilePicture = u.ProfilePicture,
-                               DateOfBirth = u.DateOfBirth,
-                               PhoneNumber = u.PhoneNumber,
-                               Bio = r.Bio,
-                               Hobbies = r.Hobbies,
-                               Profession = r.Profession,
-                               SmokingAllowed = r.SmokingAllowed,
-                               PetFriendly = r.PetFriendly,
-                               Lifestyle = r.Lifestyle,
-                               Cleanliness = r.Cleanliness,
-                               GuestsAllowed = r.GuestsAllowed,
-                               BudgetMin = r.BudgetMin,
-                               BudgetMax = r.BudgetMax,
-                               BudgetIncludes = r.BudgetIncludes,
-                               AvailableFrom = r.AvailableFrom,
-                               AvailableUntil = r.AvailableUntil,
-                               MinimumStayMonths = r.MinimumStayMonths,
-                               MaximumStayMonths = r.MaximumStayMonths,
-                               LookingForRoomType = r.LookingForRoomType,
-                               LookingForApartmentType = r.LookingForApartmentType,
-                               PreferredLocation = r.PreferredLocation,
-                               LookingForApartmentId = r.LookingForApartmentId,
-                               IsActive = r.IsActive
-                           })
-                           .Skip((page - 1) * pageSize)
-                           .Take(pageSize)
-                           .ToListAsync();
+        var roommates = await query
+            .OrderByDescending(r => r.CreatedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        // Get user IDs
+        var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
+        
+        // Fetch users separately
+        var users = await _usersContext.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .AsNoTracking()
+            .ToListAsync();
+        
+        // Create dictionary for fast lookup
+        var userDict = users.ToDictionary(u => u.UserId);
+        
+        // Map to DTOs
+        var result = roommates.Select(r =>
+        {
+            var user = userDict.GetValueOrDefault(r.UserId);
+            return new RoommateDto
+            {
+                RoommateId = r.RoommateId,
+                UserId = r.UserId,
+                FirstName = user?.FirstName ?? string.Empty,
+                LastName = user?.LastName ?? string.Empty,
+                ProfilePicture = user?.ProfilePicture,
+                DateOfBirth = user?.DateOfBirth,
+                PhoneNumber = user?.PhoneNumber,
+                Bio = r.Bio,
+                Hobbies = r.Hobbies,
+                Profession = r.Profession,
+                SmokingAllowed = r.SmokingAllowed,
+                PetFriendly = r.PetFriendly,
+                Lifestyle = r.Lifestyle,
+                Cleanliness = r.Cleanliness,
+                GuestsAllowed = r.GuestsAllowed,
+                BudgetMin = r.BudgetMin,
+                BudgetMax = r.BudgetMax,
+                BudgetIncludes = r.BudgetIncludes,
+                AvailableFrom = r.AvailableFrom,
+                AvailableUntil = r.AvailableUntil,
+                MinimumStayMonths = r.MinimumStayMonths,
+                MaximumStayMonths = r.MaximumStayMonths,
+                LookingForRoomType = r.LookingForRoomType,
+                LookingForApartmentType = r.LookingForApartmentType,
+                PreferredLocation = r.PreferredLocation,
+                LookingForApartmentId = r.LookingForApartmentId,
+                IsActive = r.IsActive
+            };
+        }).ToList();
 
         return new PagedResult<RoommateDto>
         {
@@ -293,6 +327,10 @@ public class RoommateService : IRoommateService
             ModifiedDate = DateTime.UtcNow
         };
 
+        // Fetch user first to ensure it exists and to popualte DTO
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+        if (user == null) throw new Exception("User not found");
+
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -306,7 +344,36 @@ public class RoommateService : IRoommateService
             throw;
         }
 
-        return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new Exception("Failed to create roommate");
+        return new RoommateDto
+        {
+            RoommateId = roommate.RoommateId,
+            UserId = roommate.UserId,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            ProfilePicture = user.ProfilePicture,
+            DateOfBirth = user.DateOfBirth,
+            PhoneNumber = user.PhoneNumber,
+            Bio = roommate.Bio,
+            Hobbies = roommate.Hobbies,
+            Profession = roommate.Profession,
+            SmokingAllowed = roommate.SmokingAllowed,
+            PetFriendly = roommate.PetFriendly,
+            Lifestyle = roommate.Lifestyle,
+            Cleanliness = roommate.Cleanliness,
+            GuestsAllowed = roommate.GuestsAllowed,
+            BudgetMin = roommate.BudgetMin,
+            BudgetMax = roommate.BudgetMax,
+            BudgetIncludes = roommate.BudgetIncludes,
+            AvailableFrom = roommate.AvailableFrom,
+            AvailableUntil = roommate.AvailableUntil,
+            MinimumStayMonths = roommate.MinimumStayMonths,
+            MaximumStayMonths = roommate.MaximumStayMonths,
+            LookingForRoomType = roommate.LookingForRoomType,
+            LookingForApartmentType = roommate.LookingForApartmentType,
+            PreferredLocation = roommate.PreferredLocation,
+            LookingForApartmentId = roommate.LookingForApartmentId,
+            IsActive = roommate.IsActive
+        };
     }
 
     public async Task<RoommateDto> UpdateRoommateAsync(int id, int userId, RoommateInputDto input)

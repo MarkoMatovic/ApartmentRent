@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Lander.Helpers;
+using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
@@ -19,12 +20,18 @@ public class UserService : IUserInterface
     private readonly UsersContext _context;
     private readonly TokenProvider _tokenProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailService _emailService;
 
-    public UserService(UsersContext context, TokenProvider tokenProvider, IHttpContextAccessor httpContextAccessor)
+    public UserService(
+        UsersContext context, 
+        TokenProvider tokenProvider, 
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService)
     {
         _context = context;
         _tokenProvider = tokenProvider;
         _httpContextAccessor = httpContextAccessor;
+        _emailService = emailService;
     }
 
     public async Task<string>LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
@@ -67,6 +74,10 @@ public class UserService : IUserInterface
             _context.Users.Add(user);
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
+            
+            // Send welcome email (fire and forget)
+            var userName = $"{user.FirstName} {user.LastName}";
+            _ = _emailService.SendWelcomeEmailAsync(user.Email, userName);
             
             return new UserRegistrationDto
         {
@@ -214,6 +225,81 @@ public class UserService : IUserInterface
                 throw;
             }
         }
+    }
+
+    public async Task<UserProfileDto?> GetUserProfileAsync(int userId)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user == null) return null;
+
+        return new UserProfileDto
+        {
+            UserId = user.UserId,
+            UserGuid = user.UserGuid,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            ProfilePicture = user.ProfilePicture,
+            DateOfBirth = user.DateOfBirth,
+            IsActive = user.IsActive,
+            IsLookingForRoommate = user.IsLookingForRoommate,
+            UserRoleId = user.UserRoleId,
+            CreatedDate = user.CreatedDate
+        };
+    }
+
+    public async Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto)
+    {
+        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
+        
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+        
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        if (updateDto.FirstName != null) user.FirstName = updateDto.FirstName;
+        if (updateDto.LastName != null) user.LastName = updateDto.LastName;
+        if (updateDto.Email != null) user.Email = updateDto.Email;
+        if (updateDto.PhoneNumber != null) user.PhoneNumber = updateDto.PhoneNumber;
+        if (updateDto.ProfilePicture != null) user.ProfilePicture = updateDto.ProfilePicture;
+        if (updateDto.DateOfBirth.HasValue) user.DateOfBirth = updateDto.DateOfBirth.Value;
+
+        user.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        user.ModifiedDate = DateTime.UtcNow;
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return new UserProfileDto
+        {
+            UserId = user.UserId,
+            UserGuid = user.UserGuid,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            ProfilePicture = user.ProfilePicture,
+            DateOfBirth = user.DateOfBirth,
+            IsActive = user.IsActive,
+            IsLookingForRoommate = user.IsLookingForRoommate,
+            UserRoleId = user.UserRoleId,
+            CreatedDate = user.CreatedDate
+        };
     }
 
 }

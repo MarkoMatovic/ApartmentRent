@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lander;
 using Lander.Helpers;
+using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Implementation;
 using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Listings.Implementation;
@@ -116,6 +117,9 @@ builder.Services.AddScoped<ISearchRequestService, SearchRequestService>();
 builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
 builder.Services.AddScoped<ISmsService, SmsService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();
@@ -123,9 +127,15 @@ builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
-        o.RequireHttpsMetadata = true;  // OK za HTTPS mode
+        o.RequireHttpsMetadata = true;
+        o.SaveToken = true;
+        o.MapInboundClaims = false; // Sprečava automatsko mapiranje JWT claim-ova
         o.TokenValidationParameters = new TokenValidationParameters
         {        
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)),
@@ -193,5 +203,6 @@ app.MapGrpcService<ReviewFavoriteService>();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

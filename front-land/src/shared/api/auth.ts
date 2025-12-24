@@ -27,5 +27,9 @@ export const authApi = {
   updateRoommateStatus: async (userGuid: string, isLookingForRoommate: boolean): Promise<void> => {
     await apiClient.post(`/api/v1/auth/update-roommate-status`, { userGuid, isLookingForRoommate });
   },
+
+  deactivateUser: async (userGuid: string): Promise<void> => {
+    await apiClient.post(`/api/v1/auth/deactivate-user`, { userGuid });
+  },
 };
 
