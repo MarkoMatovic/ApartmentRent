@@ -47,5 +47,26 @@ namespace Lander.src.Modules.Reviews.Controllers
             var response = await _grpcClient.GetReviewsByApartmentIdAsync(apartmentId);
             return Ok(response.Reviews);
         }
+
+        [HttpDelete(ApiActionsV1.DeleteReview, Name = nameof(ApiActionsV1.DeleteReview))]
+        public async Task<IActionResult> DeleteReview([FromRoute] int id)
+        {
+            var response = await _grpcClient.DeleteReviewAsync(id);
+            return Ok(response);
+        }
+
+        [HttpDelete(ApiActionsV1.DeleteFavorite, Name = nameof(ApiActionsV1.DeleteFavorite))]
+        public async Task<IActionResult> DeleteFavorite([FromRoute] int id)
+        {
+            var response = await _grpcClient.DeleteFavoriteAsync(id);
+            return Ok(response);
+        }
+
+        [HttpGet(ApiActionsV1.GetUserFavorites, Name = nameof(ApiActionsV1.GetUserFavorites))]
+        public async Task<IActionResult> GetUserFavorites([FromRoute] int userId)
+        {
+            var response = await _grpcClient.GetUserFavoritesAsync(userId);
+            return Ok(response.Favorites);
+        }
     }
 }

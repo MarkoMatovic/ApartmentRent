@@ -16,6 +16,8 @@ public static class ApiActionsV1
     public const string ReactivateUser = "reactivate-user";
     public const string ChangePassword = "change-password";
     public const string UpdateRoommateStatus = "update-roommate-status";
+    public const string GetUserProfile = "profile/{userId}";
+    public const string UpdateUserProfile = "update-profile/{userId}";
     #endregion
 
     #region ApartmentActions
@@ -23,6 +25,7 @@ public static class ApiActionsV1
     public const string CreateApartment = "create-apartment";
     public const string GetApartment = "get-apartment";
     public const string GetAllApartments = "get-all-apartments";
+    public const string UpdateApartment = "update-apartment/{id}";
     public const string DeleteApartment = "delete-apartment/{id}";
     public const string ActivateApartment = "activate-apartment/{id}";
     #endregion
@@ -31,7 +34,9 @@ public static class ApiActionsV1
     public const string Notification = $"{V1}/notification";
     public const string SendNotification = "send-notification";
     public const string MarkAsRead = "mark-as-read";
+    public const string MarkAllAsRead = "mark-all-as-read";
     public const string GetUserNotifications = "get-user-notifications";
+    public const string DeleteNotification = "delete/{id}";
     #endregion
 
     #region Reviews
@@ -39,6 +44,9 @@ public static class ApiActionsV1
     public const string CreateReview = "create-review";
     public const string CreateFavorite = "create-favorite";
     public const string GetReviewById = "get-review-by-id";
+    public const string DeleteReview = "delete-review/{id}";
+    public const string DeleteFavorite = "delete-favorite/{id}";
+    public const string GetUserFavorites = "favorites/{userId}";
     #endregion
 
     #region Sms
@@ -73,5 +81,14 @@ public static class ApiActionsV1
     public const string CreateSavedSearch = "create-saved-search";
     public const string UpdateSavedSearch = "update-saved-search/{id}";
     public const string DeleteSavedSearch = "delete-saved-search/{id}";
+    #endregion
+
+    #region Messages
+    public const string Messages = $"{V1}/messages";
+    public const string GetConversation = "conversation";
+    public const string GetUserConversations = "user/{userId}";
+    public const string SendMessage = "send";
+    public const string MarkMessageAsRead = "mark-read/{messageId}";
+    public const string GetUnreadCount = "unread-count/{userId}";
     #endregion
 }

@@ -9,6 +9,9 @@ service ReviewFavoriteGrpcService {
   rpc GetReviewById (GetReviewByIdRequest) returns (ReviewResponse);
   rpc GetReviewsByApartmentId (GetReviewsByApartmentIdRequest) returns (GetReviewsResponse);
   rpc GetFavorites (GetFavoritesRequest) returns (GetFavoritesResponse);
+  rpc DeleteReview (DeleteReviewRequest) returns (DeleteResponse);
+  rpc DeleteFavorite (DeleteFavoriteRequest) returns (DeleteResponse);
+  rpc GetUserFavorites (GetUserFavoritesRequest) returns (GetFavoritesResponse);
 }
 
 message CreateFavoriteRequest {
@@ -76,4 +79,21 @@ message GetFavoritesRequest {
 }
 message GetFavoritesResponse {
   repeated FavoriteResponse favorites = 1;  
+}
+
+message DeleteReviewRequest {
+  int32 review_id = 1;
+}
+
+message DeleteFavoriteRequest {
+  int32 favorite_id = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetUserFavoritesRequest {
+  int32 user_id = 1;
 }

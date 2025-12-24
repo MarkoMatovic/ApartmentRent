@@ -57,6 +57,17 @@ public class ApartmentsController : ControllerBase
     {
         return Ok(await _apartmentServie.GetApartmentByIdAsync(id));
     }
+
+    [HttpPut(ApiActionsV1.UpdateApartment, Name = nameof(ApiActionsV1.UpdateApartment))]
+    public async Task<ActionResult<ApartmentDto>> UpdateApartment([FromRoute] int id, [FromBody] ApartmentUpdateInputDto updateDto)
+    {
+        var result = await _apartmentServie.UpdateApartmentAsync(id, updateDto);
+        
+        await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
+            .EvictByTagAsync("apartments", default);
+        
+        return Ok(result);
+    }
     
     [HttpDelete(ApiActionsV1.DeleteApartment, Name = nameof(ApiActionsV1.DeleteApartment))]
     public async Task<ActionResult<bool>> DeleteApartment([FromRoute] int id)

@@ -23,7 +23,6 @@ public class RoommatesController : ControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetAllRoommates, Name = nameof(ApiActionsV1.GetAllRoommates))]
-    [AllowAnonymous]
     public async Task<ActionResult> GetAllRoommates(
         [FromQuery] string? location = null,
         [FromQuery] decimal? minBudget = null,
@@ -58,7 +57,6 @@ public class RoommatesController : ControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetRoommateByUserId, Name = nameof(ApiActionsV1.GetRoommateByUserId))]
-    [Authorize]
     public async Task<ActionResult<RoommateDto>> GetRoommateByUserId([FromQuery] int userId)
     {
         var roommate = await _roommateService.GetRoommateByUserIdAsync(userId);
@@ -79,10 +77,18 @@ public class RoommatesController : ControllerBase
         if (user == null)
             return Unauthorized();
 
-        var roommate = await _roommateService.CreateRoommateAsync(user.UserId, input);
-        return Ok(roommate);
+        try 
+        {
+            var roommate = await _roommateService.CreateRoommateAsync(user.UserId, input);
+            return Ok(roommate);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
     }
 
+       
     [HttpPut(ApiActionsV1.UpdateRoommate, Name = nameof(ApiActionsV1.UpdateRoommate))]
     [Authorize]
     public async Task<ActionResult<RoommateDto>> UpdateRoommate([FromRoute] int id, [FromBody] RoommateInputDto input)

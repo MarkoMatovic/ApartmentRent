@@ -170,6 +170,7 @@ public class ApartmentService : IApartmentService
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync()
     {
         var apartments = await _context.Apartments
+            .Include(a => a.ApartmentImages)
             .Where(a => !a.IsDeleted && a.IsActive)
             .AsNoTracking()
             .AsSplitQuery()
@@ -294,6 +295,7 @@ public class ApartmentService : IApartmentService
         var totalCount = await query.CountAsync();
 
         var apartments = await query
+            .Include(a => a.ApartmentImages)
             .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
@@ -407,8 +409,100 @@ public class ApartmentService : IApartmentService
                 ImageUrl = img.ImageUrl
             }).ToList()
         };
+    }
 
-    
+    public async Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto)
+    {
+        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        
+        var apartment = await _context.Apartments
+            .Include(a => a.ApartmentImages)
+            .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
+
+        if (apartment == null)
+        {
+            throw new Exception("Apartment not found or has been deleted");
+        }
+
+        if (updateDto.Title != null) apartment.Title = updateDto.Title;
+        if (updateDto.Description != null) apartment.Description = updateDto.Description;
+        if (updateDto.Rent.HasValue) apartment.Rent = updateDto.Rent.Value;
+        if (updateDto.Address != null) apartment.Address = updateDto.Address;
+        if (updateDto.City != null) apartment.City = updateDto.City;
+        if (updateDto.PostalCode != null) apartment.PostalCode = updateDto.PostalCode;
+        if (updateDto.AvailableFrom.HasValue) apartment.AvailableFrom = updateDto.AvailableFrom.Value;
+        if (updateDto.AvailableUntil.HasValue) apartment.AvailableUntil = updateDto.AvailableUntil.Value;
+        if (updateDto.NumberOfRooms.HasValue) apartment.NumberOfRooms = updateDto.NumberOfRooms.Value;
+        if (updateDto.RentIncludeUtilities.HasValue) apartment.RentIncludeUtilities = updateDto.RentIncludeUtilities.Value;
+        if (updateDto.Latitude.HasValue) apartment.Latitude = updateDto.Latitude.Value;
+        if (updateDto.Longitude.HasValue) apartment.Longitude = updateDto.Longitude.Value;
+        if (updateDto.SizeSquareMeters.HasValue) apartment.SizeSquareMeters = updateDto.SizeSquareMeters.Value;
+        if (updateDto.ApartmentType.HasValue) apartment.ApartmentType = updateDto.ApartmentType.Value;
+        if (updateDto.IsFurnished.HasValue) apartment.IsFurnished = updateDto.IsFurnished.Value;
+        if (updateDto.HasBalcony.HasValue) apartment.HasBalcony = updateDto.HasBalcony.Value;
+        if (updateDto.HasElevator.HasValue) apartment.HasElevator = updateDto.HasElevator.Value;
+        if (updateDto.HasParking.HasValue) apartment.HasParking = updateDto.HasParking.Value;
+        if (updateDto.HasInternet.HasValue) apartment.HasInternet = updateDto.HasInternet.Value;
+        if (updateDto.HasAirCondition.HasValue) apartment.HasAirCondition = updateDto.HasAirCondition.Value;
+        if (updateDto.IsPetFriendly.HasValue) apartment.IsPetFriendly = updateDto.IsPetFriendly.Value;
+        if (updateDto.IsSmokingAllowed.HasValue) apartment.IsSmokingAllowed = updateDto.IsSmokingAllowed.Value;
+        if (updateDto.DepositAmount.HasValue) apartment.DepositAmount = updateDto.DepositAmount.Value;
+        if (updateDto.MinimumStayMonths.HasValue) apartment.MinimumStayMonths = updateDto.MinimumStayMonths.Value;
+        if (updateDto.MaximumStayMonths.HasValue) apartment.MaximumStayMonths = updateDto.MaximumStayMonths.Value;
+        if (updateDto.IsImmediatelyAvailable.HasValue) apartment.IsImmediatelyAvailable = updateDto.IsImmediatelyAvailable.Value;
+
+        apartment.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        apartment.ModifiedDate = DateTime.UtcNow;
+
+        if (updateDto.ImageUrls != null && updateDto.ImageUrls.Any())
+        {
+            var existingImages = apartment.ApartmentImages.Where(img => !img.IsDeleted).ToList();
+            foreach (var img in existingImages)
+            {
+                img.IsDeleted = true;
+                img.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+                img.ModifiedDate = DateTime.UtcNow;
+            }
+
+            var newImages = updateDto.ImageUrls.Select(url => new ApartmentImage
+            {
+                ApartmentId = apartment.ApartmentId,
+                ImageUrl = url,
+                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                CreatedDate = DateTime.UtcNow,
+                ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                ModifiedDate = DateTime.UtcNow
+            }).ToList();
+
+            _context.ApartmentImages.AddRange(newImages);
+        }
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return new ApartmentDto
+        {
+            ApartmentId = apartment.ApartmentId,
+            Title = apartment.Title,
+            Rent = apartment.Rent,
+            Address = apartment.Address,
+            City = apartment.City,
+            Latitude = apartment.Latitude,
+            Longitude = apartment.Longitude,
+            SizeSquareMeters = apartment.SizeSquareMeters,
+            ApartmentType = apartment.ApartmentType,
+            IsFurnished = apartment.IsFurnished,
+            IsImmediatelyAvailable = apartment.IsImmediatelyAvailable
+        };
     }
 }
 
