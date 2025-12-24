@@ -82,4 +82,13 @@ public static class ApiActionsV1
     public const string UpdateSavedSearch = "update-saved-search/{id}";
     public const string DeleteSavedSearch = "delete-saved-search/{id}";
     #endregion
+
+    #region Messages
+    public const string Messages = $"{V1}/messages";
+    public const string GetConversation = "conversation";
+    public const string GetUserConversations = "user/{userId}";
+    public const string SendMessage = "send";
+    public const string MarkMessageAsRead = "mark-read/{messageId}";
+    public const string GetUnreadCount = "unread-count/{userId}";
+    #endregion
 }

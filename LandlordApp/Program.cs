@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lander;
 using Lander.Helpers;
+using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Implementation;
 using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Listings.Implementation;
@@ -116,6 +117,7 @@ builder.Services.AddScoped<ISearchRequestService, SearchRequestService>();
 builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
 builder.Services.AddScoped<ISmsService, SmsService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();
@@ -193,5 +195,6 @@ app.MapGrpcService<ReviewFavoriteService>();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();
