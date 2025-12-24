@@ -26,9 +26,9 @@ const decodeToken = (token: string): User | null => {
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-    
+
     const payload = JSON.parse(jsonPayload);
-    
+
     // Map JWT claims to User object
     return {
       userId: parseInt(payload.userId) || 0,
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Load user and token from localStorage on mount
     const storedToken = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken) {
       setToken(storedToken);
       if (storedUser) {
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const token = await authApi.login({ email, password });
       setToken(token);
       localStorage.setItem('authToken', token);
-      
+
       // Decode token to extract user data
       const decodedUser = decodeToken(token);
       if (decodedUser) {

@@ -60,7 +60,8 @@ const CreateRoommatePage: React.FC = () => {
       }, 2000);
     },
     onError: (err: any) => {
-      setError(err.response?.data || 'Failed to create roommate profile');
+      const errorMessage = err.response?.data?.message || err.response?.data || err.message || 'Failed to create roommate profile';
+      setError(errorMessage);
     },
   });
 

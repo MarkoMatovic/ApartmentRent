@@ -170,6 +170,7 @@ public class ApartmentService : IApartmentService
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync()
     {
         var apartments = await _context.Apartments
+            .Include(a => a.ApartmentImages)
             .Where(a => !a.IsDeleted && a.IsActive)
             .AsNoTracking()
             .AsSplitQuery()
@@ -294,6 +295,7 @@ public class ApartmentService : IApartmentService
         var totalCount = await query.CountAsync();
 
         var apartments = await query
+            .Include(a => a.ApartmentImages)
             .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
