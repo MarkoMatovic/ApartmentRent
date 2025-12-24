@@ -118,6 +118,8 @@ builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
 builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();

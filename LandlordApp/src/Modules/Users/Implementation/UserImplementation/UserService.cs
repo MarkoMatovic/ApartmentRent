@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Lander.Helpers;
+using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
@@ -19,12 +20,18 @@ public class UserService : IUserInterface
     private readonly UsersContext _context;
     private readonly TokenProvider _tokenProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailService _emailService;
 
-    public UserService(UsersContext context, TokenProvider tokenProvider, IHttpContextAccessor httpContextAccessor)
+    public UserService(
+        UsersContext context, 
+        TokenProvider tokenProvider, 
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService)
     {
         _context = context;
         _tokenProvider = tokenProvider;
         _httpContextAccessor = httpContextAccessor;
+        _emailService = emailService;
     }
 
     public async Task<string>LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
@@ -67,6 +74,10 @@ public class UserService : IUserInterface
             _context.Users.Add(user);
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
+            
+            // Send welcome email (fire and forget)
+            var userName = $"{user.FirstName} {user.LastName}";
+            _ = _emailService.SendWelcomeEmailAsync(user.Email, userName);
             
             return new UserRegistrationDto
         {

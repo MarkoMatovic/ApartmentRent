@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Status Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #1976d2; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .status { padding: 12px; border-radius: 4px; margin: 20px 0; text-align: center; font-weight: bold; }
+        .status-approved { background-color: #4caf50; color: white; }
+        .status-rejected { background-color: #f44336; color: white; }
+        .status-pending { background-color: #ff9800; color: white; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #1976d2; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Application Status Update</h1>
+        </div>
+        <div class="content">
+            <h2>Hello {{TenantName}},</h2>
+            <p>Your application status for <strong>{{ApartmentTitle}}</strong> has been updated:</p>
+            <div class="status status-{{Status}}">
+                <h3>{{Status}}</h3>
+            </div>
+            <p>Please log in to your account to view more details.</p>
+            <a href="https://landlander.com/my-applications" class="button">View Applications</a>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 Landlander Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

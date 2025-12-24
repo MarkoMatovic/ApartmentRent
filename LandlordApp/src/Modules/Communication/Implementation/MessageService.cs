@@ -11,12 +11,18 @@ public class MessageService : IMessageService
     private readonly CommunicationsContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailService _emailService;
 
-    public MessageService(CommunicationsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
+    public MessageService(
+        CommunicationsContext context, 
+        UsersContext usersContext, 
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
+        _emailService = emailService;
     }
 
     public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText)
@@ -51,6 +57,14 @@ public class MessageService : IMessageService
 
         var sender = await _usersContext.Users.FindAsync(senderId);
         var receiver = await _usersContext.Users.FindAsync(receiverId);
+
+        // Send email notification to receiver (fire and forget)
+        if (receiver != null && !string.IsNullOrEmpty(receiver.Email))
+        {
+            var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
+            var preview = messageText.Length > 100 ? messageText.Substring(0, 100) + "..." : messageText;
+            _ = _emailService.SendNewMessageEmailAsync(receiver.Email, senderName, preview);
+        }
 
         return new MessageDto
         {
