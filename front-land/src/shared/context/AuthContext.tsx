@@ -15,7 +15,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to decode JWT token
 const decodeToken = (token: string): User | null => {
   try {
     const base64Url = token.split('.')[1];
@@ -29,7 +28,6 @@ const decodeToken = (token: string): User | null => {
 
     const payload = JSON.parse(jsonPayload);
 
-    // Map JWT claims to User object
     return {
       userId: parseInt(payload.userId) || 0,
       userGuid: payload.sub || '',
@@ -41,8 +39,7 @@ const decodeToken = (token: string): User | null => {
       isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
     };
-  } catch (error) {
-    console.error('Failed to decode token:', error);
+  } catch {
     return null;
   }
 };
@@ -53,7 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load user and token from localStorage on mount
     const storedToken = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('user');
 
@@ -62,7 +58,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       } else {
-        // Decode token to get user data
         const decodedUser = decodeToken(storedToken);
         if (decodedUser) {
           setUser(decodedUser);
@@ -79,7 +74,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setToken(token);
       localStorage.setItem('authToken', token);
 
-      // Decode token to extract user data
       const decodedUser = decodeToken(token);
       if (decodedUser) {
         setUser(decodedUser);
@@ -94,7 +88,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const newUser = await authApi.register(data);
       setUser(newUser);
-      // After registration, you might want to auto-login
     } catch (error) {
       throw error;
     }
@@ -103,8 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     try {
       await authApi.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
     } finally {
       setUser(null);
       setToken(null);

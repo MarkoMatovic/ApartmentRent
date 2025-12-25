@@ -14,15 +14,12 @@ namespace Lander.src.Modules.Listings.Controllers;
 [ApiController]
 public class ApartmentsController : ControllerBase
 {
-    #region Properties
     private readonly IApartmentService _apartmentServie;
-    #endregion
-    #region Constructors
+
     public ApartmentsController(IApartmentService apartmentServie)
     {
         _apartmentServie = apartmentServie;
     }
-    #endregion
 
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
     public async Task<ActionResult<ApartmentDto>> CreateApartment([FromBody] ApartmentInputDto apartmentInputDto)
@@ -40,8 +37,6 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentsList")]
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
-        Console.WriteLine($"Received filters: City={filters?.City}, MinRent={filters?.MinRent}, MaxRent={filters?.MaxRent}, Page={filters?.Page}, PageSize={filters?.PageSize}");
-        
         if (filters != null && (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue))
         {
             return Ok(await _apartmentServie.GetAllApartmentsAsync(filters));

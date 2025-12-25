@@ -72,19 +72,15 @@ public class RoommateService : IRoommateService
 
         var roommates = await query.ToListAsync();
         
-        // Get user IDs
         var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
         
-        // Fetch users separately
         var users = await _usersContext.Users
             .Where(u => userIds.Contains(u.UserId))
             .AsNoTracking()
             .ToListAsync();
         
-        // Create dictionary for fast lookup
         var userDict = users.ToDictionary(u => u.UserId);
         
-        // Map to DTOs
         var result = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
@@ -181,19 +177,15 @@ public class RoommateService : IRoommateService
             .Take(pageSize)
             .ToListAsync();
         
-        // Get user IDs
         var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
         
-        // Fetch users separately
         var users = await _usersContext.Users
             .Where(u => userIds.Contains(u.UserId))
             .AsNoTracking()
             .ToListAsync();
         
-        // Create dictionary for fast lookup
         var userDict = users.ToDictionary(u => u.UserId);
         
-        // Map to DTOs
         var result = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
@@ -327,7 +319,6 @@ public class RoommateService : IRoommateService
             ModifiedDate = DateTime.UtcNow
         };
 
-        // Fetch user first to ensure it exists and to popualte DTO
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) throw new Exception("User not found");
 

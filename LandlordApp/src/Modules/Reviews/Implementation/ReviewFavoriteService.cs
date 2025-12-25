@@ -80,7 +80,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             throw;
         }
 
-        // Load user info
         var user = await _context.Users.FindAsync(request.UserId);
 
         return new ReviewResponse

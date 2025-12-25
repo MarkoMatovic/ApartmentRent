@@ -5,8 +5,6 @@ export const apartmentsApi = {
   getAll: async (filters?: ApartmentFilters): Promise<ApartmentDto[]> => {
     const params: Record<string, any> = {};
     
-    console.log('[apartmentsApi] Input filters:', filters);
-    
     if (filters) {
       if (filters.city) params.city = filters.city;
       if (filters.minRent) params.minRent = Number(filters.minRent);
@@ -23,16 +21,11 @@ export const apartmentsApi = {
       if (filters.pageSize) params.pageSize = filters.pageSize;
     }
     
-    console.log('[apartmentsApi] Sending params:', params);
-    
     const response = await apiClient.get<any>(`/api/v1/rent/get-all-apartments`, {
       params,
     });
     
     const apartments = response.data.items || response.data;
-    
-    console.log('[apartmentsApi] Received apartments count:', apartments.length);
-    console.log('[apartmentsApi] First 3 apartments:', apartments.slice(0, 3).map((a: any) => ({ id: a.apartmentId, title: a.title, rent: a.rent })));
     
     return apartments;
   },

@@ -58,7 +58,6 @@ public class MessageService : IMessageService
         var sender = await _usersContext.Users.FindAsync(senderId);
         var receiver = await _usersContext.Users.FindAsync(receiverId);
 
-        // Send email notification to receiver (fire and forget)
         if (receiver != null && !string.IsNullOrEmpty(receiver.Email))
         {
             var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
