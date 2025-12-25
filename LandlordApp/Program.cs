@@ -50,7 +50,6 @@ builder.Services.AddDbContext<SearchRequestsContext>(options =>
 builder.Services.AddDbContext<SavedSearchesContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// CORS configuration for frontend access
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -58,7 +57,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:5173", 
                 "http://127.0.0.1:5173",
-                "https://localhost:5173"  // Dodaj HTTPS origin ako frontend koristi HTTPS
+                "https://localhost:5173"
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
@@ -129,7 +128,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         o.RequireHttpsMetadata = true;
         o.SaveToken = true;
-        o.MapInboundClaims = false; // Sprečava automatsko mapiranje JWT claim-ova
+        o.MapInboundClaims = false;
         o.TokenValidationParameters = new TokenValidationParameters
         {        
             ValidateIssuer = true,
@@ -157,7 +156,6 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
 
-    // Dodavanje Bearer autentifikacije u Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,

@@ -1,8 +1,5 @@
 namespace Lander.src.Modules.Listings.Models;
 
-/// <summary>
-/// Apartment type enumeration
-/// </summary>
 public enum ApartmentType
 {
     Studio = 1,

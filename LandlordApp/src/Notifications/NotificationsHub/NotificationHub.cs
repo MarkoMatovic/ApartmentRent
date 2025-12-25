@@ -14,7 +14,4 @@ public class NotificationHub : Hub
     {
         await Clients.All.SendAsync("ReceiveNotification", message);
     }
-
-    // kada zelim da posaljem notifi svimaa, u metodi pozivam ovo
-    //await _hubContext.Clients.All.SendAsync("ReceiveNotification", notificationDto);
 }

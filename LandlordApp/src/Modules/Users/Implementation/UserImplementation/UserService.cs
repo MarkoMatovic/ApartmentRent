@@ -75,7 +75,6 @@ public class UserService : IUserInterface
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
             
-            // Send welcome email (fire and forget)
             var userName = $"{user.FirstName} {user.LastName}";
             _ = _emailService.SendWelcomeEmailAsync(user.Email, userName);
             

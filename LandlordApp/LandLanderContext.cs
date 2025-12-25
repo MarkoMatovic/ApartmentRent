@@ -97,12 +97,7 @@ public class ApplicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.ApartmentId).HasColumnName("ApartmentId");
 
-            // User je cross-context - navigacioni property je NotMapped
-            // Foreign key constraint će biti kreiran ručno u migraciji ka UsersRoles.Users
             entity.HasIndex(e => e.UserId);
-            
-            // ApartmentId je cross-context foreign key - navigacioni property je NotMapped u modelu
-            // Foreign key constraint će biti kreiran ručno u migraciji ka Listings.Apartments
             entity.HasIndex(e => e.ApartmentId);
         });
 
@@ -212,7 +207,6 @@ public partial class NotificationContext : DbContext, IUnitofWork
             entity.Property(e => e.RecipientUserId);
             entity.Property(e => e.CreatedByGuid);
 
-            // Cross-context foreign keys - navigacioni property-je nisu definisani
             entity.HasIndex(e => e.RecipientUserId);
             entity.HasIndex(e => e.SenderUserId);
         });
@@ -446,16 +440,13 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.NumberOfRooms);
             entity.Property(e => e.RentIncludeUtilities).HasDefaultValue(false);
             
-            // Location (for maps & search)
             entity.Property(e => e.Latitude).HasColumnType("decimal(9,6)");
             entity.Property(e => e.Longitude).HasColumnType("decimal(9,6)");
             
-            // Apartment characteristics (filters)
             entity.Property(e => e.SizeSquareMeters);
             entity.Property(e => e.ApartmentType)
                 .HasConversion<int>();
             
-            // Furnishing & amenities
             entity.Property(e => e.IsFurnished).HasDefaultValue(false);
             entity.Property(e => e.HasBalcony).HasDefaultValue(false);
             entity.Property(e => e.HasElevator).HasDefaultValue(false);
@@ -463,18 +454,14 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.HasInternet).HasDefaultValue(false);
             entity.Property(e => e.HasAirCondition).HasDefaultValue(false);
             
-            // Rules
             entity.Property(e => e.IsPetFriendly).HasDefaultValue(false);
             entity.Property(e => e.IsSmokingAllowed).HasDefaultValue(false);
             
-            // Availability & rental terms
             entity.Property(e => e.DepositAmount).HasColumnType("decimal(10,2)");
             entity.Property(e => e.MinimumStayMonths);
             entity.Property(e => e.MaximumStayMonths);
             entity.Property(e => e.IsImmediatelyAvailable).HasDefaultValue(false);
 
-            // Landlord (User) je cross-context - navigacioni property je NotMapped
-            // Foreign key constraint će biti kreiran ručno u migraciji ka UsersRoles.Users
             entity.HasIndex(e => e.LandlordId);
             entity.HasIndex(e => new { e.Latitude, e.Longitude });
             entity.HasIndex(e => e.ApartmentType);
@@ -606,9 +593,6 @@ public class ReviewsContext : DbContext, IUnitofWork
                 .HasColumnType("datetime");
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
 
-            // Cross-context foreign keys - navigacioni property-je su NotMapped u modelima
-            // Foreign key constraint-e će biti kreirani kroz migracije
-            // ApartmentId, RoommateId, SearchRequestId i UserId će biti indeksirani za performanse
             entity.HasIndex(e => e.ApartmentId);
             entity.HasIndex(e => e.RoommateId);
             entity.HasIndex(e => e.SearchRequestId);
@@ -618,12 +602,11 @@ public class ReviewsContext : DbContext, IUnitofWork
             entity.HasIndex(e => new { e.UserId, e.SearchRequestId }).IsUnique();
         });
 
-        // Map User entity to existing UsersRoles.Users table (cross-context reference)
         modelBuilder.Entity<User>(entity =>
         {
             entity.ToTable("Users", "UsersRoles");
             entity.HasKey(e => e.UserId);
-            entity.Metadata.SetIsTableExcludedFromMigrations(true); // Don't create/modify this table in migrations
+            entity.Metadata.SetIsTableExcludedFromMigrations(true);
         });
     }
 }
@@ -719,15 +702,6 @@ public class UsersContext : DbContext, IUnitofWork
             entity.HasOne(d => d.UserRole).WithMany(p => p.Users)
                 .HasForeignKey(d => d.UserRoleId)
                 .HasConstraintName("FK__Users__UserRoleI__5535A963")
-                .OnDelete(DeleteBehavior.Restrict);
-            entity.HasMany(u => u.MessageSenders)
-      .WithOne(m => m.Sender) 
-      .HasForeignKey(m => m.SenderId)
-      .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasMany(u => u.MessageReceivers)
-                .WithOne(m => m.Receiver) 
-                .HasForeignKey(m => m.ReceiverId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -857,7 +831,6 @@ public class RoommatesContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            // Cross-context foreign key - UserId references UsersRoles.Users
             entity.HasIndex(e => e.UserId);
         });
     }
@@ -955,7 +928,6 @@ public class SearchRequestsContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            // Cross-context foreign key - UserId references UsersRoles.Users
             entity.HasIndex(e => e.UserId);
         });
     }

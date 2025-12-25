@@ -66,8 +66,7 @@ const ChatPage: React.FC = () => {
       const data = await messagesApi.getUserConversations(currentUserId);
       setConversations(data);
       setLoading(false);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
+    } catch {
       setLoading(false);
     }
   };
@@ -77,8 +76,7 @@ const ChatPage: React.FC = () => {
       const data = await messagesApi.getConversation(currentUserId, conv.otherUserId);
       setMessages(data.messages);
       setSelectedConversation(conv);
-    } catch (error) {
-      console.error('Error loading messages:', error);
+    } catch {
     }
   };
 
@@ -98,8 +96,7 @@ const ChatPage: React.FC = () => {
       }
       
       setMessageText('');
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch {
     }
   };
 
@@ -123,7 +120,6 @@ const ChatPage: React.FC = () => {
       </Typography>
       
       <Paper sx={{ display: 'flex', height: '80vh' }}>
-        {/* Conversations List */}
         <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', overflow: 'auto' }}>
           <List>
             {conversations.length === 0 ? (
@@ -166,7 +162,6 @@ const ChatPage: React.FC = () => {
           </List>
         </Box>
 
-        {/* Messages Area */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {!selectedConversation ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
@@ -176,7 +171,6 @@ const ChatPage: React.FC = () => {
             </Box>
           ) : (
             <>
-              {/* Chat Header */}
               <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar src={selectedConversation.otherUserProfilePicture || undefined} sx={{ mr: 2 }}>
@@ -193,7 +187,6 @@ const ChatPage: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* Messages */}
               <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
                 {messages.map((msg) => {
                   const isOwn = msg.senderId === currentUserId;
@@ -227,7 +220,6 @@ const ChatPage: React.FC = () => {
                 <div ref={messagesEndRef} />
               </Box>
 
-              {/* Input */}
               <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <TextField

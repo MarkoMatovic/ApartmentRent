@@ -99,8 +99,7 @@ const ProfilePage: React.FC = () => {
         setSuccess('Roommate status updated successfully');
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (error) {
-      console.error('Failed to update roommate status:', error);
+    } catch {
       setIsLookingForRoommate(!newValue);
       setError('Failed to update roommate status');
     }
@@ -137,7 +136,6 @@ const ProfilePage: React.FC = () => {
       setIsEditing(false);
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
-      console.error('Failed to update profile:', error);
       setError(error.response?.data || 'Failed to update profile');
     } finally {
       setIsUpdating(false);
@@ -162,7 +160,6 @@ const ProfilePage: React.FC = () => {
         window.location.href = '/login';
       }, 2000);
     } catch (error: any) {
-      console.error('Failed to deactivate account:', error);
       setError(error.response?.data || 'Failed to deactivate account');
     } finally {
       setIsUpdating(false);
