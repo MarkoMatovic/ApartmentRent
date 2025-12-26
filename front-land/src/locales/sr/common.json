@@ -3,7 +3,6 @@
   "welcomeGuest": "Dobrodošli!",
   "subtitle": "Vaša platforma za pronalaženje savršenog životnog prostora i povezivanje sa cimerima.",
   "search": "Pretraži",
-  "browseApartments": "Pregledaj stanove",
   "findRoommates": "Pronađi cimere",
   "messages": "Poruke",
   "home": "Početna",
@@ -36,4 +35,3 @@
   "lookingForRoommate": "Tražim cimera",
   "lookingForRoommateDescription": "Uključite ovo da biste pokazali drugima da tražite cimera"
 }
-

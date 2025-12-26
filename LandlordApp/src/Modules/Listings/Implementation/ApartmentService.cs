@@ -391,6 +391,7 @@ public class ApartmentService : IApartmentService
             MaximumStayMonths = apartment.MaximumStayMonths,
             IsImmediatelyAvailable = apartment.IsImmediatelyAvailable,
             IsLookingForRoommate = isLookingForRoommate,
+            LandlordId = apartment.LandlordId,
             ApartmentImages = apartment.ApartmentImages?.Select(img => new ApartmentImageDto
             {
                 ImageId = img.ImageId,

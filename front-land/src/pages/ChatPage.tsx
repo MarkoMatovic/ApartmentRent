@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -29,6 +30,8 @@ const ChatPage: React.FC = () => {
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [searchParams] = useSearchParams();
+  const targetUserIdParam = searchParams.get('userId');
 
   const currentUserId = user?.userId || 1;
   const { connected, sendMessage, markAsRead, newMessage, userTyping } = useChatSignalR(currentUserId);
@@ -38,17 +41,42 @@ const ChatPage: React.FC = () => {
   }, [currentUserId]);
 
   useEffect(() => {
+    if (!loading && targetUserIdParam) {
+      const targetId = Number(targetUserIdParam);
+
+      if (!isNaN(targetId)) {
+        // Find existing conversation
+        const existing = conversations.find(c => c.otherUserId === targetId);
+
+        if (existing) {
+          setSelectedConversation(existing);
+          loadMessages(existing);
+        } else {
+          // New conversation placeholder
+          const newConv: ConversationDto = {
+            otherUserId: targetId,
+            otherUserName: `User ${targetId}`, // Will be updated when we load messages or profile
+            unreadCount: 0
+          };
+          setSelectedConversation(newConv);
+          setMessages([]);
+        }
+      }
+    }
+  }, [targetUserIdParam, conversations, loading]);
+
+  useEffect(() => {
     if (newMessage) {
-      if (selectedConversation && 
-          (newMessage.senderId === selectedConversation.otherUserId || 
-           newMessage.receiverId === selectedConversation.otherUserId)) {
+      if (selectedConversation &&
+        (newMessage.senderId === selectedConversation.otherUserId ||
+          newMessage.receiverId === selectedConversation.otherUserId)) {
         setMessages(prev => [...prev, newMessage]);
-        
+
         if (newMessage.receiverId === currentUserId) {
           markAsRead(newMessage.messageId);
         }
       }
-      
+
       loadConversations();
     }
   }, [newMessage, selectedConversation, currentUserId, markAsRead]);
@@ -66,7 +94,8 @@ const ChatPage: React.FC = () => {
       const data = await messagesApi.getUserConversations(currentUserId);
       setConversations(data);
       setLoading(false);
-    } catch {
+    } catch (error) {
+      console.error('Error loading conversations:', error);
       setLoading(false);
     }
   };
@@ -76,7 +105,8 @@ const ChatPage: React.FC = () => {
       const data = await messagesApi.getConversation(currentUserId, conv.otherUserId);
       setMessages(data.messages);
       setSelectedConversation(conv);
-    } catch {
+    } catch (error) {
+      console.error('Error loading messages:', error);
     }
   };
 
@@ -94,9 +124,12 @@ const ChatPage: React.FC = () => {
         });
         setMessages(prev => [...prev, newMsg]);
       }
-      
+
       setMessageText('');
-    } catch {
+      // Reload conversations to update "Last Message" snippet in the sidebar
+      loadConversations();
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
@@ -118,13 +151,14 @@ const ChatPage: React.FC = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         {t('title', 'Messages')}
       </Typography>
-      
+
       <Paper sx={{ display: 'flex', height: '80vh' }}>
+        {/* Conversations List */}
         <Box sx={{ width: 300, borderRight: 1, borderColor: 'divider', overflow: 'auto' }}>
           <List>
             {conversations.length === 0 ? (
               <ListItem>
-                <ListItemText 
+                <ListItemText
                   primary={t('noConversations', 'No conversations yet')}
                   primaryTypographyProps={{ align: 'center', color: 'text.secondary' }}
                 />
@@ -149,7 +183,7 @@ const ChatPage: React.FC = () => {
                     secondary={
                       conv.lastMessage && conv.lastMessage.messageText.length > 30
                         ? conv.lastMessage.messageText.substring(0, 30) + '...'
-                        : conv.lastMessage?.messageText
+                        : conv.lastMessage?.messageText || t('startConversation', 'Start a conversation')
                     }
                     secondaryTypographyProps={{
                       noWrap: true,
@@ -162,15 +196,17 @@ const ChatPage: React.FC = () => {
           </List>
         </Box>
 
+        {/* Chat Area */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {!selectedConversation ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, flexDirection: 'column' }}>
               <Typography color="text.secondary">
                 {t('selectConversation', 'Select a conversation to start messaging')}
               </Typography>
             </Box>
           ) : (
             <>
+              {/* Chat Header */}
               <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar src={selectedConversation.otherUserProfilePicture || undefined} sx={{ mr: 2 }}>
@@ -187,7 +223,13 @@ const ChatPage: React.FC = () => {
                 </Box>
               </Box>
 
+              {/* Messages List */}
               <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                {messages.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 4 }}>
+                    {t('startChatting', 'Say hello to start the conversation!')}
+                  </Typography>
+                )}
                 {messages.map((msg) => {
                   const isOwn = msg.senderId === currentUserId;
                   return (
@@ -220,6 +262,7 @@ const ChatPage: React.FC = () => {
                 <div ref={messagesEndRef} />
               </Box>
 
+              {/* Input Area */}
               <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <TextField

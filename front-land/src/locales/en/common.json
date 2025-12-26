@@ -3,7 +3,6 @@
   "welcomeGuest": "Welcome!",
   "subtitle": "Your platform for finding the perfect living space and connecting with roommates.",
   "search": "Search",
-  "browseApartments": "Browse Apartments",
   "findRoommates": "Find Roommates",
   "messages": "Messages",
   "home": "Home",
@@ -36,4 +35,3 @@
   "lookingForRoommate": "Looking for Roommate",
   "lookingForRoommateDescription": "Enable this to show others that you're looking for a roommate"
 }
-
