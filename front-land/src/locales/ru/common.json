@@ -3,7 +3,6 @@
   "welcomeGuest": "Добро пожаловать!",
   "subtitle": "Ваша платформа для поиска идеального жилья и знакомства с соседями.",
   "search": "Поиск",
-  "browseApartments": "Просмотр квартир",
   "findRoommates": "Найти соседей",
   "messages": "Сообщения",
   "home": "Главная",
@@ -36,4 +35,3 @@
   "lookingForRoommate": "Ищу соседа",
   "lookingForRoommateDescription": "Включите это, чтобы показать другим, что вы ищете соседа"
 }
-

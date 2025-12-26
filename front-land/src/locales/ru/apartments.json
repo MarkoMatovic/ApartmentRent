@@ -1,5 +1,6 @@
 {
   "title": "Квартиры",
+  "browseApartments": "Просмотр квартир",
   "searchPlaceholder": "Где вы ищете?",
   "moveInDate": "Дата заселения",
   "moveOutDate": "Дата выезда (необязательно)",
@@ -45,4 +46,3 @@
   "sortRooms": "Количеству комнат",
   "lookingForRoommate": "Ищу соседа"
 }
-

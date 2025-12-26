@@ -80,12 +80,23 @@ const Header: React.FC = () => {
   const navItems = [
     { label: t('home'), path: '/' },
     { label: t('apartments'), path: '/apartments' },
-    { label: t('messages'), path: '/messages' },
-    { label: t('roommates'), path: '/roommates' },
+    // Prikazuj roommates i messages samo ako je korisnik ulogovan
+    ...(isAuthenticated ? [
+      { label: t('messages'), path: '/messages' },
+      { label: t('roommates'), path: '/roommates' },
+    ] : []),
   ];
 
   return (
-    <AppBar position="sticky" sx={{ bgcolor: 'primary.main' }}>
+    <AppBar
+      position="sticky"
+      sx={{
+        bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        backdropFilter: 'blur(10px)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
+      }}
+    >
       <Toolbar>
         {/* Logo */}
         <Typography
@@ -95,8 +106,13 @@ const Header: React.FC = () => {
             flexGrow: 0,
             mr: 3,
             cursor: 'pointer',
-            fontWeight: 700,
-            color: 'white',
+            fontWeight: 800,
+            fontSize: '1.5rem',
+            background: 'linear-gradient(45deg, #fff 30%, #f0f0f0 90%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            letterSpacing: '0.5px'
           }}
           onClick={() => navigate('/')}
         >
@@ -105,13 +121,41 @@ const Header: React.FC = () => {
 
         {/* Desktop Navigation */}
         {!isMobile && (
-          <Box sx={{ display: 'flex', gap: 2, flexGrow: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
             {navItems.map((item) => (
               <Button
                 key={item.path}
                 color="inherit"
                 onClick={() => navigate(item.path)}
-                sx={{ textTransform: 'none', fontWeight: 600 }}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.95rem',
+                  px: 2,
+                  py: 1,
+                  borderRadius: '20px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                    transition: 'left 0.5s',
+                  },
+                  '&:hover::before': {
+                    left: '100%',
+                  },
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
               >
                 {item.label}
               </Button>

@@ -48,5 +48,6 @@ public class GetApartmentDto
     public int? MaximumStayMonths { get; set; }
     public bool IsImmediatelyAvailable { get; set; }
     public bool IsLookingForRoommate { get; set; }
+    public int? LandlordId { get; set; }
     public List<ApartmentImageDto>? ApartmentImages { get; set; }
 }

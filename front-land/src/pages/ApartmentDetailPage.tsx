@@ -76,7 +76,7 @@ const ApartmentDetailPage: React.FC = () => {
             {apartment.address}, {apartment.city}
           </Typography>
         </Box>
-        
+
         {apartment.averageRating !== undefined && apartment.reviewCount !== undefined && apartment.reviewCount > 0 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <StarRating rating={apartment.averageRating} size="medium" showNumber />
@@ -238,6 +238,12 @@ const ApartmentDetailPage: React.FC = () => {
                 color="secondary"
                 size="large"
                 sx={{ mt: 3 }}
+                onClick={() => {
+                  if (apartment.landlordId) {
+                    navigate(`/messages?userId=${apartment.landlordId}`);
+                  }
+                }}
+                disabled={!apartment.landlordId}
               >
                 {t('contact')}
               </Button>
