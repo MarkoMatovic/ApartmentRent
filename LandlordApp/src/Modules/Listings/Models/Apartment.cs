@@ -30,15 +30,12 @@ public partial class Apartment
 
     public bool? RentIncludeUtilities { get; set; }
 
-    // Location (for maps & search)
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
 
-    // Apartment characteristics (filters)
     public int? SizeSquareMeters { get; set; }
     public ApartmentType ApartmentType { get; set; } = ApartmentType.Studio;
 
-    // Furnishing & amenities
     public bool IsFurnished { get; set; } = false;
     public bool HasBalcony { get; set; } = false;
     public bool HasElevator { get; set; } = false;
@@ -46,11 +43,9 @@ public partial class Apartment
     public bool HasInternet { get; set; } = false;
     public bool HasAirCondition { get; set; } = false;
 
-    // Rules
     public bool IsPetFriendly { get; set; } = false;
     public bool IsSmokingAllowed { get; set; } = false;
 
-    // Availability & rental terms
     public decimal? DepositAmount { get; set; }
     public int? MinimumStayMonths { get; set; }
     public int? MaximumStayMonths { get; set; }

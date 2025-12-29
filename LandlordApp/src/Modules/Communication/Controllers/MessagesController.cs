@@ -33,6 +33,7 @@ public class MessagesController : ControllerBase
     [HttpGet(ApiActionsV1.GetUserConversations, Name = nameof(ApiActionsV1.GetUserConversations))]
     public async Task<ActionResult<List<ConversationDto>>> GetUserConversations([FromRoute] int userId)
     {
+        // Simple pass-through
         var conversations = await _messageService.GetUserConversationsAsync(userId);
         return Ok(conversations);
     }

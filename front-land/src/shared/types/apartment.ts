@@ -95,6 +95,7 @@ export interface GetApartmentDto {
   isImmediatelyAvailable: boolean;
   apartmentImages?: ApartmentImage[];
   isLookingForRoommate?: boolean;
+  landlordId?: number;
   averageRating?: number;
   reviewCount?: number;
 }

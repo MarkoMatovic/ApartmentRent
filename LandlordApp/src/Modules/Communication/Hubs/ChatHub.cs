@@ -23,7 +23,6 @@ public class ChatHub : Hub
     {
         var message = await _messageService.SendMessageAsync(senderId, receiverId, messageText);
         
-        // Notify receiver
         await Clients.Group($"user_{receiverId}").SendAsync("ReceiveMessage", new
         {
             message.MessageId,
@@ -36,7 +35,6 @@ public class ChatHub : Hub
             message.SenderProfilePicture
         });
 
-        // Confirm to sender
         await Clients.Group($"user_{senderId}").SendAsync("MessageSent", new
         {
             message.MessageId,
@@ -57,7 +55,6 @@ public class ChatHub : Hub
         var message = await _messageService.GetMessageByIdAsync(messageId);
         if (message != null)
         {
-            // Notify sender that message was read
             await Clients.Group($"user_{message.SenderId}").SendAsync("MessageRead", new
             {
                 MessageId = messageId,

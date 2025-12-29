@@ -27,35 +27,29 @@ export const useChatSignalR = (userId: number | null) => {
 
     newConnection.start()
       .then(() => {
-        console.log('Chat SignalR Connected!');
         setConnected(true);
         
         newConnection.invoke('JoinChatRoom', userId)
-          .catch(err => console.error('Error joining chat room:', err));
+          .catch(() => {});
 
         newConnection.on('ReceiveMessage', (message: MessageDto) => {
-          console.log('New message received:', message);
           setNewMessage(message);
         });
 
         newConnection.on('MessageSent', (message: MessageDto) => {
-          console.log('Message sent confirmation:', message);
           setNewMessage(message);
         });
 
         newConnection.on('MessageRead', (data: { messageId: number }) => {
-          console.log('Message read:', data.messageId);
           setMessageRead(data.messageId);
         });
 
         newConnection.on('UserTyping', (data: { userId: number }) => {
-          console.log('User typing:', data.userId);
           setUserTyping(data.userId);
           setTimeout(() => setUserTyping(null), 3000);
         });
       })
-      .catch(err => {
-        console.error('Chat SignalR Connection Error:', err);
+      .catch(() => {
         setConnected(false);
       });
 
@@ -70,8 +64,7 @@ export const useChatSignalR = (userId: number | null) => {
     if (connection && connected) {
       try {
         await connection.invoke('SendMessage', senderId, receiverId, messageText);
-      } catch (err) {
-        console.error('Error sending message:', err);
+      } catch {
       }
     }
   }, [connection, connected]);
@@ -80,8 +73,7 @@ export const useChatSignalR = (userId: number | null) => {
     if (connection && connected) {
       try {
         await connection.invoke('MarkMessageAsRead', messageId);
-      } catch (err) {
-        console.error('Error marking message as read:', err);
+      } catch {
       }
     }
   }, [connection, connected]);
@@ -90,8 +82,7 @@ export const useChatSignalR = (userId: number | null) => {
     if (connection && connected) {
       try {
         await connection.invoke('UserTyping', userId, receiverId);
-      } catch (err) {
-        console.error('Error notifying typing:', err);
+      } catch {
       }
     }
   }, [connection, connected]);

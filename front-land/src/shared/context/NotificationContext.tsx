@@ -34,17 +34,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     newConnection
       .start()
-      .then(() => {
-        console.log('SignalR Connected');
-      })
-      .catch((err) => {
-        // Silently fail if backend is not available - this is expected in development
-        if (import.meta.env.DEV) {
-          console.warn('SignalR: Backend not available. Notifications will not work until backend is started.');
-        } else {
-          console.error('SignalR Connection Error: ', err);
-        }
-      });
+      .catch(() => {});
 
     newConnection.on('ReceiveNotification', (title: string, message: string, type: string) => {
       addNotification({

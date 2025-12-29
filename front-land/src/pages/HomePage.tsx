@@ -23,6 +23,9 @@ const HomePage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+
+  console.log('HomePage Auth State:', { user, isAuthenticated });
+
   const [location, setLocation] = useState('');
   const [moveInDate, setMoveInDate] = useState<Date | null>(null);
   const [moveOutDate, setMoveOutDate] = useState<Date | null>(null);
@@ -32,7 +35,7 @@ const HomePage: React.FC = () => {
     if (location) params.append('location', location);
     if (moveInDate) params.append('moveIn', moveInDate.toISOString().split('T')[0]);
     if (moveOutDate) params.append('moveOut', moveOutDate.toISOString().split('T')[0]);
-    
+
     navigate(`/apartments?${params.toString()}`);
   };
 

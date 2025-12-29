@@ -36,24 +36,36 @@ export const lightTheme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
-      fontWeight: 600,
+      fontWeight: 700,
+      fontSize: '2.5rem',
+      letterSpacing: '-0.02em',
     },
     h2: {
       fontWeight: 600,
+      fontSize: '2rem',
+      letterSpacing: '-0.01em',
     },
     h3: {
       fontWeight: 600,
+      fontSize: '1.5rem',
     },
     h4: {
       fontWeight: 600,
+      fontSize: '1.25rem',
     },
     h5: {
       fontWeight: 600,
+      fontSize: '1.1rem',
     },
     h6: {
       fontWeight: 600,
+      fontSize: '1rem',
+    },
+    button: {
+      fontWeight: 600,
+      letterSpacing: '0.02em',
     },
   },
   shape: {
