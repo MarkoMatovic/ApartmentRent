@@ -3,7 +3,6 @@
   "welcomeGuest": "Willkommen!",
   "subtitle": "Ihre Plattform zum Finden des perfekten Wohnraums und zum Vernetzen mit Mitbewohnern.",
   "search": "Suchen",
-  "browseApartments": "Wohnungen durchsuchen",
   "findRoommates": "Mitbewohner finden",
   "messages": "Nachrichten",
   "home": "Startseite",
@@ -36,4 +35,3 @@
   "lookingForRoommate": "Suche Mitbewohner",
   "lookingForRoommateDescription": "Aktivieren Sie dies, um anderen zu zeigen, dass Sie einen Mitbewohner suchen"
 }
-

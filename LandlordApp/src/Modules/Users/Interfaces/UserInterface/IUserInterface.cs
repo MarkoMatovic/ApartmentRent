@@ -7,7 +7,7 @@ namespace Lander.src.Modules.Users.Interfaces.UserInterface;
 public interface IUserInterface
 {
     Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto);
-    Task<string> LoginUserAsync(LoginUserInputDto userRegistrationInputDto);
+    Task<string?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto);
     Task LogoutUserAsync();
     Task DeactivateUserAsync(DeactivateUserInputDto deactivateUserInputDto);
     Task ReactivateUserAsync(ReactivateUserInputDto reactivateUserInputDto);

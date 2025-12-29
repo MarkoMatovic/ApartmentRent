@@ -71,11 +71,26 @@ public class RoommatesController : ControllerBase
     {
         var userGuid = User.FindFirstValue("sub");
         if (string.IsNullOrEmpty(userGuid))
-            return Unauthorized();
+        {
+            return Unauthorized(new { message = "User GUID not found in token claims" });
+        }
 
-        var user = await _userInterface.GetUserByGuidAsync(Guid.Parse(userGuid));
+        Guid parsedGuid;
+        if (!Guid.TryParse(userGuid, out parsedGuid))
+        {
+            return Unauthorized(new { message = "Invalid user GUID format" });
+        }
+
+        var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
         if (user == null)
-            return Unauthorized();
+        {
+            return Unauthorized(new { message = $"User not found for GUID: {userGuid}" });
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized(new { message = "User account is not active. Please contact support." });
+        }
 
         try 
         {

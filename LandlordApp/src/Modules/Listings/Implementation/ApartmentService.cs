@@ -69,23 +69,18 @@ public class ApartmentService : IApartmentService
             AvailableUntil = apartmentInputDto.AvailableUntil,
             NumberOfRooms = apartmentInputDto.NumberOfRooms,
             RentIncludeUtilities = apartmentInputDto.RentIncludeUtilities,
-            // Location (for maps & search)
             Latitude = apartmentInputDto.Latitude,
             Longitude = apartmentInputDto.Longitude,
-            // Apartment characteristics (filters)
             SizeSquareMeters = apartmentInputDto.SizeSquareMeters,
             ApartmentType = apartmentInputDto.ApartmentType ?? ApartmentType.Studio,
-            // Furnishing & amenities
             IsFurnished = apartmentInputDto.IsFurnished ?? false,
             HasBalcony = apartmentInputDto.HasBalcony ?? false,
             HasElevator = apartmentInputDto.HasElevator ?? false,
             HasParking = apartmentInputDto.HasParking ?? false,
             HasInternet = apartmentInputDto.HasInternet ?? false,
             HasAirCondition = apartmentInputDto.HasAirCondition ?? false,
-            // Rules
             IsPetFriendly = apartmentInputDto.IsPetFriendly ?? false,
             IsSmokingAllowed = apartmentInputDto.IsSmokingAllowed ?? false,
-            // Availability & rental terms
             DepositAmount = apartmentInputDto.DepositAmount,
             MinimumStayMonths = apartmentInputDto.MinimumStayMonths,
             MaximumStayMonths = apartmentInputDto.MaximumStayMonths,
@@ -128,7 +123,6 @@ public class ApartmentService : IApartmentService
             Rent = apartment.Rent,
             Address = apartment.Address,
             City = apartment.City,
-            // Extended fields (optional for backward compatibility)
             Latitude = apartment.Latitude,
             Longitude = apartment.Longitude,
             SizeSquareMeters = apartment.SizeSquareMeters,
@@ -228,27 +222,22 @@ public class ApartmentService : IApartmentService
 
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
-        Console.WriteLine($"[ApartmentService] Filters received - City: '{filters.City}', MinRent: {filters.MinRent}, MaxRent: {filters.MaxRent}, Page: {filters.Page}, PageSize: {filters.PageSize}");
-        
         var query = _context.Apartments
             .Where(a => !a.IsDeleted && a.IsActive)
             .AsNoTracking();
 
         if (!string.IsNullOrEmpty(filters.City))
         {
-            Console.WriteLine($"[ApartmentService] Applying City filter: {filters.City}");
             query = query.Where(a => a.City != null && a.City.Contains(filters.City));
         }
 
         if (filters.MinRent.HasValue)
         {
-            Console.WriteLine($"[ApartmentService] Applying MinRent filter: {filters.MinRent.Value}");
             query = query.Where(a => a.Rent >= filters.MinRent.Value);
         }
 
         if (filters.MaxRent.HasValue)
         {
-            Console.WriteLine($"[ApartmentService] Applying MaxRent filter: {filters.MaxRent.Value}");
             query = query.Where(a => a.Rent <= filters.MaxRent.Value);
         }
 
@@ -402,6 +391,7 @@ public class ApartmentService : IApartmentService
             MaximumStayMonths = apartment.MaximumStayMonths,
             IsImmediatelyAvailable = apartment.IsImmediatelyAvailable,
             IsLookingForRoommate = isLookingForRoommate,
+            LandlordId = apartment.LandlordId,
             ApartmentImages = apartment.ApartmentImages?.Select(img => new ApartmentImageDto
             {
                 ImageId = img.ImageId,

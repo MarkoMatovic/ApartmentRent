@@ -1,5 +1,6 @@
 {
   "title": "Wohnungen",
+  "browseApartments": "Wohnungen durchsuchen",
   "searchPlaceholder": "Wo suchen Sie?",
   "moveInDate": "Einzugsdatum",
   "moveOutDate": "Auszugsdatum (optional)",
@@ -45,4 +46,3 @@
   "sortRooms": "Anzahl der Zimmer",
   "lookingForRoommate": "Suche Mitbewohner"
 }
-

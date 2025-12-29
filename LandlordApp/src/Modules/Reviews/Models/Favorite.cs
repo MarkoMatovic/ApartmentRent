@@ -10,8 +10,8 @@ public class Favorite
     public int? UserId { get; set; }
 
     public int? ApartmentId { get; set; }
-    public int? RoommateId { get; set; } // For favoriting roommates
-    public int? SearchRequestId { get; set; } // For favoriting search requests
+    public int? RoommateId { get; set; }
+    public int? SearchRequestId { get; set; }
 
     public Guid? CreatedByGuid { get; set; }
 
@@ -20,10 +20,6 @@ public class Favorite
     public Guid? ModifiedByGuid { get; set; }
 
     public DateTime? ModifiedDate { get; set; }
-
-    //public virtual Apartment? Apartment { get; set; }
-
-    //public virtual User? User { get; set; }
 }
 public class CreateFavoriteInput
 {
