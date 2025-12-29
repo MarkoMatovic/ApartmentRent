@@ -47,7 +47,6 @@ const CreateRoommatePage: React.FC = () => {
     lookingForRoomType: '',
     lookingForApartmentType: '',
     preferredLocation: '',
-    lookingForApartmentId: undefined,
   });
 
   const createMutation = useMutation({
@@ -60,7 +59,26 @@ const CreateRoommatePage: React.FC = () => {
       }, 2000);
     },
     onError: (err: any) => {
-      const errorMessage = err.response?.data?.message || err.response?.data || err.message || 'Failed to create roommate profile';
+      console.error('Create roommate error:', err);
+
+      // Detaljnije error poruke
+      let errorMessage = 'Failed to create roommate profile';
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data) {
+        errorMessage = typeof err.response.data === 'string'
+          ? err.response.data
+          : JSON.stringify(err.response.data);
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      // Ako je problem sa aktivacijom naloga, dodaj dodatnu poruku
+      if (errorMessage.includes('not active')) {
+        errorMessage += '\n\nMolimo vas da kontaktirate podršku ili proverite vaš email za aktivacioni link.';
+      }
+
       setError(errorMessage);
     },
   });

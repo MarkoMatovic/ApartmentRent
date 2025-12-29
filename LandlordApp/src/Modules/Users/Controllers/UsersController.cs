@@ -30,7 +30,12 @@ namespace Lander.src.Modules.Users.Controllers
         [HttpPost(ApiActionsV1.Login, Name = nameof(ApiActionsV1.Login))]
         public async Task<ActionResult<string>> LoginUser([FromBody] LoginUserInputDto loginUserInputDto)
         {
-            return Ok(await _userInterface.LoginUserAsync(loginUserInputDto));
+            var token = await _userInterface.LoginUserAsync(loginUserInputDto);
+            if (token == null)
+            {
+                return Unauthorized(new { message = "Neispravan email ili lozinka" });
+            }
+            return Ok(token);
         }
         [HttpPost(ApiActionsV1.Logout, Name = nameof(ApiActionsV1.Logout))]
         public async Task<ActionResult> Logout()

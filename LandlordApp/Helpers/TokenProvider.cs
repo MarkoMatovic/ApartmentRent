@@ -20,9 +20,12 @@ public sealed class TokenProvider(IConfiguration configuration)
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.UserGuid.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.UserGuid.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
-            new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName),
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName ?? ""),
+            new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName ?? ""),
+            new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
             new Claim(ClaimTypes.Role, user.UserRole?.RoleName ?? "Guest"),
             new Claim("userId", user.UserId.ToString()),
             new Claim("isActive", user.IsActive.ToString()),
