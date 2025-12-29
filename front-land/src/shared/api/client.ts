@@ -28,10 +28,18 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const errorData = error.response?.data;
+      const errorMessage = typeof errorData === 'string' ? errorData : errorData?.message || '';
+
+      console.log('401 error detected:', { errorMessage, errorData });
+
+      // Ako imamo poruku od kontrolera (JSON sa message ili string), NE redirektuj
+      // Redirektuj SAMO ako je odgovor prazan (što obično radi Identity/JWT middleware kad je token nevažeći)
+      if (!errorMessage && !errorData) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

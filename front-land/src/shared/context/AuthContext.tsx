@@ -16,8 +16,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const decodeToken = (token: string): User | null => {
+  console.log('Attempting to decode token:', token);
   try {
-    const base64Url = token.split('.')[1];
+    if (!token || typeof token !== 'string') {
+      console.error('Token is null or not a string');
+      return null;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.warn('Invalid token format - expected 3 parts, got:', parts.length);
+      return null;
+    }
+
+    const base64Url = parts[1];
+    if (!base64Url) {
+      console.error('Token payload part is missing');
+      return null;
+    }
+
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
       atob(base64)
@@ -27,19 +44,21 @@ const decodeToken = (token: string): User | null => {
     );
 
     const payload = JSON.parse(jsonPayload);
+    console.log('Decoded Token Payload Successfully:', payload);
 
     return {
-      userId: parseInt(payload.userId) || 0,
-      userGuid: payload.sub || '',
-      firstName: payload.given_name || '',
-      lastName: payload.family_name || '',
-      email: payload.email || '',
-      phoneNumber: payload.phone_number,
-      isActive: payload.isActive === 'true' || payload.isActive === true,
+      userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
+      userGuid: payload.sub || payload.nameid || '',
+      firstName: payload.given_name || payload.givenName || payload.first_name || '',
+      lastName: payload.family_name || payload.familyName || payload.last_name || '',
+      email: payload.email || payload.emailaddress || '',
+      phoneNumber: payload.phone_number || payload.phone,
+      isActive: payload.isActive === 'true' || payload.isActive === true || payload.active === true,
       isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
     };
-  } catch {
+  } catch (error) {
+    console.error('CRITICAL: Error decoding token:', error);
     return null;
   }
 };
@@ -50,36 +69,65 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('user');
+    const initAuth = async () => {
+      console.log('Initializing Auth State...');
+      const storedToken = localStorage.getItem('authToken');
+      const storedUser = localStorage.getItem('user');
 
-    if (storedToken) {
-      setToken(storedToken);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-        const decodedUser = decodeToken(storedToken);
-        if (decodedUser) {
-          setUser(decodedUser);
-          localStorage.setItem('user', JSON.stringify(decodedUser));
+      if (storedToken) {
+        console.log('Found stored token');
+        setToken(storedToken);
+        if (storedUser) {
+          try {
+            console.log('Found stored user data');
+            setUser(JSON.parse(storedUser));
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+            const decodedUser = decodeToken(storedToken);
+            if (decodedUser) {
+              setUser(decodedUser);
+              localStorage.setItem('user', JSON.stringify(decodedUser));
+            }
+          }
+        } else {
+          console.log('No stored user data, decoding from token...');
+          const decodedUser = decodeToken(storedToken);
+          if (decodedUser) {
+            setUser(decodedUser);
+            localStorage.setItem('user', JSON.stringify(decodedUser));
+          }
         }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      const token = await authApi.login({ email, password });
-      setToken(token);
-      localStorage.setItem('authToken', token);
+      console.log('Logging in user:', email);
+      const tokenResult = await authApi.login({ email, password });
 
-      const decodedUser = decodeToken(token);
+      if (!tokenResult || typeof tokenResult !== 'string' || tokenResult.split('.').length !== 3) {
+        console.error('Backend returned invalid token:', tokenResult);
+        throw new Error('Neispravan format tokena sa servera');
+      }
+
+      setToken(tokenResult);
+      localStorage.setItem('authToken', tokenResult);
+
+      const decodedUser = decodeToken(tokenResult);
       if (decodedUser) {
+        console.log('User logged in and decoded:', decodedUser);
         setUser(decodedUser);
         localStorage.setItem('user', JSON.stringify(decodedUser));
+      } else {
+        console.error('Failed to decode valid looking token');
+        throw new Error('Problem sa dekodiranjem korisničkih podataka');
       }
     } catch (error) {
+      console.error('Login function error:', error);
       throw error;
     }
   };
@@ -95,8 +143,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
+      console.log('Logging out...');
       await authApi.logout();
-    } catch {
+    } catch (error) {
+      console.error('Logout error:', error);
     } finally {
       setUser(null);
       setToken(null);
@@ -131,4 +181,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

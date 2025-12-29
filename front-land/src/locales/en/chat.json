@@ -5,14 +5,20 @@
   "typeMessage": "Type a message...",
   "send": "Send",
   "online": "Online",
-  "offline": "Offline",
+  "offline": "Offline - messages will be sent when reconnected",
   "newMessage": "New Message",
   "conversations": "Conversations",
-  "noConversations": "You have no conversations",
-  "searchConversations": "Search conversations",
+  "noConversations": "No conversations yet",
+  "noResults": "No results",
+  "searchConversations": "Search conversations...",
   "markAsRead": "Mark as read",
   "delete": "Delete",
   "today": "Today",
-  "yesterday": "Yesterday"
+  "yesterday": "Yesterday",
+  "typing": "typing...",
+  "startConversation": "Start a conversation",
+  "selectConversation": "Select a conversation to start messaging",
+  "startChatting": "Hello! 👋",
+  "sendFirstMessage": "Send the first message to start the conversation",
+  "checkMessages": "Check messages"
 }
-
