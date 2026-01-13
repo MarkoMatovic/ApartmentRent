@@ -49,6 +49,8 @@ builder.Services.AddDbContext<SearchRequestsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<SavedSearchesContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<AnalyticsContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddCors(options =>
 {
@@ -119,6 +121,9 @@ builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
+builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
+builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoommateMatchingService, Lander.src.Modules.MachineLearning.Implementation.RoommateMatchingService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();

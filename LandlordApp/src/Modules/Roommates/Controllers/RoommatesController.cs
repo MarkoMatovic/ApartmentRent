@@ -15,11 +15,13 @@ public class RoommatesController : ControllerBase
 {
     private readonly IRoommateService _roommateService;
     private readonly IUserInterface _userInterface;
+    private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
 
-    public RoommatesController(IRoommateService roommateService, IUserInterface userInterface)
+    public RoommatesController(IRoommateService roommateService, IUserInterface userInterface, Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
     {
         _roommateService = roommateService;
         _userInterface = userInterface;
+        _analyticsService = analyticsService;
     }
 
     [HttpGet(ApiActionsV1.GetAllRoommates, Name = nameof(ApiActionsV1.GetAllRoommates))]
@@ -34,6 +36,19 @@ public class RoommatesController : ControllerBase
         [FromQuery] int? page = null,
         [FromQuery] int? pageSize = null)
     {
+        // Track search event if filters are applied
+        if (location != null || minBudget.HasValue || maxBudget.HasValue || smokingAllowed.HasValue || petFriendly.HasValue || lifestyle != null)
+        {
+            var searchQuery = $"Location:{location},Budget:{minBudget}-{maxBudget},Smoking:{smokingAllowed},Pets:{petFriendly},Lifestyle:{lifestyle}";
+            _ = _analyticsService.TrackEventAsync(
+                "RoommateSearch",
+                "Roommates",
+                searchQuery: searchQuery,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+            );
+        }
+        
         if (page.HasValue && pageSize.HasValue)
         {
             var pagedResult = await _roommateService.GetAllRoommatesAsync(
@@ -50,6 +65,16 @@ public class RoommatesController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<RoommateDto>> GetRoommate([FromQuery] int id)
     {
+        // Track roommate view event
+        _ = _analyticsService.TrackEventAsync(
+            "RoommateView",
+            "Roommates",
+            entityId: id,
+            entityType: "Roommate",
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+        );
+        
         var roommate = await _roommateService.GetRoommateByIdAsync(id);
         if (roommate == null)
             return NotFound();
