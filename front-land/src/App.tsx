@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './shared/context/AuthContext';
 import { ThemeProvider } from './shared/context/ThemeContext';
@@ -17,6 +16,7 @@ import RoommateDetailPage from './pages/RoommateDetailPage';
 import CreateRoommatePage from './pages/CreateRoommatePage';
 import ProfilePage from './pages/ProfilePage';
 import MyApartmentsPage from './pages/MyApartmentsPage';
+import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 
 function App() {
   return (
@@ -39,6 +39,7 @@ function App() {
                 <Route path="/roommates/create" element={<CreateRoommatePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-apartments" element={<MyApartmentsPage />} />
+                <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

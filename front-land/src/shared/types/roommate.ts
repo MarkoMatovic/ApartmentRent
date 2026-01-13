@@ -27,6 +27,8 @@ export interface Roommate {
   preferredLocation?: string;
   lookingForApartmentId?: number;
   isActive?: boolean;
+  matchScore?: number; // ML.NET compatibility score (0-100)
+  user?: any; // User details
 }
 
 export interface RoommateFilters {
