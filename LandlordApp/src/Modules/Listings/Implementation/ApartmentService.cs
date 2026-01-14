@@ -141,13 +141,6 @@ public class ApartmentService : IApartmentService
         catch (Exception ex)
         {
             _context.RollBackTransaction();
-            // Log the exception for debugging
-            System.Diagnostics.Debug.WriteLine($"Error creating apartment: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-            if (ex.InnerException != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
-            }
             throw;
         }
 
@@ -363,37 +356,21 @@ public class ApartmentService : IApartmentService
 
     public async Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync()
     {
-        // Try both "sub" and ClaimTypes.NameIdentifier to be safe
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub") 
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         int? landlordId = null;
 
-        // Debug logging
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: currentUserGuid = {currentUserGuid}");
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: All claims: {string.Join(", ", _httpContextAccessor.HttpContext?.User?.Claims.Select(c => $"{c.Type}={c.Value}") ?? new List<string>())}");
-
-        // Get LandlordId from user Guid
         if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
         {
             var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
             if (user != null)
             {
                 landlordId = user.UserId;
-                System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Found user with UserId = {landlordId}");
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: User not found for Guid = {parsedGuid}");
-            }
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: currentUserGuid is null or invalid");
         }
 
         if (!landlordId.HasValue)
         {
-            System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: landlordId is null, returning empty list");
             return new PagedResult<ApartmentDto>
             {
                 Items = new List<ApartmentDto>(),
@@ -403,34 +380,16 @@ public class ApartmentService : IApartmentService
             };
         }
 
-        // First, let's check all apartments to see what we have
-        var allApartmentsCount = await _context.Apartments.CountAsync();
-        var apartmentsWithLandlordId = await _context.Apartments
-            .Where(a => a.LandlordId != null)
-            .CountAsync();
-        var apartmentsWithThisLandlordId = await _context.Apartments
-            .Where(a => a.LandlordId == landlordId.Value)
-            .CountAsync();
-        
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Total apartments in DB: {allApartmentsCount}");
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Apartments with LandlordId set: {apartmentsWithLandlordId}");
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Apartments with LandlordId = {landlordId.Value}: {apartmentsWithThisLandlordId}");
-
         var query = _context.Apartments
             .Where(a => !a.IsDeleted && a.LandlordId == landlordId.Value)
             .AsNoTracking();
 
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Querying apartments with LandlordId = {landlordId.Value}");
-
         var totalCount = await query.CountAsync();
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Found {totalCount} apartments in database (not deleted)");
 
         var apartments = await query
             .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
             .OrderByDescending(a => a.CreatedDate)
             .ToListAsync();
-
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Loaded {apartments.Count} apartments with images");
 
         var items = apartments.Select(a => new ApartmentDto
         {
@@ -457,8 +416,6 @@ public class ApartmentService : IApartmentService
                     IsPrimary = img.IsPrimary
                 }).ToList()
         }).ToList();
-
-        System.Diagnostics.Debug.WriteLine($"GetMyApartmentsAsync: Returning {items.Count} items");
 
         return new PagedResult<ApartmentDto>
         {

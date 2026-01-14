@@ -39,13 +39,10 @@ export const apartmentsApi = {
 
   getMyApartments: async (): Promise<ApartmentDto[]> => {
     const response = await apiClient.get<any>(`/api/v1/rent/get-my-apartments`);
-    // Backend returns PagedResult with Items property (capital I)
-    // Check both lowercase and uppercase, and handle direct array
     let apartments = response.data?.items || response.data?.Items || response.data;
     if (!Array.isArray(apartments)) {
       apartments = [];
     }
-    console.log('getMyApartments response:', response.data, 'parsed apartments:', apartments);
     return apartments;
   },
 

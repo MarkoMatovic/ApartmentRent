@@ -30,16 +30,6 @@ const MyApartmentsPage: React.FC = () => {
     updateMutation.mutate({ id: apartmentId, isLookingForRoommate });
   };
 
-  // Debug logging
-  React.useEffect(() => {
-    if (error) {
-      console.error('Error loading my apartments:', error);
-    }
-    if (apartments) {
-      console.log('My apartments loaded:', apartments);
-    }
-  }, [apartments, error]);
-
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>

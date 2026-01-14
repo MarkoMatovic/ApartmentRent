@@ -65,13 +65,7 @@ const ApartmentImageGallery: React.FC<ApartmentImageGalleryProps> = ({
               transition: 'opacity 0.3s ease',
             }}
             onError={(e: any) => {
-              console.error('Image failed to load:', images[currentImageIndex].imageUrl);
-              console.error('Error event:', e);
-              // Set a placeholder or show error
               e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Found';
-            }}
-            onLoad={() => {
-              console.log('Image loaded successfully:', images[currentImageIndex].imageUrl);
             }}
           />
         ) : (
@@ -254,7 +248,6 @@ const ApartmentImageGallery: React.FC<ApartmentImageGalleryProps> = ({
                   objectFit: 'cover',
                 }}
                 onError={(e: any) => {
-                  console.error('Thumbnail failed to load:', image.imageUrl);
                   e.target.src = 'https://via.placeholder.com/100x80?text=Error';
                 }}
               />

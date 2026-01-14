@@ -59,7 +59,6 @@ const CreateRoommatePage: React.FC = () => {
       }, 2000);
     },
     onError: (err: any) => {
-      console.error('Create roommate error:', err);
 
       // Detaljnije error poruke
       let errorMessage = 'Failed to create roommate profile';
