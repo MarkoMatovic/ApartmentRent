@@ -4,14 +4,14 @@ import { Apartment, ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentIn
 export const apartmentsApi = {
   getAll: async (filters?: ApartmentFilters): Promise<ApartmentDto[]> => {
     const params: Record<string, any> = {};
-    
+
     if (filters) {
       if (filters.city) params.city = filters.city;
       if (filters.minRent) params.minRent = Number(filters.minRent);
       if (filters.maxRent) params.maxRent = Number(filters.maxRent);
       if (filters.numberOfRooms) params.numberOfRooms = Number(filters.numberOfRooms);
-      if (filters.apartmentType !== undefined && filters.apartmentType !== '') params.apartmentType = filters.apartmentType;
-      if (filters.isFurnished !== undefined && filters.isFurnished !== '') params.isFurnished = filters.isFurnished;
+      if (filters.apartmentType !== undefined) params.apartmentType = filters.apartmentType;
+      if (filters.isFurnished !== undefined) params.isFurnished = filters.isFurnished;
       if (filters.hasParking !== undefined) params.hasParking = filters.hasParking;
       if (filters.hasBalcony !== undefined) params.hasBalcony = filters.hasBalcony;
       if (filters.isPetFriendly !== undefined) params.isPetFriendly = filters.isPetFriendly;
@@ -20,13 +20,13 @@ export const apartmentsApi = {
       if (filters.page) params.page = filters.page;
       if (filters.pageSize) params.pageSize = filters.pageSize;
     }
-    
+
     const response = await apiClient.get<any>(`/api/v1/rent/get-all-apartments`, {
       params,
     });
-    
+
     const apartments = response.data.items || response.data;
-    
+
     return apartments;
   },
 
@@ -35,6 +35,12 @@ export const apartmentsApi = {
       params: { id },
     });
     return response.data;
+  },
+
+  getMyApartments: async (): Promise<ApartmentDto[]> => {
+    const response = await apiClient.get<any>(`/api/v1/rent/get-my-apartments`);
+    const apartments = response.data.items || response.data;
+    return apartments;
   },
 
   create: async (data: ApartmentInputDto): Promise<Apartment> => {
@@ -48,6 +54,20 @@ export const apartmentsApi = {
 
   activate: async (id: number): Promise<void> => {
     await apiClient.post(`/api/v1/rent/activate-apartment/${id}`);
+  },
+
+  uploadImages: async (files: File[]): Promise<string[]> => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    const response = await apiClient.post<string[]>(`/api/v1/rent/upload-images`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   },
 };
 

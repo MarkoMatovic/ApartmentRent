@@ -6,6 +6,7 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
+using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
@@ -16,12 +17,14 @@ public class ApartmentService : IApartmentService
     private readonly ListingsContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUserInterface _userInterface;
 
-    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
+    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor, IUserInterface userInterface)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
+        _userInterface = userInterface;
     }
 
     public async Task<bool> ActivateApartmentAsync(int apartmentId)
@@ -56,9 +59,21 @@ public class ApartmentService : IApartmentService
     public async Task<ApartmentDto> CreateApartmentAsync(ApartmentInputDto apartmentInputDto)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        int? landlordId = null;
+
+        // Get LandlordId from user Guid
+        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        {
+            var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
+            if (user != null)
+            {
+                landlordId = user.UserId;
+            }
+        }
 
         var apartment = new Apartment
         {
+            LandlordId = landlordId,
             Title = apartmentInputDto.Title,
             Description = apartmentInputDto.Description,
             Rent = apartmentInputDto.Rent,
@@ -85,34 +100,51 @@ public class ApartmentService : IApartmentService
             MinimumStayMonths = apartmentInputDto.MinimumStayMonths,
             MaximumStayMonths = apartmentInputDto.MaximumStayMonths,
             IsImmediatelyAvailable = apartmentInputDto.IsImmediatelyAvailable ?? false,
+            IsActive = true,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             ModifiedDate = DateTime.UtcNow
         };
 
-        _context.Apartments.Add(apartment);
-
-        var apartmentImages = apartmentInputDto.ImageUrls.Select(url => new ApartmentImage
-        {
-            ApartmentId = apartment.ApartmentId,
-            ImageUrl = url,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            ModifiedDate = DateTime.UtcNow
-        }).ToList();
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
-            _context.ApartmentImages.AddRange(apartmentImages);
-            await _context.SaveEntitiesAsync();
+            _context.Apartments.Add(apartment);
+            await _context.SaveEntitiesAsync(); // Save apartment first to get ApartmentId
+
+            // Now create images with the correct ApartmentId
+            if (apartmentInputDto.ImageUrls != null && apartmentInputDto.ImageUrls.Any())
+            {
+                var apartmentImages = apartmentInputDto.ImageUrls.Select((url, index) => new ApartmentImage
+                {
+                    ApartmentId = apartment.ApartmentId,
+                    ImageUrl = url,
+                    DisplayOrder = index,
+                    IsPrimary = index == 0,
+                    IsDeleted = false,
+                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    CreatedDate = DateTime.UtcNow,
+                    ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    ModifiedDate = DateTime.UtcNow
+                }).ToList();
+
+                _context.ApartmentImages.AddRange(apartmentImages);
+                await _context.SaveEntitiesAsync(); // Save images
+            }
+
             await _context.CommitTransactionAsync(transaction);
         }
-        catch
+        catch (Exception ex)
         {
             _context.RollBackTransaction();
+            // Log the exception for debugging
+            System.Diagnostics.Debug.WriteLine($"Error creating apartment: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+            }
             throw;
         }
 
@@ -200,7 +232,7 @@ public class ApartmentService : IApartmentService
             IsLookingForRoommate = a.LandlordId.HasValue && landlordLookingForRoommate.Contains(a.LandlordId.Value),
             ApartmentImages = a.Apartment.ApartmentImages
                 .Where(img => !img.IsDeleted)
-                .OrderByDescending(img => img.IsPrimary)
+                .OrderBy(img => img.DisplayOrder)
                 .Take(5)
                 .Select(img => new ApartmentImageDto
                 {
@@ -319,7 +351,7 @@ public class ApartmentService : IApartmentService
             IsLookingForRoommate = a.LandlordId.HasValue && landlordLookingForRoommate.Contains(a.LandlordId.Value),
             ApartmentImages = a.Apartment.ApartmentImages
                 .Where(img => !img.IsDeleted)
-                .OrderByDescending(img => img.IsPrimary)
+                .OrderBy(img => img.DisplayOrder)
                 .Take(5)
                 .Select(img => new ApartmentImageDto
                 {
@@ -339,12 +371,95 @@ public class ApartmentService : IApartmentService
         };
     }
 
+    public async Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync()
+    {
+        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        int? landlordId = null;
+
+        // Get LandlordId from user Guid
+        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        {
+            var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
+            if (user != null)
+            {
+                landlordId = user.UserId;
+            }
+        }
+
+        if (!landlordId.HasValue)
+        {
+            return new PagedResult<ApartmentDto>
+            {
+                Items = new List<ApartmentDto>(),
+                TotalCount = 0,
+                Page = 1,
+                PageSize = 20
+            };
+        }
+
+        var query = _context.Apartments
+            .Where(a => !a.IsDeleted && a.LandlordId == landlordId.Value)
+            .AsNoTracking();
+
+        var totalCount = await query.CountAsync();
+
+        var apartments = await query
+            .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
+            .OrderByDescending(a => a.CreatedDate)
+            .ToListAsync();
+
+        var landlordIds = apartments.Where(a => a.LandlordId.HasValue).Select(a => a.LandlordId!.Value).Distinct().ToList();
+        
+        var landlordLookingForRoommate = new List<int>();
+        if (landlordIds.Any())
+        {
+            landlordLookingForRoommate = await _usersContext.Users
+                .Where(u => landlordIds.Contains(u.UserId) && u.IsLookingForRoommate)
+                .Select(u => u.UserId)
+                .ToListAsync();
+        }
+
+        var items = apartments.Select(a => new ApartmentDto
+        {
+            ApartmentId = a.ApartmentId,
+            Title = a.Title,
+            Rent = a.Rent,
+            Address = a.Address,
+            City = a.City ?? string.Empty,
+            Latitude = a.Latitude,
+            Longitude = a.Longitude,
+            SizeSquareMeters = a.SizeSquareMeters,
+            ApartmentType = a.ApartmentType,
+            IsFurnished = a.IsFurnished,
+            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+            IsLookingForRoommate = a.LandlordId.HasValue && landlordLookingForRoommate.Contains(a.LandlordId.Value),
+            ApartmentImages = a.ApartmentImages
+                .Where(img => !img.IsDeleted)
+                .OrderBy(img => img.DisplayOrder)
+                .Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
+        }).ToList();
+
+        return new PagedResult<ApartmentDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = 1,
+            PageSize = totalCount
+        };
+    }
+
     public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
     {
         var apartment = await _context.Apartments
-            .Include(a => a.ApartmentImages)
+            .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
             .AsNoTracking()
-            .Where(a => a.ApartmentId == apartmentId)
+            .Where(a => a.ApartmentId == apartmentId && !a.IsDeleted)
             .FirstOrDefaultAsync();
 
 
@@ -392,11 +507,15 @@ public class ApartmentService : IApartmentService
             IsImmediatelyAvailable = apartment.IsImmediatelyAvailable,
             IsLookingForRoommate = isLookingForRoommate,
             LandlordId = apartment.LandlordId,
-            ApartmentImages = apartment.ApartmentImages?.Select(img => new ApartmentImageDto
+            ApartmentImages = apartment.ApartmentImages?
+                .Where(img => !img.IsDeleted)
+                .OrderBy(img => img.DisplayOrder)
+                .Select(img => new ApartmentImageDto
             {
                 ImageId = img.ImageId,
                 ApartmentId = img.ApartmentId,
-                ImageUrl = img.ImageUrl
+                ImageUrl = img.ImageUrl,
+                IsPrimary = img.IsPrimary
             }).ToList()
         };
     }
@@ -454,10 +573,12 @@ public class ApartmentService : IApartmentService
                 img.ModifiedDate = DateTime.UtcNow;
             }
 
-            var newImages = updateDto.ImageUrls.Select(url => new ApartmentImage
+            var newImages = updateDto.ImageUrls.Select((url, index) => new ApartmentImage
             {
                 ApartmentId = apartment.ApartmentId,
                 ImageUrl = url,
+                DisplayOrder = index,
+                IsPrimary = index == 0,
                 CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
                 CreatedDate = DateTime.UtcNow,
                 ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,

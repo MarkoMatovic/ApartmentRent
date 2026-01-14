@@ -26,12 +26,28 @@ public class ApartmentsController : ControllerBase
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
     public async Task<ActionResult<ApartmentDto>> CreateApartment([FromBody] ApartmentInputDto apartmentInputDto)
     {
-        var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
-        
-        await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
-            .EvictByTagAsync("apartments", default);
-        
-        return Ok(result);
+        try
+        {
+            // Log the incoming data for debugging
+            System.Diagnostics.Debug.WriteLine($"Creating apartment with {apartmentInputDto.ImageUrls?.Count ?? 0} images");
+            if (apartmentInputDto.ImageUrls != null && apartmentInputDto.ImageUrls.Any())
+            {
+                System.Diagnostics.Debug.WriteLine($"Image URLs: {string.Join(", ", apartmentInputDto.ImageUrls)}");
+            }
+
+            var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
+            
+            await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
+                .EvictByTagAsync("apartments", default);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error in CreateApartment controller: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            return StatusCode(500, new { message = "Error creating apartment", error = ex.Message });
+        }
     }
 
     [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
@@ -54,6 +70,13 @@ public class ApartmentsController : ControllerBase
         }
         
         return Ok(await _apartmentServie.GetAllApartmentsAsync());
+    }
+
+    [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]
+    public async Task<ActionResult> GetMyApartments()
+    {
+        var result = await _apartmentServie.GetMyApartmentsAsync();
+        return Ok(result);
     }
 
     [HttpGet(ApiActionsV1.GetApartment, Name = nameof(ApiActionsV1.GetApartment))]

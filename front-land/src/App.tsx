@@ -16,6 +16,7 @@ import RoommateDetailPage from './pages/RoommateDetailPage';
 import CreateRoommatePage from './pages/CreateRoommatePage';
 import ProfilePage from './pages/ProfilePage';
 import MyApartmentsPage from './pages/MyApartmentsPage';
+import CreateApartmentPage from './pages/CreateApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/apartments" element={<ApartmentListPage />} />
+                <Route path="/apartments/create" element={<CreateApartmentPage />} />
                 <Route path="/apartments/:id" element={<ApartmentDetailPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />

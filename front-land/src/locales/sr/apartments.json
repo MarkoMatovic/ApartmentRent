@@ -44,6 +44,24 @@
   "sortDateNewest": "Datumu (najnoviji)",
   "sortDateOldest": "Datumu (najstariji)",
   "sortRooms": "Broju soba",
-  "lookingForRoommate": "Tražim cimera"
+  "lookingForRoommate": "Tražim cimera",
+  "createApartment": "Objavi oglas",
+  "apartmentCreated": "Oglas uspešno kreiran!",
+  "fillRequiredFields": "Molimo popunite sva obavezna polja",
+  "basicInfo": "Osnovne informacije",
+  "priceInfo": "Informacije o ceni",
+  "availability": "Dostupnost",
+  "city": "Grad",
+  "postalCode": "Poštanski broj",
+  "sizeSquareMeters": "Kvadratura (m²)",
+  "studio": "Garsonjera",
+  "oneRoom": "Jednosoban",
+  "twoRoom": "Dvosoban",
+  "threeRoom": "Trosoban",
+  "fourRoom": "Četvorosoban i više",
+  "house": "Kuća",
+  "images": "Slike",
+  "imageUrl": "URL slike",
+  "addImage": "Dodaj",
+  "image": "Slika"
 }
-

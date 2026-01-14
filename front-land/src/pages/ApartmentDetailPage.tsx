@@ -95,9 +95,9 @@ const ApartmentDetailPage: React.FC = () => {
       {/* Image Gallery */}
       <Box sx={{ mb: 4 }}>
         <ApartmentImageGallery
-          images={apartment.apartmentImages}
+          images={apartment.apartmentImages || []}
           title={apartment.title}
-          isLookingForRoommate={(apartment as any).isLookingForRoommate}
+          isLookingForRoommate={apartment.isLookingForRoommate === true}
         />
       </Box>
 

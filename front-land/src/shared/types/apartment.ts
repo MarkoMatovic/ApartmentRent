@@ -150,4 +150,5 @@ export interface ApartmentInputDto {
   minimumStayMonths?: number;
   maximumStayMonths?: number;
   isImmediatelyAvailable: boolean;
+  imageUrls?: string[];
 }

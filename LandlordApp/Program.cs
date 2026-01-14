@@ -198,6 +198,7 @@ app.UseOutputCache();
 
 app.UseCors("AllowFrontend");
 
+app.UseStaticFiles(); // Enable static file serving for uploaded images
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
