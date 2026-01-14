@@ -23,6 +23,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false, // Allow self-signed certificates
       },
+      '/uploads': {
+        target: 'https://localhost:7092',
+        changeOrigin: true,
+        secure: false, // Allow self-signed certificates
+      },
     },
   },
 })

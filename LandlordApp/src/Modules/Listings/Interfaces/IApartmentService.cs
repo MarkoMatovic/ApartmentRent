@@ -10,6 +10,7 @@ public interface IApartmentService
     Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId);
     Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync();
     Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters);
+    Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync();
     Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto);
     Task<bool> DeleteApartmentAsync(int apartmentId);
     Task<bool> ActivateApartmentAsync(int apartmentId);
