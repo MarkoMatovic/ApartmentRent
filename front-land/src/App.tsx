@@ -17,6 +17,7 @@ import CreateRoommatePage from './pages/CreateRoommatePage';
 import ProfilePage from './pages/ProfilePage';
 import MyApartmentsPage from './pages/MyApartmentsPage';
 import CreateApartmentPage from './pages/CreateApartmentPage';
+import EditApartmentPage from './pages/EditApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/apartments" element={<ApartmentListPage />} />
                 <Route path="/apartments/create" element={<CreateApartmentPage />} />
+                <Route path="/apartments/edit/:id" element={<EditApartmentPage />} />
                 <Route path="/apartments/:id" element={<ApartmentDetailPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Apartment, ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentInputDto } from '../types/apartment';
+import { Apartment, ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentInputDto, ApartmentUpdateInputDto } from '../types/apartment';
 
 export const apartmentsApi = {
   getAll: async (filters?: ApartmentFilters): Promise<ApartmentDto[]> => {
@@ -39,12 +39,23 @@ export const apartmentsApi = {
 
   getMyApartments: async (): Promise<ApartmentDto[]> => {
     const response = await apiClient.get<any>(`/api/v1/rent/get-my-apartments`);
-    const apartments = response.data.items || response.data;
+    // Backend returns PagedResult with Items property (capital I)
+    // Check both lowercase and uppercase, and handle direct array
+    let apartments = response.data?.items || response.data?.Items || response.data;
+    if (!Array.isArray(apartments)) {
+      apartments = [];
+    }
+    console.log('getMyApartments response:', response.data, 'parsed apartments:', apartments);
     return apartments;
   },
 
   create: async (data: ApartmentInputDto): Promise<Apartment> => {
     const response = await apiClient.post<Apartment>(`/api/v1/rent/create-apartment`, data);
+    return response.data;
+  },
+
+  update: async (id: number, data: ApartmentUpdateInputDto): Promise<ApartmentDto> => {
+    const response = await apiClient.put<ApartmentDto>(`/api/v1/rent/update-apartment/${id}`, data);
     return response.data;
   },
 
