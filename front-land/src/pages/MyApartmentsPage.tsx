@@ -3,19 +3,32 @@ import { Container, Typography, Box, Paper, Button, Grid, CircularProgress, Aler
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Add as AddIcon } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import ApartmentCard from '../components/Apartment/ApartmentCard';
 
 const MyApartmentsPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: apartments, isLoading, error } = useQuery({
     queryKey: ['myApartments'],
     queryFn: () => apartmentsApi.getMyApartments(),
     retry: 1,
   });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, isLookingForRoommate }: { id: number; isLookingForRoommate: boolean }) =>
+      apartmentsApi.update(id, { isLookingForRoommate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myApartments'] });
+    },
+  });
+
+  const handleToggleRoommate = (apartmentId: number) => (isLookingForRoommate: boolean) => {
+    updateMutation.mutate({ id: apartmentId, isLookingForRoommate });
+  };
 
   // Debug logging
   React.useEffect(() => {
@@ -59,7 +72,12 @@ const MyApartmentsPage: React.FC = () => {
         <Grid container spacing={3}>
           {apartments.map((apartment) => (
             <Grid item xs={12} sm={6} md={4} key={apartment.apartmentId}>
-              <ApartmentCard apartment={apartment} />
+              <ApartmentCard 
+                apartment={apartment}
+                isOwner={true}
+                onToggleRoommate={handleToggleRoommate(apartment.apartmentId)}
+                isUpdating={updateMutation.isPending}
+              />
             </Grid>
           ))}
         </Grid>

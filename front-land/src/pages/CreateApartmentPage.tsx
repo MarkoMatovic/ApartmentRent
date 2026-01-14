@@ -225,6 +225,7 @@ const CreateApartmentPage: React.FC = () => {
         minimumStayMonths: undefined,
         maximumStayMonths: undefined,
         isImmediatelyAvailable: false,
+        isLookingForRoommate: false,
         imageUrls: [],
     });
 
@@ -706,6 +707,18 @@ const CreateApartmentPage: React.FC = () => {
                                         />
                                     }
                                     label={t('apartments:immediatelyAvailable')}
+                                />
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={formData.isLookingForRoommate || false}
+                                            onChange={(e) => handleChange('isLookingForRoommate', e.target.checked)}
+                                        />
+                                    }
+                                    label={t('apartments:lookingForRoommate', { defaultValue: 'Looking for Roommate' })}
                                 />
                             </Grid>
 

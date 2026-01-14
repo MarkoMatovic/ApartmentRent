@@ -75,7 +75,9 @@ public class ApartmentsController : ControllerBase
     [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]
     public async Task<ActionResult> GetMyApartments()
     {
+        System.Diagnostics.Debug.WriteLine("GetMyApartments controller called");
         var result = await _apartmentServie.GetMyApartmentsAsync();
+        System.Diagnostics.Debug.WriteLine($"GetMyApartments returning {result.TotalCount} apartments");
         return Ok(result);
     }
 

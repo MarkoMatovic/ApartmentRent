@@ -31,4 +31,5 @@ public class ApartmentUpdateInputDto
     public int? MinimumStayMonths { get; set; }
     public int? MaximumStayMonths { get; set; }
     public bool? IsImmediatelyAvailable { get; set; }
+    public bool? IsLookingForRoommate { get; set; }
 }

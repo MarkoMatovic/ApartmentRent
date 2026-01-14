@@ -8,6 +8,8 @@ import {
   Button,
   Chip,
   IconButton,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -28,9 +30,12 @@ interface ApartmentCardProps {
     averageRating?: number;
     reviewCount?: number;
   };
+  isOwner?: boolean;
+  onToggleRoommate?: (isLookingForRoommate: boolean) => void;
+  isUpdating?: boolean;
 }
 
-const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment }) => {
+const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = false, onToggleRoommate, isUpdating = false }) => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -105,7 +110,9 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment }) => {
           </Box>
         )}
 
-        {apartment.isLookingForRoommate && (
+
+        {/* Public badge - shown when looking for roommate and not owner */}
+        {!isOwner && apartment.isLookingForRoommate && (
           <Box
             sx={{
               position: 'absolute',
@@ -206,6 +213,40 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment }) => {
       </Box>
 
       <CardContent sx={{ flexGrow: 1 }}>
+        {/* Owner controls - switcher below image, above description */}
+        {isOwner && (
+          <Box
+            sx={{
+              mb: 2,
+              pb: 1,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={apartment.isLookingForRoommate || false}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    if (onToggleRoommate) {
+                      onToggleRoommate(e.target.checked);
+                    }
+                  }}
+                  disabled={isUpdating}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  {t('apartments:lookingForRoommate', { defaultValue: 'Looking for Roommate' })}
+                </Typography>
+              }
+            />
+          </Box>
+        )}
+
         <Typography variant="h6" component="h2" gutterBottom>
           {apartment.title}
         </Typography>

@@ -150,5 +150,37 @@ export interface ApartmentInputDto {
   minimumStayMonths?: number;
   maximumStayMonths?: number;
   isImmediatelyAvailable: boolean;
+  isLookingForRoommate?: boolean;
+  imageUrls?: string[];
+}
+
+export interface ApartmentUpdateInputDto {
+  title?: string;
+  description?: string;
+  rent?: number;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  availableFrom?: string;
+  availableUntil?: string;
+  numberOfRooms?: number;
+  rentIncludeUtilities?: boolean;
+  latitude?: number;
+  longitude?: number;
+  sizeSquareMeters?: number;
+  apartmentType?: ApartmentType;
+  isFurnished?: boolean;
+  hasBalcony?: boolean;
+  hasElevator?: boolean;
+  hasParking?: boolean;
+  hasInternet?: boolean;
+  hasAirCondition?: boolean;
+  isPetFriendly?: boolean;
+  isSmokingAllowed?: boolean;
+  depositAmount?: number;
+  minimumStayMonths?: number;
+  maximumStayMonths?: number;
+  isImmediatelyAvailable?: boolean;
+  isLookingForRoommate?: boolean;
   imageUrls?: string[];
 }
