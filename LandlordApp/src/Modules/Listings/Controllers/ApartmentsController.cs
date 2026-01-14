@@ -28,13 +28,6 @@ public class ApartmentsController : ControllerBase
     {
         try
         {
-            // Log the incoming data for debugging
-            System.Diagnostics.Debug.WriteLine($"Creating apartment with {apartmentInputDto.ImageUrls?.Count ?? 0} images");
-            if (apartmentInputDto.ImageUrls != null && apartmentInputDto.ImageUrls.Any())
-            {
-                System.Diagnostics.Debug.WriteLine($"Image URLs: {string.Join(", ", apartmentInputDto.ImageUrls)}");
-            }
-
             var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
             
             await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
@@ -44,8 +37,6 @@ public class ApartmentsController : ControllerBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error in CreateApartment controller: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             return StatusCode(500, new { message = "Error creating apartment", error = ex.Message });
         }
     }
@@ -55,7 +46,6 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentsList")]
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
-        // Track search event
         if (filters != null && (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue))
         {
             var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent}";
@@ -75,9 +65,7 @@ public class ApartmentsController : ControllerBase
     [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]
     public async Task<ActionResult> GetMyApartments()
     {
-        System.Diagnostics.Debug.WriteLine("GetMyApartments controller called");
         var result = await _apartmentServie.GetMyApartmentsAsync();
-        System.Diagnostics.Debug.WriteLine($"GetMyApartments returning {result.TotalCount} apartments");
         return Ok(result);
     }
 
@@ -86,7 +74,6 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentDetail")]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
-        // Track apartment view event
         _ = _analyticsService.TrackEventAsync(
             "ApartmentView", 
             "Listings", 

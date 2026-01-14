@@ -31,7 +31,6 @@ apiClient.interceptors.response.use(
       const errorData = error.response?.data;
       const errorMessage = typeof errorData === 'string' ? errorData : errorData?.message || '';
 
-      console.log('401 error detected:', { errorMessage, errorData });
 
       // Ako imamo poruku od kontrolera (JSON sa message ili string), NE redirektuj
       // Redirektuj SAMO ako je odgovor prazan (što obično radi Identity/JWT middleware kad je token nevažeći)

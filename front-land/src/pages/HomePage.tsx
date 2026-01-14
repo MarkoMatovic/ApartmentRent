@@ -24,7 +24,6 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
-  console.log('HomePage Auth State:', { user, isAuthenticated });
 
   const [location, setLocation] = useState('');
   const [moveInDate, setMoveInDate] = useState<Date | null>(null);

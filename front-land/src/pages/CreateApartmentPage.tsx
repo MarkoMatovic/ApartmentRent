@@ -250,7 +250,6 @@ const CreateApartmentPage: React.FC = () => {
             }, 2000);
         },
         onError: (err: any) => {
-            console.error('Create apartment error:', err);
             let errorMessage = 'Failed to create apartment listing';
 
             if (err.response?.data?.message) {
@@ -332,7 +331,6 @@ const CreateApartmentPage: React.FC = () => {
             setFormData({ ...formData, imageUrls: newImageUrls });
             setSelectedFiles([]);
         } catch (err: any) {
-            console.error('Upload error:', err);
             let errorMessage = 'Failed to upload images';
 
             if (err.response?.data) {
@@ -374,7 +372,6 @@ const CreateApartmentPage: React.FC = () => {
                 createMutation.mutate({ ...formData, imageUrls: newImageUrls });
                 return;
             } catch (err: any) {
-                console.error('Upload error:', err);
                 let errorMessage = 'Failed to upload images';
                 if (err.response?.data) {
                     errorMessage = typeof err.response.data === 'string'
@@ -388,13 +385,6 @@ const CreateApartmentPage: React.FC = () => {
                 return;
             }
         }
-
-        // Debug logging
-        console.log('Submitting apartment with images:', {
-            imageUrlsCount: formData.imageUrls?.length || 0,
-            imageUrls: formData.imageUrls,
-            formData: formData
-        });
 
         createMutation.mutate(formData);
     };
