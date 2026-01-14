@@ -116,7 +116,6 @@ const ChatPage: React.FC = () => {
       setSelectedConversation(newConv);
       setMessages([]);
     } catch (error) {
-      console.error('Error loading user info:', error);
       // Fallback to basic conversation
       const newConv: ConversationDto = {
         otherUserId: userId,
@@ -134,7 +133,6 @@ const ChatPage: React.FC = () => {
       setConversations(data);
       setLoading(false);
     } catch (error) {
-      console.error('Error loading conversations:', error);
       setLoading(false);
     }
   };
@@ -145,7 +143,6 @@ const ChatPage: React.FC = () => {
       setMessages(data.messages);
       setSelectedConversation(conv);
     } catch (error) {
-      console.error('Error loading messages:', error);
     }
   };
 
@@ -167,7 +164,6 @@ const ChatPage: React.FC = () => {
       setMessageText('');
       loadConversations();
     } catch (error) {
-      console.error('Error sending message:', error);
     }
   };
 

@@ -4,6 +4,7 @@ using Lander;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lander.Migrations.Listings
 {
     [DbContext(typeof(ListingsContext))]
-    partial class ListingsContextModelSnapshot : ModelSnapshot
+    [Migration("20260114120500_AddDisplayOrderToApartmentImage")]
+    partial class AddDisplayOrderToApartmentImage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,9 +110,6 @@ namespace Lander.Migrations.Listings
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
-
-                    b.Property<bool>("IsLookingForRoommate")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("IsPetFriendly")
                         .ValueGeneratedOnAdd()
