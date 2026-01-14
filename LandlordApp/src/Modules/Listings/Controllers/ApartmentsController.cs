@@ -26,12 +26,19 @@ public class ApartmentsController : ControllerBase
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
     public async Task<ActionResult<ApartmentDto>> CreateApartment([FromBody] ApartmentInputDto apartmentInputDto)
     {
-        var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
-        
-        await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
-            .EvictByTagAsync("apartments", default);
-        
-        return Ok(result);
+        try
+        {
+            var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
+            
+            await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
+                .EvictByTagAsync("apartments", default);
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Error creating apartment", error = ex.Message });
+        }
     }
 
     [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
@@ -39,7 +46,6 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentsList")]
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
-        // Track search event
         if (filters != null && (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue))
         {
             var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent}";
@@ -56,12 +62,18 @@ public class ApartmentsController : ControllerBase
         return Ok(await _apartmentServie.GetAllApartmentsAsync());
     }
 
+    [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]
+    public async Task<ActionResult> GetMyApartments()
+    {
+        var result = await _apartmentServie.GetMyApartmentsAsync();
+        return Ok(result);
+    }
+
     [HttpGet(ApiActionsV1.GetApartment, Name = nameof(ApiActionsV1.GetApartment))]
     [AllowAnonymous]
     [OutputCache(PolicyName = "ApartmentDetail")]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
-        // Track apartment view event
         _ = _analyticsService.TrackEventAsync(
             "ApartmentView", 
             "Listings", 

@@ -51,6 +51,8 @@ public partial class Apartment
     public int? MaximumStayMonths { get; set; }
     public bool IsImmediatelyAvailable { get; set; } = false;
 
+    public bool IsLookingForRoommate { get; set; } = false;
+
     public Guid? CreatedByGuid { get; set; }
 
     public DateTime? CreatedDate { get; set; }

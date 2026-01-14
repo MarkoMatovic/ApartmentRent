@@ -64,6 +64,9 @@ const ApartmentImageGallery: React.FC<ApartmentImageGalleryProps> = ({
               objectFit: 'cover',
               transition: 'opacity 0.3s ease',
             }}
+            onError={(e: any) => {
+              e.target.src = 'https://via.placeholder.com/800x600?text=Image+Not+Found';
+            }}
           />
         ) : (
           <Box
@@ -243,6 +246,9 @@ const ApartmentImageGallery: React.FC<ApartmentImageGalleryProps> = ({
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
+                }}
+                onError={(e: any) => {
+                  e.target.src = 'https://via.placeholder.com/100x80?text=Error';
                 }}
               />
             </Box>

@@ -45,7 +45,6 @@ const ProfilePage: React.FC = () => {
     profilePicture: user?.profilePicture || ''
   });
 
-  const [isLookingForRoommate, setIsLookingForRoommate] = useState(user?.isLookingForRoommate ?? false);
   const [imagePreview, setImagePreview] = useState(user?.profilePicture || '');
 
   useEffect(() => {
@@ -59,7 +58,6 @@ const ProfilePage: React.FC = () => {
         profilePicture: user.profilePicture || ''
       });
       setImagePreview(user.profilePicture || '');
-      setIsLookingForRoommate(user.isLookingForRoommate ?? false);
     }
   }, [user]);
 
@@ -86,24 +84,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleToggleRoommateStatus = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = event.target.checked;
-    setIsLookingForRoommate(newValue);
-
-    try {
-      if (user?.userGuid) {
-        await authApi.updateRoommateStatus(user.userGuid, newValue);
-        if (updateUser) {
-          updateUser({ ...user, isLookingForRoommate: newValue });
-        }
-        setSuccess('Roommate status updated successfully');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch {
-      setIsLookingForRoommate(!newValue);
-      setError('Failed to update roommate status');
-    }
-  };
 
   const handleSaveProfile = async () => {
     setIsUpdating(true);
@@ -327,26 +307,6 @@ const ProfilePage: React.FC = () => {
           </Grid>
         </Grid>
 
-        <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" gutterBottom>Preferences</Typography>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isLookingForRoommate}
-                onChange={handleToggleRoommateStatus}
-                color="primary"
-              />
-            }
-            label={
-              <Box>
-                <Typography variant="body1">{t('lookingForRoommate', 'Looking for Roommate')}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('lookingForRoommateDescription', 'Enable to show that you are looking for a roommate')}
-                </Typography>
-              </Box>
-            }
-          />
-        </Box>
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="h6" gutterBottom color="error">Danger Zone</Typography>

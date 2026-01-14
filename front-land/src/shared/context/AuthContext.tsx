@@ -16,22 +16,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const decodeToken = (token: string): User | null => {
-  console.log('Attempting to decode token:', token);
   try {
     if (!token || typeof token !== 'string') {
-      console.error('Token is null or not a string');
       return null;
     }
 
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.warn('Invalid token format - expected 3 parts, got:', parts.length);
       return null;
     }
 
     const base64Url = parts[1];
     if (!base64Url) {
-      console.error('Token payload part is missing');
       return null;
     }
 
@@ -44,7 +40,6 @@ const decodeToken = (token: string): User | null => {
     );
 
     const payload = JSON.parse(jsonPayload);
-    console.log('Decoded Token Payload Successfully:', payload);
 
     return {
       userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
@@ -58,7 +53,6 @@ const decodeToken = (token: string): User | null => {
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
     };
   } catch (error) {
-    console.error('CRITICAL: Error decoding token:', error);
     return null;
   }
 };
@@ -70,19 +64,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const initAuth = async () => {
-      console.log('Initializing Auth State...');
       const storedToken = localStorage.getItem('authToken');
       const storedUser = localStorage.getItem('user');
 
       if (storedToken) {
-        console.log('Found stored token');
         setToken(storedToken);
         if (storedUser) {
           try {
-            console.log('Found stored user data');
             setUser(JSON.parse(storedUser));
           } catch (e) {
-            console.error('Error parsing stored user:', e);
             const decodedUser = decodeToken(storedToken);
             if (decodedUser) {
               setUser(decodedUser);
@@ -90,7 +80,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
           }
         } else {
-          console.log('No stored user data, decoding from token...');
           const decodedUser = decodeToken(storedToken);
           if (decodedUser) {
             setUser(decodedUser);
@@ -106,11 +95,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('Logging in user:', email);
       const tokenResult = await authApi.login({ email, password });
 
       if (!tokenResult || typeof tokenResult !== 'string' || tokenResult.split('.').length !== 3) {
-        console.error('Backend returned invalid token:', tokenResult);
         throw new Error('Neispravan format tokena sa servera');
       }
 
@@ -119,15 +106,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const decodedUser = decodeToken(tokenResult);
       if (decodedUser) {
-        console.log('User logged in and decoded:', decodedUser);
         setUser(decodedUser);
         localStorage.setItem('user', JSON.stringify(decodedUser));
       } else {
-        console.error('Failed to decode valid looking token');
         throw new Error('Problem sa dekodiranjem korisničkih podataka');
       }
     } catch (error) {
-      console.error('Login function error:', error);
       throw error;
     }
   };
@@ -143,10 +127,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      console.log('Logging out...');
       await authApi.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      // Ignore logout errors
     } finally {
       setUser(null);
       setToken(null);
