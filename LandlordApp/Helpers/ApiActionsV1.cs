@@ -91,4 +91,23 @@ public static class ApiActionsV1
     public const string MarkMessageAsRead = "mark-read/{messageId}";
     public const string GetUnreadCount = "unread-count/{userId}";
     #endregion
+
+    #region MachineLearning
+    public const string MachineLearning = $"{V1}/ml";
+    public const string PredictPrice = "predict-price";
+    public const string TrainPriceModel = "train-price-model";
+    public const string GetModelMetrics = "model-metrics";
+    public const string IsModelTrained = "is-model-trained";
+    public const string GetRoommateMatches = "roommate-matches";
+    public const string CalculateMatchScore = "match-score";
+    #endregion
+
+    #region Analytics
+    public const string Analytics = $"{V1}/analytics";
+    public const string GetAnalyticsSummary = "summary";
+    public const string GetTopViewedApartments = "top-apartments";
+    public const string GetTopViewedRoommates = "top-roommates";
+    public const string GetTopSearchTerms = "top-searches";
+    public const string GetEventTrends = "trends";
+    #endregion
 }

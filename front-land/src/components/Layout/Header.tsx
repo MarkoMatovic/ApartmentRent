@@ -26,6 +26,7 @@ import {
   LightMode as LightModeIcon,
   Menu as MenuIcon,
   AccountCircle,
+  Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -200,7 +201,7 @@ const Header: React.FC = () => {
         {/* Right side icons */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LanguageSwitcher />
-          
+
           <IconButton color="inherit" onClick={toggleTheme}>
             {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
           </IconButton>
@@ -230,6 +231,12 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/my-apartments'); handleMenuClose(); }}>
                   {t('myApartments')}
                 </MenuItem>
+                {user?.userRoleId === 1 && (
+                  <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
+                    <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                    Analytics Dashboard
+                  </MenuItem>
+                )}
                 <MenuItem onClick={handleLogout}>{t('logout')}</MenuItem>
               </Menu>
             </>

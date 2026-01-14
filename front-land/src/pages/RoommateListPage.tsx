@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Container,
   Grid,
@@ -12,21 +12,25 @@ import {
   Paper,
   Skeleton,
   Button,
+  ToggleButtonGroup,
+  ToggleButton,
+  Alert,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Sort as SortIcon, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../shared/context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { roommatesApi } from '../shared/api/roommates';
+import { mlApi } from '../shared/api/analytics';
 import { RoommateFilters } from '../shared/types/roommate';
 import RoommateCard from '../components/Roommate/RoommateCard';
 
 const RoommateListPage: React.FC = () => {
   const { t } = useTranslation(['common', 'roommates']);
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  
+  const { isAuthenticated, user } = useAuth();
+
   const [filters, setFilters] = useState<RoommateFilters>({
     location: '',
     minBudget: undefined,
@@ -36,14 +40,41 @@ const RoommateListPage: React.FC = () => {
     lifestyle: undefined,
   });
 
+  const [sortBy, setSortBy] = useState<'default' | 'bestMatch'>('default');
+
   const { data: roommates, isLoading } = useQuery({
     queryKey: ['roommates', filters],
     queryFn: () => roommatesApi.getAll(filters),
   });
 
+  // Fetch match scores if user is authenticated and has a roommate profile
+  const { data: matchScores, isLoading: matchesLoading } = useQuery({
+    queryKey: ['roommate-matches', user?.userId],
+    queryFn: () => mlApi.getRoommateMatches(user!.userId, 50),
+    enabled: isAuthenticated && !!user?.userId && sortBy === 'bestMatch',
+  });
+
   const handleFilterChange = (field: keyof RoommateFilters, value: any) => {
     setFilters({ ...filters, [field]: value });
   };
+
+  // Merge roommates with match scores
+  const roommatesWithScores = useMemo(() => {
+    if (!roommates) return [];
+
+    if (sortBy === 'bestMatch' && matchScores) {
+      const scoreMap = new Map(matchScores.map(m => [m.roommateId, m.matchPercentage]));
+
+      return roommates
+        .map(rm => ({
+          ...rm,
+          matchScore: scoreMap.get(rm.roommateId),
+        }))
+        .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    }
+
+    return roommates;
+  }, [roommates, matchScores, sortBy]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -70,7 +101,7 @@ const RoommateListPage: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               {t('roommates:filters')}
             </Typography>
-            
+
             <TextField
               fullWidth
               label={t('roommates:location')}
@@ -79,7 +110,7 @@ const RoommateListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <TextField
               fullWidth
               label={`${t('roommates:minBudget')} (€)`}
@@ -89,7 +120,7 @@ const RoommateListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <TextField
               fullWidth
               label={`${t('roommates:maxBudget')} (€)`}
@@ -99,7 +130,7 @@ const RoommateListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <FormControl fullWidth margin="normal" size="small">
               <InputLabel>{t('roommates:smokingAllowed')}</InputLabel>
               <Select
@@ -112,7 +143,7 @@ const RoommateListPage: React.FC = () => {
                 <MenuItem value="false">No</MenuItem>
               </Select>
             </FormControl>
-            
+
             <FormControl fullWidth margin="normal" size="small">
               <InputLabel>{t('roommates:petFriendly')}</InputLabel>
               <Select
@@ -125,7 +156,7 @@ const RoommateListPage: React.FC = () => {
                 <MenuItem value="false">No</MenuItem>
               </Select>
             </FormControl>
-            
+
             <FormControl fullWidth margin="normal" size="small">
               <InputLabel>{t('roommates:lifestyle')}</InputLabel>
               <Select
@@ -144,9 +175,35 @@ const RoommateListPage: React.FC = () => {
 
         {/* Roommate List */}
         <Grid item xs={12} md={9}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            {roommates?.length || 0} {t('roommates:title')}
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="body1">
+              {roommates?.length || 0} {t('roommates:title')}
+            </Typography>
+
+            {isAuthenticated && (
+              <ToggleButtonGroup
+                value={sortBy}
+                exclusive
+                onChange={(_, value) => value && setSortBy(value)}
+                size="small"
+              >
+                <ToggleButton value="default">
+                  <SortIcon sx={{ mr: 1 }} fontSize="small" />
+                  Default
+                </ToggleButton>
+                <ToggleButton value="bestMatch">
+                  <AutoAwesomeIcon sx={{ mr: 1 }} fontSize="small" />
+                  Best Matches
+                </ToggleButton>
+              </ToggleButtonGroup>
+            )}
+          </Box>
+
+          {sortBy === 'bestMatch' && matchesLoading && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Calculating compatibility scores...
+            </Alert>
+          )}
 
           {isLoading ? (
             <Grid container spacing={3}>
@@ -164,9 +221,12 @@ const RoommateListPage: React.FC = () => {
             </Box>
           ) : (
             <Grid container spacing={3}>
-              {roommates.map((roommate) => (
+              {roommatesWithScores.map((roommate) => (
                 <Grid item xs={12} sm={6} md={4} key={roommate.userId}>
-                  <RoommateCard roommate={roommate} />
+                  <RoommateCard
+                    roommate={roommate}
+                    matchScore={sortBy === 'bestMatch' ? roommate.matchScore : undefined}
+                  />
                 </Grid>
               ))}
             </Grid>
