@@ -15,10 +15,12 @@ namespace Lander.src.Modules.Listings.Controllers;
 public class ApartmentsController : ControllerBase
 {
     private readonly IApartmentService _apartmentServie;
+    private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
 
-    public ApartmentsController(IApartmentService apartmentServie)
+    public ApartmentsController(IApartmentService apartmentServie, Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
     {
         _apartmentServie = apartmentServie;
+        _analyticsService = analyticsService;
     }
 
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
@@ -37,8 +39,17 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentsList")]
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
+        // Track search event
         if (filters != null && (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue))
         {
+            var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent}";
+            _ = _analyticsService.TrackEventAsync(
+                "ApartmentSearch", 
+                "Listings", 
+                searchQuery: searchQuery,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+            );
             return Ok(await _apartmentServie.GetAllApartmentsAsync(filters));
         }
         
@@ -50,6 +61,16 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentDetail")]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
+        // Track apartment view event
+        _ = _analyticsService.TrackEventAsync(
+            "ApartmentView", 
+            "Listings", 
+            entityId: id,
+            entityType: "Apartment",
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+        );
+        
         return Ok(await _apartmentServie.GetApartmentByIdAsync(id));
     }
 
