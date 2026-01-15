@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -12,21 +12,26 @@ import {
   MenuItem,
   Grid,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { roommatesApi, RoommateInputDto } from '../shared/api/roommates';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { useAuth } from '../shared/context/AuthContext';
 
 const CreateRoommatePage: React.FC = () => {
   const { t } = useTranslation(['common', 'roommates']);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [existingRoommateId, setExistingRoommateId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<RoommateInputDto>({
     bio: '',
@@ -49,11 +54,52 @@ const CreateRoommatePage: React.FC = () => {
     preferredLocation: '',
   });
 
+  // Proveri da li korisnik već ima roommate karticu
+  const { data: existingRoommate, isLoading: isLoadingRoommate } = useQuery({
+    queryKey: ['roommate', user?.userId],
+    queryFn: () => roommatesApi.getByUserId(user?.userId || 0),
+    enabled: !!user?.userId,
+    retry: false,
+  });
+
+  // Učitaj postojeće podatke ako postoji roommate kartica
+  useEffect(() => {
+    if (existingRoommate) {
+      setIsEditMode(true);
+      setExistingRoommateId(existingRoommate.roommateId);
+      setFormData({
+        bio: existingRoommate.bio || '',
+        hobbies: existingRoommate.hobbies || '',
+        profession: existingRoommate.profession || '',
+        smokingAllowed: existingRoommate.smokingAllowed,
+        petFriendly: existingRoommate.petFriendly,
+        lifestyle: existingRoommate.lifestyle || '',
+        cleanliness: existingRoommate.cleanliness || '',
+        guestsAllowed: existingRoommate.guestsAllowed,
+        budgetMin: existingRoommate.budgetMin,
+        budgetMax: existingRoommate.budgetMax,
+        budgetIncludes: existingRoommate.budgetIncludes || '',
+        availableFrom: existingRoommate.availableFrom,
+        availableUntil: existingRoommate.availableUntil,
+        minimumStayMonths: existingRoommate.minimumStayMonths,
+        maximumStayMonths: existingRoommate.maximumStayMonths,
+        lookingForRoomType: existingRoommate.lookingForRoomType || '',
+        lookingForApartmentType: existingRoommate.lookingForApartmentType || '',
+        preferredLocation: existingRoommate.preferredLocation || '',
+      });
+    }
+  }, [existingRoommate]);
+
   const createMutation = useMutation({
-    mutationFn: (data: RoommateInputDto) => roommatesApi.create(data),
+    mutationFn: (data: RoommateInputDto) => {
+      // Ako postoji roommate kartica, ažuriraj je; inače kreiraj novu
+      // Backend će automatski proveriti i ažurirati postojeću ako postoji
+      return roommatesApi.create(data);
+    },
     onSuccess: () => {
       setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ['roommates'] });
+      queryClient.invalidateQueries({ queryKey: ['roommate', user?.userId] });
       setTimeout(() => {
         navigate('/roommates');
       }, 2000);
@@ -92,12 +138,23 @@ const CreateRoommatePage: React.FC = () => {
     createMutation.mutate(formData);
   };
 
+  if (isLoadingRoommate) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
   if (success) {
     return (
       <Container maxWidth="md" sx={{ py: 8 }}>
         <Paper sx={{ p: 4 }}>
           <Alert severity="success" sx={{ mb: 2 }}>
-            {t('roommates:profileCreated', { defaultValue: 'Roommate profile created successfully!' })}
+            {isEditMode 
+              ? t('roommates:profileUpdated', { defaultValue: 'Roommate profile updated successfully!' })
+              : t('roommates:profileCreated', { defaultValue: 'Roommate profile created successfully!' })
+            }
           </Alert>
         </Paper>
       </Container>
@@ -109,8 +166,19 @@ const CreateRoommatePage: React.FC = () => {
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
-            {t('roommates:createProfile', { defaultValue: 'Create Roommate Profile' })}
+            {isEditMode 
+              ? t('roommates:editProfile', { defaultValue: 'Edit Roommate Profile' })
+              : t('roommates:createProfile', { defaultValue: 'Create Roommate Profile' })
+            }
           </Typography>
+          
+          {isEditMode && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {t('roommates:editProfileInfo', { 
+                defaultValue: 'You already have a roommate profile. You can update it here. Only one profile per user is allowed.' 
+              })}
+            </Alert>
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>

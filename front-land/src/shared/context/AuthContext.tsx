@@ -84,6 +84,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (decodedUser) {
             setUser(decodedUser);
             localStorage.setItem('user', JSON.stringify(decodedUser));
+            // Pošalji custom event da se osveži broj nepročitanih poruka
+            window.dispatchEvent(new Event('authTokenChanged'));
           }
         }
       }
@@ -103,6 +105,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setToken(tokenResult);
       localStorage.setItem('authToken', tokenResult);
+      
+      // Pošalji custom event da se osveži broj nepročitanih poruka
+      window.dispatchEvent(new Event('authTokenChanged'));
 
       const decodedUser = decodeToken(tokenResult);
       if (decodedUser) {

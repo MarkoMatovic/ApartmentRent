@@ -58,24 +58,43 @@ public class UserService : IUserInterface
     public async Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-        var user = new User
-        {
-            FirstName = userRegistrationInputDto.FirstName,
-            LastName = userRegistrationInputDto.LastName,
-            Email = userRegistrationInputDto.Email,
-            Password = HashPassword(userRegistrationInputDto.Password),
-            DateOfBirth = userRegistrationInputDto.DateOfBirth,
-            PhoneNumber = userRegistrationInputDto.PhoneNumber,
-            ProfilePicture = userRegistrationInputDto.ProfilePicture,
-            CreatedDate = DateTime.UtcNow,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null, 
-
-        };
-
+        
+        // Dohvati rolu "Tenant" iz baze
+        var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
+        
         var transaction = await _context.BeginTransactionAsync();
         try
         {
+            // Kreiraj rolu "Tenant" ako ne postoji (unutar transakcije)
+            if (tenantRole == null)
+            {
+                tenantRole = new Role
+                {
+                    RoleName = "Tenant",
+                    Description = "Tenant role for users looking for apartments",
+                    CreatedDate = DateTime.UtcNow,
+                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null
+                };
+                _context.Roles.Add(tenantRole);
+                await _context.SaveEntitiesAsync();
+            }
+            
+            var user = new User
+            {
+                FirstName = userRegistrationInputDto.FirstName,
+                LastName = userRegistrationInputDto.LastName,
+                Email = userRegistrationInputDto.Email,
+                Password = HashPassword(userRegistrationInputDto.Password),
+                DateOfBirth = userRegistrationInputDto.DateOfBirth,
+                PhoneNumber = userRegistrationInputDto.PhoneNumber,
+                ProfilePicture = userRegistrationInputDto.ProfilePicture,
+                CreatedDate = DateTime.UtcNow,
+                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+                ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+                IsActive = true, // Automatski aktiviraj korisnika
+                UserRoleId = tenantRole.RoleId // Dodeli rolu "Tenant"
+            };
+
             _context.Users.Add(user);
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
