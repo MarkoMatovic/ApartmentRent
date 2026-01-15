@@ -54,12 +54,15 @@ const RoommateCard: React.FC<RoommateCardProps> = ({ roommate, matchScore }) => 
 
       <CardContent sx={{ flexGrow: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}>
-            {roommate.user?.firstName?.[0] || 'R'}
+          <Avatar 
+            src={roommate.profilePicture || undefined}
+            sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}
+          >
+            {roommate.firstName?.[0] || roommate.user?.firstName?.[0] || 'R'}
           </Avatar>
           <Box>
             <Typography variant="h6">
-              {roommate.user?.firstName || 'Roommate'} {roommate.user?.lastName?.[0] || ''}
+              {roommate.firstName || roommate.user?.firstName || 'Roommate'} {roommate.lastName || roommate.user?.lastName || ''}
             </Typography>
             {roommate.profession && (
               <Typography variant="body2" color="text.secondary">

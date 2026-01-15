@@ -41,7 +41,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, unreadMessagesCount } = useNotifications();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -123,44 +123,72 @@ const Header: React.FC = () => {
         {/* Desktop Navigation */}
         {!isMobile && (
           <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
-            {navItems.map((item) => (
-              <Button
-                key={item.path}
-                color="inherit"
-                onClick={() => navigate(item.path)}
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  px: 2,
-                  py: 1,
-                  borderRadius: '20px',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                    transition: 'left 0.5s',
-                  },
-                  '&:hover::before': {
-                    left: '100%',
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
-                  },
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {navItems.map((item) => {
+              const showBadge = item.path === '/messages' && unreadMessagesCount > 0;
+              return (
+                <Box
+                  key={item.path}
+                  sx={{
+                    position: 'relative',
+                    display: 'inline-block',
+                  }}
+                >
+                  <Button
+                    color="inherit"
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                      px: 2,
+                      py: 1,
+                      borderRadius: '20px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                        transition: 'left 0.5s',
+                      },
+                      '&:hover::before': {
+                        left: '100%',
+                      },
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                  {showBadge && (
+                    <Badge
+                      badgeContent={unreadMessagesCount}
+                      color="error"
+                      sx={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        pointerEvents: 'none',
+                        '& .MuiBadge-badge': {
+                          fontSize: '0.7rem',
+                          minWidth: '18px',
+                          height: '18px',
+                          padding: '0 4px',
+                        },
+                      }}
+                    />
+                  )}
+                </Box>
+              );
+            })}
           </Box>
         )}
 
