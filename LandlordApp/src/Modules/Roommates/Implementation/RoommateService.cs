@@ -290,42 +290,81 @@ public class RoommateService : IRoommateService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
 
-        var roommate = new Roommate
-        {
-            UserId = userId,
-            Bio = input.Bio,
-            Hobbies = input.Hobbies,
-            Profession = input.Profession,
-            SmokingAllowed = input.SmokingAllowed,
-            PetFriendly = input.PetFriendly,
-            Lifestyle = input.Lifestyle,
-            Cleanliness = input.Cleanliness,
-            GuestsAllowed = input.GuestsAllowed,
-            BudgetMin = input.BudgetMin,
-            BudgetMax = input.BudgetMax,
-            BudgetIncludes = input.BudgetIncludes,
-            AvailableFrom = input.AvailableFrom,
-            AvailableUntil = input.AvailableUntil,
-            MinimumStayMonths = input.MinimumStayMonths,
-            MaximumStayMonths = input.MaximumStayMonths,
-            LookingForRoomType = input.LookingForRoomType,
-            LookingForApartmentType = input.LookingForApartmentType,
-            PreferredLocation = input.PreferredLocation,
-            LookingForApartmentId = input.LookingForApartmentId,
-            IsActive = true,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            ModifiedDate = DateTime.UtcNow
-        };
+        // Proveri da li korisnik već ima roommate karticu
+        var existingRoommate = await _context.Roommates
+            .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
 
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) throw new Exception("User not found");
 
+        Roommate roommate;
         var transaction = await _context.BeginTransactionAsync();
         try
         {
-            _context.Roommates.Add(roommate);
+            if (existingRoommate != null)
+            {
+                // Ažuriraj postojeću roommate karticu
+                roommate = existingRoommate;
+                roommate.Bio = input.Bio;
+                roommate.Hobbies = input.Hobbies;
+                roommate.Profession = input.Profession;
+                roommate.SmokingAllowed = input.SmokingAllowed;
+                roommate.PetFriendly = input.PetFriendly;
+                roommate.Lifestyle = input.Lifestyle;
+                roommate.Cleanliness = input.Cleanliness;
+                roommate.GuestsAllowed = input.GuestsAllowed;
+                roommate.BudgetMin = input.BudgetMin;
+                roommate.BudgetMax = input.BudgetMax;
+                roommate.BudgetIncludes = input.BudgetIncludes;
+                roommate.AvailableFrom = input.AvailableFrom;
+                roommate.AvailableUntil = input.AvailableUntil;
+                roommate.MinimumStayMonths = input.MinimumStayMonths;
+                roommate.MaximumStayMonths = input.MaximumStayMonths;
+                roommate.LookingForRoomType = input.LookingForRoomType;
+                roommate.LookingForApartmentType = input.LookingForApartmentType;
+                roommate.PreferredLocation = input.PreferredLocation;
+                roommate.LookingForApartmentId = input.LookingForApartmentId;
+                roommate.IsActive = true;
+                roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+                roommate.ModifiedDate = DateTime.UtcNow;
+                
+                _context.Roommates.Update(roommate);
+            }
+            else
+            {
+                // Kreiraj novu roommate karticu
+                roommate = new Roommate
+                {
+                    UserId = userId,
+                    Bio = input.Bio,
+                    Hobbies = input.Hobbies,
+                    Profession = input.Profession,
+                    SmokingAllowed = input.SmokingAllowed,
+                    PetFriendly = input.PetFriendly,
+                    Lifestyle = input.Lifestyle,
+                    Cleanliness = input.Cleanliness,
+                    GuestsAllowed = input.GuestsAllowed,
+                    BudgetMin = input.BudgetMin,
+                    BudgetMax = input.BudgetMax,
+                    BudgetIncludes = input.BudgetIncludes,
+                    AvailableFrom = input.AvailableFrom,
+                    AvailableUntil = input.AvailableUntil,
+                    MinimumStayMonths = input.MinimumStayMonths,
+                    MaximumStayMonths = input.MaximumStayMonths,
+                    LookingForRoomType = input.LookingForRoomType,
+                    LookingForApartmentType = input.LookingForApartmentType,
+                    PreferredLocation = input.PreferredLocation,
+                    LookingForApartmentId = input.LookingForApartmentId,
+                    IsActive = true,
+                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    CreatedDate = DateTime.UtcNow,
+                    ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    ModifiedDate = DateTime.UtcNow
+                };
+                
+                _context.Roommates.Add(roommate);
+            }
+            
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
