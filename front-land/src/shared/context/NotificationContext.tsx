@@ -28,8 +28,6 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
-  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-  const [chatConnection, setChatConnection] = useState<signalR.HubConnection | null>(null);
 
   // Učitaj broj nepročitanih poruka
   const refreshUnreadMessagesCount = async () => {
@@ -67,8 +65,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         type: type as Notification['type'],
       });
     });
-
-    setConnection(newConnection);
 
     return () => {
       if (newConnection) {
@@ -112,8 +108,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       newChatConnection.on('MessageSent', () => {
         refreshUnreadMessagesCount();
       });
-
-      setChatConnection(newChatConnection);
 
       return () => {
         if (newChatConnection) {

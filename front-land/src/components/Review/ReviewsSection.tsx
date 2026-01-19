@@ -4,14 +4,12 @@ import {
   Paper,
   Typography,
   LinearProgress,
-  Divider,
   CircularProgress,
   Alert,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { reviewsApi } from '../../shared/api/reviews';
-import { Review } from '../../shared/types/review';
 import StarRating from './StarRating';
 import ReviewCard from './ReviewCard';
 import CreateReviewForm from './CreateReviewForm';

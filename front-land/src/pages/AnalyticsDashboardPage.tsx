@@ -26,10 +26,8 @@ import {
     People as PeopleIcon,
 } from '@mui/icons-material';
 import { analyticsApi } from '../shared/api/analytics';
-import { useTranslation } from 'react-i18next';
 
 const AnalyticsDashboardPage: React.FC = () => {
-    const { t } = useTranslation();
     const [dateRange] = useState({
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         to: new Date().toISOString().split('T')[0],

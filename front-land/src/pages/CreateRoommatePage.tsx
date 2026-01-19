@@ -31,7 +31,6 @@ const CreateRoommatePage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [existingRoommateId, setExistingRoommateId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<RoommateInputDto>({
     bio: '',
@@ -66,7 +65,6 @@ const CreateRoommatePage: React.FC = () => {
   useEffect(() => {
     if (existingRoommate) {
       setIsEditMode(true);
-      setExistingRoommateId(existingRoommate.roommateId);
       setFormData({
         bio: existingRoommate.bio || '',
         hobbies: existingRoommate.hobbies || '',
