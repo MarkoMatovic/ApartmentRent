@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Container,
   Grid,
@@ -9,19 +9,16 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Button,
   Skeleton,
 } from '@mui/material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
-import { ApartmentDto, ApartmentType } from '../shared/types/apartment';
 import ApartmentCard from '../components/Apartment/ApartmentCard';
 
 const ApartmentListPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
   const [filters, setFilters] = useState({

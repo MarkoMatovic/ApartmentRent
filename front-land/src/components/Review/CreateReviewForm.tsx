@@ -8,7 +8,6 @@ import {
   FormControlLabel,
   Switch,
   Alert,
-  Collapse,
 } from '@mui/material';
 import { RateReview as ReviewIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';

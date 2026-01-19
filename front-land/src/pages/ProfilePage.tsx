@@ -7,8 +7,6 @@ import {
   TextField,
   Button,
   Avatar,
-  FormControlLabel,
-  Switch,
   Grid,
   Alert,
   Dialog,

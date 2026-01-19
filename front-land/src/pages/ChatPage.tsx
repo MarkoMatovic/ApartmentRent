@@ -72,7 +72,7 @@ const ChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchParams] = useSearchParams();
   const targetUserIdParam = searchParams.get('userId');
 
@@ -309,9 +309,13 @@ const ChatPage: React.FC = () => {
           ? { 
               ...conv, 
               lastMessage: { 
-                messageText: messageToSend, 
-                sentAt: new Date().toISOString() 
-              } 
+                messageId: 0,
+                senderId: currentUserId,
+                receiverId: selectedConversation.otherUserId,
+                messageText: messageToSend,
+                sentAt: new Date().toISOString(),
+                isRead: true,
+              }
             }
           : conv
       ));
