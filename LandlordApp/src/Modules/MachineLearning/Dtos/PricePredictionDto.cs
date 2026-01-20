@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.MachineLearning.Dtos;
-
 public class PricePredictionRequestDto
 {
     public int? SizeSquareMeters { get; set; }
@@ -15,14 +14,12 @@ public class PricePredictionRequestDto
     public string? City { get; set; }
     public int? ApartmentType { get; set; } // 0=Studio, 1=OneBedroom, etc.
 }
-
 public class PricePredictionResponseDto
 {
     public decimal PredictedPrice { get; set; }
     public decimal ConfidenceScore { get; set; } // 0-100
     public string Message { get; set; } = string.Empty;
 }
-
 public class ModelMetricsDto
 {
     public double RSquared { get; set; } // Coefficient of determination

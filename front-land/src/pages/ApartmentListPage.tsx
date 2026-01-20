@@ -10,6 +10,7 @@ import {
   FormControl,
   InputLabel,
   Skeleton,
+  Button,
 } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,7 @@ const ApartmentListPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   
   const [filters, setFilters] = useState({
+    listingType: '',
     city: searchParams.get('location') || '',
     minRent: '',
     maxRent: '',
@@ -30,15 +32,43 @@ const ApartmentListPage: React.FC = () => {
     isFurnished: '',
   });
 
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
   const [sortBy, setSortBy] = useState('date');
 
-  const { data: apartments, isLoading } = useQuery({
-    queryKey: ['apartments', filters],
-    queryFn: () => apartmentsApi.getAll(filters as any),
+  const { data: response, isLoading } = useQuery({
+    queryKey: ['apartments', filters.listingType, filters.city, filters.minRent, filters.maxRent, filters.numberOfRooms, filters.apartmentType, filters.isFurnished, page],
+    queryFn: () => {
+      const filterParams: any = {
+        page: page,
+        pageSize: pageSize,
+      };
+      
+      // ListingType filter
+      if (filters.listingType && filters.listingType !== '') {
+        filterParams.listingType = Number(filters.listingType);
+      }
+      
+      // Other filters
+      if (filters.city) filterParams.city = filters.city;
+      if (filters.minRent) filterParams.minRent = Number(filters.minRent);
+      if (filters.maxRent) filterParams.maxRent = Number(filters.maxRent);
+      if (filters.numberOfRooms) filterParams.numberOfRooms = Number(filters.numberOfRooms);
+      if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
+      if (filters.isFurnished) filterParams.isFurnished = filters.isFurnished === 'true';
+      
+      return apartmentsApi.getAll(filterParams);
+    },
+    staleTime: 0,
   });
 
+  const apartments = response?.items || [];
+  const totalCount = response?.totalCount || 0;
+  const totalPages = response?.totalPages || 1;
+
   const handleFilterChange = (field: string, value: any) => {
-    setFilters({ ...filters, [field]: value });
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setPage(1); // Reset to first page when filters change
   };
 
   const handleSortChange = (value: string) => {
@@ -46,7 +76,7 @@ const ApartmentListPage: React.FC = () => {
     // Implement sorting logic
   };
 
-  const sortedApartments = apartments ? [...apartments].sort((a, b) => {
+  const sortedApartments = apartments.length > 0 ? [...apartments].sort((a, b) => {
     switch (sortBy) {
       case 'price-asc':
         return a.rent - b.rent;
@@ -70,6 +100,19 @@ const ApartmentListPage: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               {t('apartments:filters')}
             </Typography>
+            
+            <FormControl fullWidth margin="normal" size="small">
+              <InputLabel>{t('apartments:listingType', { defaultValue: 'Listing Type' })}</InputLabel>
+              <Select
+                value={filters.listingType}
+                onChange={(e) => handleFilterChange('listingType', e.target.value)}
+                label={t('apartments:listingType', { defaultValue: 'Listing Type' })}
+              >
+                <MenuItem value="">{t('apartments:all', { defaultValue: 'All' })}</MenuItem>
+                <MenuItem value="1">{t('apartments:forRent', { defaultValue: 'For Rent' })}</MenuItem>
+                <MenuItem value="2">{t('apartments:sale', { defaultValue: 'Sale' })}</MenuItem>
+              </Select>
+            </FormControl>
             
             <TextField
               fullWidth
@@ -121,7 +164,7 @@ const ApartmentListPage: React.FC = () => {
         <Grid item xs={12} md={9}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="body1">
-              {apartments?.length || 0} {t('apartments:title')}
+              {totalCount} {t('apartments:title')}
             </Typography>
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>{t('apartments:sortBy')}</InputLabel>
@@ -150,13 +193,36 @@ const ApartmentListPage: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <Grid container spacing={3}>
-              {sortedApartments.map((apartment) => (
-                <Grid item xs={12} sm={6} key={apartment.apartmentId}>
-                  <ApartmentCard apartment={apartment} />
-                </Grid>
-              ))}
-            </Grid>
+            <>
+              <Grid container spacing={3}>
+                {sortedApartments.map((apartment) => (
+                  <Grid item xs={12} sm={6} key={apartment.apartmentId}>
+                    <ApartmentCard apartment={apartment} />
+                  </Grid>
+                ))}
+              </Grid>
+              
+              {/* Pagination */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 4 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  {t('common:previous', { defaultValue: '← Previous' })}
+                </Button>
+                <Typography variant="body1">
+                  {t('common:page', { defaultValue: 'Page' })} {page}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page >= totalPages}
+                >
+                  {t('common:next', { defaultValue: 'Next →' })}
+                </Button>
+              </Box>
+            </>
           )}
         </Grid>
       </Grid>
@@ -165,4 +231,3 @@ const ApartmentListPage: React.FC = () => {
 };
 
 export default ApartmentListPage;
-

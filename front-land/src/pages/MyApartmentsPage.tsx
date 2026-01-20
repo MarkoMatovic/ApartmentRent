@@ -1,5 +1,5 @@
-import React from 'react';
-import { Container, Typography, Box, Paper, Button, Grid, CircularProgress, Alert } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, Typography, Box, Paper, Button, Grid, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Add as AddIcon } from '@mui/icons-material';
@@ -11,6 +11,8 @@ const MyApartmentsPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [apartmentToDelete, setApartmentToDelete] = useState<number | null>(null);
 
   const { data: apartments, isLoading, error } = useQuery({
     queryKey: ['myApartments'],
@@ -26,8 +28,38 @@ const MyApartmentsPage: React.FC = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apartmentsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myApartments'] });
+      queryClient.invalidateQueries({ queryKey: ['apartments'] });
+      setDeleteDialogOpen(false);
+      setApartmentToDelete(null);
+    },
+  });
+
   const handleToggleRoommate = (apartmentId: number) => (isLookingForRoommate: boolean) => {
     updateMutation.mutate({ id: apartmentId, isLookingForRoommate });
+  };
+
+  const handleEdit = (apartmentId: number) => {
+    navigate(`/apartments/edit/${apartmentId}`);
+  };
+
+  const handleDeleteClick = (apartmentId: number) => {
+    setApartmentToDelete(apartmentId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (apartmentToDelete) {
+      deleteMutation.mutate(apartmentToDelete);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setApartmentToDelete(null);
   };
 
   return (
@@ -66,7 +98,10 @@ const MyApartmentsPage: React.FC = () => {
                 apartment={apartment}
                 isOwner={true}
                 onToggleRoommate={handleToggleRoommate(apartment.apartmentId)}
+                onEdit={() => handleEdit(apartment.apartmentId)}
+                onDelete={() => handleDeleteClick(apartment.apartmentId)}
                 isUpdating={updateMutation.isPending}
+                isDeleting={deleteMutation.isPending && apartmentToDelete === apartment.apartmentId}
               />
             </Grid>
           ))}
@@ -83,6 +118,36 @@ const MyApartmentsPage: React.FC = () => {
           </Typography>
         </Paper>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+      >
+        <DialogTitle>
+          {t('apartments:deleteApartment', { defaultValue: 'Delete Apartment' })}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {t('apartments:deleteApartmentConfirm', { defaultValue: 'Are you sure you want to delete this apartment listing? This action cannot be undone.' })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleteMutation.isPending}>
+            {t('common:cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending 
+              ? t('common:deleting', { defaultValue: 'Deleting...' })
+              : t('common:delete', { defaultValue: 'Delete' })}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

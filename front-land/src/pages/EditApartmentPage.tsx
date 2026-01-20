@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentUpdateInputDto } from '../shared/types/apartment';
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 const EditApartmentPage: React.FC = () => {
     const { t } = useTranslation(['common', 'apartments']);
@@ -42,6 +43,7 @@ const EditApartmentPage: React.FC = () => {
                 title: apartment.title,
                 description: apartment.description,
                 rent: apartment.rent,
+                price: apartment.price,
                 address: apartment.address,
                 city: apartment.city,
                 postalCode: apartment.postalCode,
@@ -50,6 +52,7 @@ const EditApartmentPage: React.FC = () => {
                 numberOfRooms: apartment.numberOfRooms,
                 rentIncludeUtilities: apartment.rentIncludeUtilities,
                 sizeSquareMeters: apartment.sizeSquareMeters,
+                listingType: apartment.listingType,
                 isFurnished: apartment.isFurnished,
                 hasBalcony: apartment.hasBalcony,
                 hasElevator: apartment.hasElevator,
@@ -63,6 +66,7 @@ const EditApartmentPage: React.FC = () => {
                 maximumStayMonths: apartment.maximumStayMonths,
                 isImmediatelyAvailable: apartment.isImmediatelyAvailable,
                 isLookingForRoommate: apartment.isLookingForRoommate || false,
+                contactPhone: apartment.contactPhone || '',
             });
         }
     }, [apartment]);
@@ -175,16 +179,30 @@ const EditApartmentPage: React.FC = () => {
                             />
                         </Grid>
 
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                fullWidth
-                                label={t('apartments:rent')}
-                                type="number"
-                                value={formData.rent || ''}
-                                onChange={(e) => handleChange('rent', parseFloat(e.target.value) || 0)}
-                                margin="normal"
-                            />
-                        </Grid>
+                        {/* Show Price for Sale, Rent for Rent */}
+                        {formData.listingType === 2 ? (
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label={`${t('apartments:price', { defaultValue: 'Sale Price' })} (€)`}
+                                    type="number"
+                                    value={formData.price || ''}
+                                    onChange={(e) => handleChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                    margin="normal"
+                                />
+                            </Grid>
+                        ) : (
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    label={`${t('apartments:monthlyRent', { defaultValue: 'Monthly Rent' })} (€)`}
+                                    type="number"
+                                    value={formData.rent || ''}
+                                    onChange={(e) => handleChange('rent', parseFloat(e.target.value) || 0)}
+                                    margin="normal"
+                                />
+                            </Grid>
+                        )}
 
                         <Grid item xs={12} sm={6}>
                             <TextField
@@ -214,6 +232,31 @@ const EditApartmentPage: React.FC = () => {
                                 onChange={(e) => handleChange('postalCode', e.target.value)}
                                 margin="normal"
                             />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                label={t('apartments:contactPhone', { defaultValue: 'Contact Phone' })}
+                                value={formData.contactPhone || ''}
+                                onChange={(e) => handleChange('contactPhone', e.target.value)}
+                                margin="normal"
+                                placeholder="+381 64 123 4567"
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel>{t('apartments:listingType', { defaultValue: 'Listing Type' })}</InputLabel>
+                                <Select
+                                    value={formData.listingType || 1}
+                                    onChange={(e) => handleChange('listingType', e.target.value)}
+                                    label={t('apartments:listingType', { defaultValue: 'Listing Type' })}
+                                >
+                                    <MenuItem value={1}>{t('apartments:forRent', { defaultValue: 'For Rent' })}</MenuItem>
+                                    <MenuItem value={2}>{t('apartments:sale', { defaultValue: 'Sale' })}</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Grid>
 
                         <Grid item xs={12}>

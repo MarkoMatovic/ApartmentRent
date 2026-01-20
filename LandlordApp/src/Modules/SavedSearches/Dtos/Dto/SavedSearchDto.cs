@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.SavedSearches.Dtos.Dto;
-
 public class SavedSearchDto
 {
     public int SavedSearchId { get; set; }
@@ -12,4 +11,3 @@ public class SavedSearchDto
     public bool IsActive { get; set; }
     public DateTime? CreatedDate { get; set; }
 }
-

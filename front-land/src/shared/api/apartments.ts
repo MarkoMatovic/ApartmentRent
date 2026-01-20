@@ -1,11 +1,20 @@
 import apiClient from './client';
 import { Apartment, ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentInputDto, ApartmentUpdateInputDto } from '../types/apartment';
 
+export interface PagedResponse<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export const apartmentsApi = {
-  getAll: async (filters?: ApartmentFilters): Promise<ApartmentDto[]> => {
+  getAll: async (filters?: ApartmentFilters): Promise<PagedResponse<ApartmentDto>> => {
     const params: Record<string, any> = {};
 
     if (filters) {
+      if (filters.listingType !== undefined) params.listingType = filters.listingType;
       if (filters.city) params.city = filters.city;
       if (filters.minRent) params.minRent = Number(filters.minRent);
       if (filters.maxRent) params.maxRent = Number(filters.maxRent);
@@ -21,13 +30,11 @@ export const apartmentsApi = {
       if (filters.pageSize) params.pageSize = filters.pageSize;
     }
 
-    const response = await apiClient.get<any>(`/api/v1/rent/get-all-apartments`, {
+    const response = await apiClient.get<PagedResponse<ApartmentDto>>(`/api/v1/rent/get-all-apartments`, {
       params,
     });
 
-    const apartments = response.data.items || response.data;
-
-    return apartments;
+    return response.data;
   },
 
   getById: async (id: number): Promise<GetApartmentDto> => {

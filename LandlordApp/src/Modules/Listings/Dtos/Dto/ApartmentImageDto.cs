@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Listings.Dtos.Dto;
-
 public class ApartmentImageDto
 {
     public int ImageId { get; set; }

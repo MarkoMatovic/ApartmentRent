@@ -1,11 +1,10 @@
-﻿using Lander.Helpers;
+using Lander.Helpers;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
 namespace Lander.src.Modules.Users.Controllers
 {
     [Route(ApiActionsV1.Auth)]
@@ -21,7 +20,6 @@ namespace Lander.src.Modules.Users.Controllers
             _userInterface = userInterface;
         }
         #endregion
-
         [HttpPost(ApiActionsV1.Register, Name = nameof(ApiActionsV1.Register))]
         public async Task<ActionResult<UserRegistrationDto>> RegisterUser([FromBody] UserRegistrationInputDto userRegistrationInputDto)
         {
@@ -61,21 +59,18 @@ namespace Lander.src.Modules.Users.Controllers
             await _userInterface.DeactivateUserAsync(deactivateUserInputDto);
             return Ok("User deactivated successfully.");
         }
-
         [HttpPost(ApiActionsV1.ReactivateUser, Name = nameof(ApiActionsV1.ReactivateUser))]
         public async Task<IActionResult> ReactivateUser([FromBody] ReactivateUserInputDto reactivateUserInputDto)
         {
             await _userInterface.ReactivateUserAsync(reactivateUserInputDto);
             return Ok("User reactivated successfully.");
         }
-
         [HttpPost(ApiActionsV1.UpdateRoommateStatus, Name = nameof(ApiActionsV1.UpdateRoommateStatus))]
         public async Task<IActionResult> UpdateRoommateStatus([FromBody] UpdateRoommateStatusInputDto updateRoommateStatusInputDto)
         {
             await _userInterface.UpdateRoommateStatusAsync(updateRoommateStatusInputDto);
             return Ok("Roommate status updated successfully.");
         }
-
         [HttpGet(ApiActionsV1.GetUserProfile, Name = nameof(ApiActionsV1.GetUserProfile))]
         public async Task<ActionResult<UserProfileDto>> GetUserProfile([FromRoute] int userId)
         {
@@ -84,7 +79,6 @@ namespace Lander.src.Modules.Users.Controllers
                 return NotFound("User not found");
             return Ok(profile);
         }
-
         [HttpPut(ApiActionsV1.UpdateUserProfile, Name = nameof(ApiActionsV1.UpdateUserProfile))]
         public async Task<ActionResult<UserProfileDto>> UpdateUserProfile([FromRoute] int userId, [FromBody] UserProfileUpdateInputDto updateDto)
         {

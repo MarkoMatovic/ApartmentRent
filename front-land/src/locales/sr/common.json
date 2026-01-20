@@ -33,5 +33,10 @@
   "lightMode": "Svetli režim",
   "language": "Jezik",
   "lookingForRoommate": "Tražim cimera",
-  "lookingForRoommateDescription": "Uključite ovo da biste pokazali drugima da tražite cimera"
+  "lookingForRoommateDescription": "Uključite ovo da biste pokazali drugima da tražite cimera",
+  "previous": "← Prethodna",
+  "next": "Sledeća →",
+  "page": "Strana",
+  "deleting": "Brisanje...",
+  "unknown": "Nepoznato"
 }

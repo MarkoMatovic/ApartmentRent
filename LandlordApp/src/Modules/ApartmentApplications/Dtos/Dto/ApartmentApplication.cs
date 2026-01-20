@@ -1,4 +1,4 @@
-﻿namespace Lander.src.Modules.ApartmentApplications.Dtos.Dto
+namespace Lander.src.Modules.ApartmentApplications.Dtos.Dto
 {
     public class ApartmentApplicationDto
     {

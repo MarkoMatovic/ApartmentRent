@@ -33,5 +33,10 @@
   "lightMode": "Heller Modus",
   "language": "Sprache",
   "lookingForRoommate": "Suche Mitbewohner",
-  "lookingForRoommateDescription": "Aktivieren Sie dies, um anderen zu zeigen, dass Sie einen Mitbewohner suchen"
+  "lookingForRoommateDescription": "Aktivieren Sie dies, um anderen zu zeigen, dass Sie einen Mitbewohner suchen",
+  "previous": "← Zurück",
+  "next": "Weiter →",
+  "page": "Seite",
+  "deleting": "Löschen...",
+  "unknown": "Unbekannt"
 }

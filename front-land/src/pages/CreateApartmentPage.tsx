@@ -202,6 +202,7 @@ const CreateApartmentPage: React.FC = () => {
         title: '',
         description: '',
         rent: 0,
+        price: undefined,
         address: '',
         city: '',
         postalCode: '',
@@ -213,6 +214,7 @@ const CreateApartmentPage: React.FC = () => {
         longitude: undefined,
         sizeSquareMeters: undefined,
         apartmentType: ApartmentType.Studio,
+        listingType: 1,
         isFurnished: false,
         hasBalcony: false,
         hasElevator: false,
@@ -226,6 +228,7 @@ const CreateApartmentPage: React.FC = () => {
         maximumStayMonths: undefined,
         isImmediatelyAvailable: false,
         isLookingForRoommate: false,
+        contactPhone: '',
         imageUrls: [],
     });
 
@@ -424,6 +427,21 @@ const CreateApartmentPage: React.FC = () => {
                                 </Typography>
                             </Grid>
 
+                            {/* Listing Type - Rent or Sale */}
+                            <Grid item xs={12} sm={6}>
+                                <FormControl fullWidth margin="normal" required>
+                                    <InputLabel>{t('apartments:listingType', { defaultValue: 'Listing Type' })}</InputLabel>
+                                    <Select
+                                        value={formData.listingType || 1}
+                                        onChange={(e) => handleChange('listingType', e.target.value)}
+                                        label={t('apartments:listingType', { defaultValue: 'Listing Type' })}
+                                    >
+                                        <MenuItem value={1}>{t('apartments:forRent', { defaultValue: 'For Rent' })}</MenuItem>
+                                        <MenuItem value={2}>{t('apartments:sale', { defaultValue: 'Sale' })}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
                             <Grid item xs={12}>
                                 <TextField
                                     fullWidth
@@ -476,6 +494,18 @@ const CreateApartmentPage: React.FC = () => {
                                     value={formData.postalCode}
                                     onChange={(e) => handleChange('postalCode', e.target.value)}
                                     margin="normal"
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    required
+                                    label={t('apartments:contactPhone', { defaultValue: 'Contact Phone' })}
+                                    value={formData.contactPhone}
+                                    onChange={(e) => handleChange('contactPhone', e.target.value)}
+                                    margin="normal"
+                                    placeholder="+381 64 123 4567"
                                 />
                             </Grid>
 
@@ -618,40 +648,60 @@ const CreateApartmentPage: React.FC = () => {
                                 </Typography>
                             </Grid>
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    required
-                                    label={`${t('apartments:rent')} (€)`}
-                                    type="number"
-                                    value={formData.rent || ''}
-                                    onChange={(e) => handleChange('rent', parseFloat(e.target.value))}
-                                    margin="normal"
-                                />
-                            </Grid>
+                            {/* Show Price field for Sale */}
+                            {formData.listingType === 2 && (
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        required
+                                        label={`${t('apartments:price', { defaultValue: 'Sale Price' })} (€)`}
+                                        type="number"
+                                        value={formData.price || ''}
+                                        onChange={(e) => handleChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                        margin="normal"
+                                    />
+                                </Grid>
+                            )}
 
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label={`${t('apartments:deposit')} (€)`}
-                                    type="number"
-                                    value={formData.depositAmount || ''}
-                                    onChange={(e) => handleChange('depositAmount', e.target.value ? parseFloat(e.target.value) : undefined)}
-                                    margin="normal"
-                                />
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={formData.rentIncludeUtilities || false}
-                                            onChange={(e) => handleChange('rentIncludeUtilities', e.target.checked)}
+                            {/* Show Rent and Deposit fields for Rent */}
+                            {formData.listingType !== 2 && (
+                                <>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            required
+                                            label={`${t('apartments:monthlyRent', { defaultValue: 'Monthly Rent' })} (€)`}
+                                            type="number"
+                                            value={formData.rent || ''}
+                                            onChange={(e) => handleChange('rent', parseFloat(e.target.value))}
+                                            margin="normal"
                                         />
-                                    }
-                                    label={t('apartments:utilitiesIncluded')}
-                                />
-                            </Grid>
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField
+                                            fullWidth
+                                            label={`${t('apartments:deposit')} (€)`}
+                                            type="number"
+                                            value={formData.depositAmount || ''}
+                                            onChange={(e) => handleChange('depositAmount', e.target.value ? parseFloat(e.target.value) : undefined)}
+                                            margin="normal"
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={formData.rentIncludeUtilities || false}
+                                                    onChange={(e) => handleChange('rentIncludeUtilities', e.target.checked)}
+                                                />
+                                            }
+                                            label={t('apartments:utilitiesIncluded')}
+                                        />
+                                    </Grid>
+                                </>
+                            )}
 
                             {/* Availability */}
                             <Grid item xs={12}>
