@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Analytics.Dtos.Dto;
-
 public class AnalyticsSummaryDto
 {
     public int TotalEvents { get; set; }
@@ -11,7 +10,6 @@ public class AnalyticsSummaryDto
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
 }
-
 public class TopEntityDto
 {
     public int EntityId { get; set; }
@@ -20,14 +18,12 @@ public class TopEntityDto
     public string? EntityTitle { get; set; }
     public string? EntityDetails { get; set; }
 }
-
 public class SearchTermDto
 {
     public string SearchTerm { get; set; } = null!;
     public int SearchCount { get; set; }
     public DateTime? LastSearched { get; set; }
 }
-
 public class EventTrendDto
 {
     public DateTime Date { get; set; }

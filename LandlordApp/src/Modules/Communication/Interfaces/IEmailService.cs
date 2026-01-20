@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Communication.Intefaces;
-
 public interface IEmailService
 {
     Task<bool> SendEmailAsync(string to, string subject, string htmlContent);

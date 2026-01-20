@@ -1,7 +1,5 @@
 using Lander.src.Modules.Communication.Dtos.Dto;
-
 namespace Lander.src.Modules.Communication.Intefaces;
-
 public interface IMessageService
 {
     Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText);

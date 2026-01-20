@@ -49,6 +49,9 @@ namespace Lander.Migrations.Listings
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("ContactPhone")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid?>("CreatedByGuid")
                         .HasColumnType("uniqueidentifier");
 
@@ -127,6 +130,9 @@ namespace Lander.Migrations.Listings
                     b.Property<decimal?>("Latitude")
                         .HasColumnType("decimal(9,6)");
 
+                    b.Property<int>("ListingType")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("Longitude")
                         .HasColumnType("decimal(9,6)");
 
@@ -148,6 +154,9 @@ namespace Lander.Migrations.Listings
                     b.Property<string>("PostalCode")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("Rent")
                         .HasColumnType("decimal(10, 2)");

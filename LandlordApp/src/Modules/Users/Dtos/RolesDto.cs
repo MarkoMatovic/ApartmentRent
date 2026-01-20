@@ -1,9 +1,8 @@
-﻿namespace Lander.src.Modules.Users.Dtos
+namespace Lander.src.Modules.Users.Dtos
 {
     public class RolesDto
     {
     }
-
     public class GetRolesDto
     {
         public int Id { get; set; }
@@ -14,5 +13,4 @@
         public Guid ModifiedByGuid { get; set; }
         public DateTime ModifiedDate { get; set; }
     }
-
 }

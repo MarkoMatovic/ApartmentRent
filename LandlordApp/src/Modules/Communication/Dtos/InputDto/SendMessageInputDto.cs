@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Communication.Dtos.InputDto;
-
 public class SendMessageInputDto
 {
     public int SenderId { get; set; }

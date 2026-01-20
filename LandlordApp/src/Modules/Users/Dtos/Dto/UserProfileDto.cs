@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Users.Dtos.Dto;
-
 public class UserProfileDto
 {
     public int UserId { get; set; }

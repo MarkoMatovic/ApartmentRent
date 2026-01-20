@@ -1,20 +1,16 @@
-﻿using Google.Protobuf.WellKnownTypes;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.EntityFrameworkCore;
-
 namespace Lander.src.Modules.Reviews.Implementation;
-
 public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrpcServiceBase
 {
     private readonly ReviewsContext _context;
-
     public ReviewFavoriteService(ReviewsContext context)
     {
         _context = context;
     }
-
     public override async Task<FavoriteResponse> CreateFavorite(CreateFavoriteRequest request, ServerCallContext context)
     {
         var favorite = new Favorite
@@ -26,7 +22,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ModifiedByGuid = Guid.Parse(request.CreatedByGuid),
             ModifiedDate = DateTime.UtcNow
         };
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -39,7 +34,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             _context.RollBackTransaction();
             throw;
         }
-
         return new FavoriteResponse
         {
             UserId = (int)favorite.UserId,
@@ -50,7 +44,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ModifiedDate = Timestamp.FromDateTime((DateTime)favorite.ModifiedDate)
         };
     }
-
     public override async Task<ReviewResponse> CreateReview(CreateReviewRequest request, ServerCallContext context)
     {
         var review = new Review
@@ -66,7 +59,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ModifiedByGuid = Guid.Parse(request.CreatedByGuid),
             ModifiedDate = DateTime.UtcNow
         };
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -79,9 +71,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             _context.RollBackTransaction();
             throw;
         }
-
         var user = await _context.Users.FindAsync(request.UserId);
-
         return new ReviewResponse
         {
             ReviewId = review.ReviewId,
@@ -103,18 +93,15 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             } : null
         };
     }
-
     public override async Task<ReviewResponse> GetReviewById(GetReviewByIdRequest request, ServerCallContext context)
     {
         var review = await _context.Reviews
             .Include(r => r.Tenant)
             .FirstOrDefaultAsync(r => r.ReviewId == request.ReviewId);
-
         if (review == null)
         {
             throw new RpcException(new Status(StatusCode.NotFound, $"Review with ID {request.ReviewId} not found"));
         }
-
         return new ReviewResponse
         {
             ReviewId = review.ReviewId,
@@ -140,7 +127,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             } : null
         };
     }
-
     public override async Task<GetReviewsResponse> GetReviewsByApartmentId(GetReviewsByApartmentIdRequest request, ServerCallContext context)
     {
         var reviews = await _context.Reviews
@@ -172,17 +158,13 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 } : null
             })
             .ToListAsync();
-
         var response = new GetReviewsResponse();
         response.Reviews.AddRange(reviews);
         return response;
     }
-
     public override async Task<GetFavoritesResponse> GetFavorites(GetFavoritesRequest request, ServerCallContext context)
     {
-        
         int limit = Math.Min(request.Limit > 0 ? request.Limit : 10, 10);
-
         var favorites = await _context.Favorites
             .OrderBy(f => f.FavoriteId) 
             .Take(limit)
@@ -201,16 +183,13 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                     : null
             })
             .ToListAsync();
-
         var response = new GetFavoritesResponse();
         response.Favorites.AddRange(favorites);
         return response;
     }
-
     public override async Task<DeleteResponse> DeleteReview(DeleteReviewRequest request, ServerCallContext context)
     {
         var review = await _context.Reviews.FindAsync(request.ReviewId);
-        
         if (review == null)
         {
             return new DeleteResponse
@@ -219,7 +198,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 Message = "Review not found"
             };
         }
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -232,18 +210,15 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             _context.RollBackTransaction();
             throw;
         }
-
         return new DeleteResponse
         {
             Success = true,
             Message = "Review deleted successfully"
         };
     }
-
     public override async Task<DeleteResponse> DeleteFavorite(DeleteFavoriteRequest request, ServerCallContext context)
     {
         var favorite = await _context.Favorites.FindAsync(request.FavoriteId);
-        
         if (favorite == null)
         {
             return new DeleteResponse
@@ -252,7 +227,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 Message = "Favorite not found"
             };
         }
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -265,14 +239,12 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             _context.RollBackTransaction();
             throw;
         }
-
         return new DeleteResponse
         {
             Success = true,
             Message = "Favorite deleted successfully"
         };
     }
-
     public override async Task<GetFavoritesResponse> GetUserFavorites(GetUserFavoritesRequest request, ServerCallContext context)
     {
         var favorites = await _context.Favorites
@@ -293,7 +265,6 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                     : null
             })
             .ToListAsync();
-
         var response = new GetFavoritesResponse();
         response.Favorites.AddRange(favorites);
         return response;

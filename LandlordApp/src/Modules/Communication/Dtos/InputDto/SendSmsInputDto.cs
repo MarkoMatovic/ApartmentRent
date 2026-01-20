@@ -1,5 +1,4 @@
-﻿namespace Lander.src.Modules.Communication.Dtos.InputDto;
-
+namespace Lander.src.Modules.Communication.Dtos.InputDto;
 public class SendSmsInputDto
 {
     public string ToPhoneNumber { get; set; }

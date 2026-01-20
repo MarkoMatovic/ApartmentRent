@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Communication.Models;
-
 public partial class EmailLog
 {
     public int EmailLogId { get; set; }
