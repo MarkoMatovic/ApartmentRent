@@ -19,6 +19,8 @@ import MyApartmentsPage from './pages/MyApartmentsPage';
 import CreateApartmentPage from './pages/CreateApartmentPage';
 import EditApartmentPage from './pages/EditApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
+import SupportPage from './pages/SupportPage';
+import PricingPage from './pages/PricingPage';
 
 function App() {
   return (
@@ -44,6 +46,8 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-apartments" element={<MyApartmentsPage />} />
                 <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
+                <Route path="/support" element={<SupportPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
