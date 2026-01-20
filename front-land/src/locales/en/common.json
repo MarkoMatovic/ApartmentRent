@@ -33,5 +33,10 @@
   "lightMode": "Light Mode",
   "language": "Language",
   "lookingForRoommate": "Looking for Roommate",
-  "lookingForRoommateDescription": "Enable this to show others that you're looking for a roommate"
+  "lookingForRoommateDescription": "Enable this to show others that you're looking for a roommate",
+  "previous": "← Previous",
+  "next": "Next →",
+  "page": "Page",
+  "deleting": "Deleting...",
+  "unknown": "Unknown"
 }

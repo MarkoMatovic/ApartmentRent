@@ -1,5 +1,4 @@
-﻿namespace Lander.src.Notifications.Models;
-
+namespace Lander.src.Notifications.Models;
 public class ReadNotification
 {
     public int Id { get; set; }

@@ -1,5 +1,4 @@
-﻿namespace Lander.src.Modules.Communication.Dtos.Dto;
-
+namespace Lander.src.Modules.Communication.Dtos.Dto;
 public class SendSmsDto
 {
     public bool Success { get; set; }

@@ -1,4 +1,4 @@
-﻿using Azure.Core;
+using Azure.Core;
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
@@ -8,14 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
-
 namespace Lander.src.Modules.Communication.Implementation;
-
 public class SmsService : ISmsService
 {
     private readonly TwilioSettings _twilioSettings;
     private readonly CommunicationsContext _context;
-
     public SmsService(IOptions<TwilioSettings> twilioSettings, CommunicationsContext context)
     {
         _twilioSettings = twilioSettings.Value ?? throw new ArgumentNullException(nameof(twilioSettings));
@@ -33,7 +30,6 @@ public class SmsService : ISmsService
             CreatedByGuid = Guid.NewGuid(), 
             CreatedDate = DateTime.UtcNow
         };
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -46,15 +42,12 @@ public class SmsService : ISmsService
             _context.RollBackTransaction();
             throw;
         }
-
         TwilioClient.Init(_twilioSettings.AccountSid, _twilioSettings.AuthToken);
-
         var twilioMessage = await MessageResource.CreateAsync(
             body: sendSmsInputDto.MessageText,
             from: new Twilio.Types.PhoneNumber(_twilioSettings.PhoneNumber),
             to: new Twilio.Types.PhoneNumber(sendSmsInputDto.ToPhoneNumber)
         );
-
         return new SendSmsDto
         {
             Success = true,

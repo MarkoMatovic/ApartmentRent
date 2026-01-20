@@ -17,6 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   People as PeopleIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -32,10 +34,13 @@ interface ApartmentCardProps {
   };
   isOwner?: boolean;
   onToggleRoommate?: (isLookingForRoommate: boolean) => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   isUpdating?: boolean;
+  isDeleting?: boolean;
 }
 
-const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = false, onToggleRoommate, isUpdating = false }) => {
+const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = false, onToggleRoommate, onEdit, onDelete, isUpdating = false, isDeleting = false }) => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -278,10 +283,37 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = fals
           )}
         </Box>
       </CardContent>
-      <CardActions>
+      <CardActions sx={{ justifyContent: isOwner ? 'space-between' : 'flex-start' }}>
         <Button size="small" color="secondary">
           {t('view')}
         </Button>
+        {isOwner && (
+          <Box sx={{ display: 'flex', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEdit) onEdit();
+              }}
+              title={t('common:edit', { defaultValue: 'Edit' })}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDelete) onDelete();
+              }}
+              disabled={isDeleting}
+              title={t('common:delete', { defaultValue: 'Delete' })}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
       </CardActions>
     </Card>
   );

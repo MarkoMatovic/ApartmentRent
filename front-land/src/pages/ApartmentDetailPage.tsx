@@ -26,6 +26,10 @@ import {
   Euro as EuroIcon,
   Bed as BedIcon,
   SquareFoot as SquareFootIcon,
+  Phone as PhoneIcon,
+  Email as EmailIcon,
+  Chat as ChatIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 
 const ApartmentDetailPage: React.FC = () => {
@@ -228,16 +232,64 @@ const ApartmentDetailPage: React.FC = () => {
                 €{apartment.rent}/mo
               </Typography>
               {apartment.rentIncludeUtilities && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   {t('apartments:utilitiesIncluded')}
                 </Typography>
               )}
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Landlord Info */}
+              {apartment.landlordName && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    {t('apartments:landlord', { defaultValue: 'Landlord' })}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon color="action" />
+                    <Typography variant="body1">{apartment.landlordName}</Typography>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Contact Options */}
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                {t('apartments:contactOptions', { defaultValue: 'Contact Options' })}
+              </Typography>
+
+              {/* Phone - display only */}
+              {apartment.contactPhone && (
+                <Box sx={{ mt: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PhoneIcon color="action" />
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    {apartment.contactPhone}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Email */}
+              {apartment.landlordEmail && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="primary"
+                  size="large"
+                  startIcon={<EmailIcon />}
+                  sx={{ mt: 1 }}
+                  href={`mailto:${apartment.landlordEmail}?subject=${encodeURIComponent(t('apartments:emailSubject', { defaultValue: 'Inquiry about: ' }) + apartment.title)}`}
+                >
+                  {t('apartments:sendEmail', { defaultValue: 'Send Email' })}
+                </Button>
+              )}
+
+              {/* Chat */}
               <Button
                 fullWidth
                 variant="contained"
                 color="secondary"
                 size="large"
-                sx={{ mt: 3 }}
+                startIcon={<ChatIcon />}
+                sx={{ mt: 1 }}
                 onClick={() => {
                   if (apartment.landlordId) {
                     navigate(`/messages?userId=${apartment.landlordId}`);
@@ -245,16 +297,17 @@ const ApartmentDetailPage: React.FC = () => {
                 }}
                 disabled={!apartment.landlordId}
               >
-                {t('contact')}
+                {t('apartments:sendMessage', { defaultValue: 'Send Message' })}
               </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                sx={{ mt: 1 }}
-              >
-                {t('apply')}
-              </Button>
+
+              {/* Looking for roommate notice */}
+              {apartment.isLookingForRoommate && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ color: 'success.contrastText', fontWeight: 600 }}>
+                    {t('apartments:lookingForRoommateNotice', { defaultValue: '🏠 This apartment is looking for a roommate! Contact the landlord to learn more.' })}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>

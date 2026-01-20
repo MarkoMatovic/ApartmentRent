@@ -1,5 +1,4 @@
-﻿namespace Lander.src.Notifications.Dtos.Dto;
-
+namespace Lander.src.Notifications.Dtos.Dto;
 public class NotificationDto
 {
     public int Id { get; set; }

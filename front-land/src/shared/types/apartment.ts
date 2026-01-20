@@ -7,6 +7,11 @@ export enum ApartmentType {
   House = 5,
 }
 
+export enum ListingType {
+  Rent = 1,  // Izdavanje
+  Sale = 2   // Prodaja
+}
+
 export interface Apartment {
   apartmentId: number;
   landlordId?: number;
@@ -24,6 +29,7 @@ export interface Apartment {
   longitude?: number;
   sizeSquareMeters?: number;
   apartmentType: ApartmentType;
+  listingType: ListingType;
   isFurnished: boolean;
   hasBalcony: boolean;
   hasElevator: boolean;
@@ -51,12 +57,14 @@ export interface ApartmentDto {
   apartmentId: number;
   title: string;
   rent: number;
+  price?: number;
   address: string;
   city: string;
   latitude?: number;
   longitude?: number;
   sizeSquareMeters?: number;
   apartmentType?: ApartmentType;
+  listingType?: ListingType;
   isFurnished?: boolean;
   isImmediatelyAvailable?: boolean;
   apartmentImages?: ApartmentImage[];
@@ -70,6 +78,7 @@ export interface GetApartmentDto {
   title: string;
   description: string;
   rent: number;
+  price?: number;
   address: string;
   city: string;
   postalCode: string;
@@ -81,6 +90,7 @@ export interface GetApartmentDto {
   longitude?: number;
   sizeSquareMeters?: number;
   apartmentType: ApartmentType;
+  listingType: ListingType;
   isFurnished: boolean;
   hasBalcony: boolean;
   hasElevator: boolean;
@@ -95,12 +105,16 @@ export interface GetApartmentDto {
   isImmediatelyAvailable: boolean;
   apartmentImages?: ApartmentImage[];
   isLookingForRoommate?: boolean;
+  contactPhone?: string;
   landlordId?: number;
+  landlordName?: string;
+  landlordEmail?: string;
   averageRating?: number;
   reviewCount?: number;
 }
 
 export interface ApartmentFilters {
+  listingType?: ListingType;
   city?: string;
   minRent?: number;
   maxRent?: number;
@@ -127,6 +141,7 @@ export interface ApartmentInputDto {
   title: string;
   description?: string;
   rent: number;
+  price?: number;
   address: string;
   city?: string;
   postalCode?: string;
@@ -138,6 +153,7 @@ export interface ApartmentInputDto {
   longitude?: number;
   sizeSquareMeters?: number;
   apartmentType: ApartmentType;
+  listingType?: ListingType;
   isFurnished: boolean;
   hasBalcony: boolean;
   hasElevator: boolean;
@@ -151,6 +167,7 @@ export interface ApartmentInputDto {
   maximumStayMonths?: number;
   isImmediatelyAvailable: boolean;
   isLookingForRoommate?: boolean;
+  contactPhone?: string;
   imageUrls?: string[];
 }
 
@@ -158,6 +175,7 @@ export interface ApartmentUpdateInputDto {
   title?: string;
   description?: string;
   rent?: number;
+  price?: number;
   address?: string;
   city?: string;
   postalCode?: string;
@@ -169,6 +187,7 @@ export interface ApartmentUpdateInputDto {
   longitude?: number;
   sizeSquareMeters?: number;
   apartmentType?: ApartmentType;
+  listingType?: ListingType;
   isFurnished?: boolean;
   hasBalcony?: boolean;
   hasElevator?: boolean;
@@ -182,5 +201,6 @@ export interface ApartmentUpdateInputDto {
   maximumStayMonths?: number;
   isImmediatelyAvailable?: boolean;
   isLookingForRoommate?: boolean;
+  contactPhone?: string;
   imageUrls?: string[];
 }

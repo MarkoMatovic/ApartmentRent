@@ -1,10 +1,9 @@
-﻿using Lander.Helpers;
+using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Intefaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
 namespace Lander.src.Modules.Communication.Contollers
 {
     [Route(ApiActionsV1.Sms)]
@@ -12,7 +11,6 @@ namespace Lander.src.Modules.Communication.Contollers
     public class SmsController : ControllerBase
     {
         private readonly ISmsService _smsService;
-
         public SmsController(ISmsService smsService)
         {
             _smsService = smsService ?? throw new ArgumentNullException(nameof(smsService));
@@ -21,14 +19,11 @@ namespace Lander.src.Modules.Communication.Contollers
         public async Task<ActionResult<SendSmsDto>> SendSms([FromBody] SendSmsInputDto sendSmsInputDto)
         {
             var response = await _smsService.SendSmsAsync(sendSmsInputDto);
-
             if (response.Success)
             {
                 return Ok(response);
             }
-
             return BadRequest(response);
         }
-
     }
 }
