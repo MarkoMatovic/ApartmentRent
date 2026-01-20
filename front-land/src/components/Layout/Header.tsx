@@ -37,7 +37,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'dashboard']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
@@ -262,7 +262,7 @@ const Header: React.FC = () => {
                 {user?.userRoleId === 1 && (
                   <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
                     <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                    Analytics Dashboard
+                    {t('dashboard:analyticsDashboard')}
                   </MenuItem>
                 )}
                 <MenuItem onClick={handleLogout}>{t('logout')}</MenuItem>

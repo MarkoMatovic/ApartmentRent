@@ -1,0 +1,22 @@
+{
+  "analyticsDashboard": "Analytics Dashboard",
+  "last30Days": "Last 30 days",
+  "totalEvents": "Total Events",
+  "apartmentViews": "Apartment Views",
+  "roommateViews": "Roommate Views",
+  "searches": "Searches",
+  "topViewedApartments": "Top Viewed Apartments",
+  "topViewedRoommates": "Top Viewed Roommates",
+  "popularSearchTerms": "Popular Search Terms",
+  "rank": "Rank",
+  "apartmentId": "Apartment ID",
+  "apartmentTitle": "Apartment",
+  "roommateId": "Roommate ID",
+  "views": "Views",
+  "searchTerm": "Search Term",
+  "count": "Count",
+  "details": "Details",
+  "noApartmentViews": "No apartment views yet",
+  "noRoommateViews": "No roommate views yet",
+  "noSearches": "No searches yet"
+}
