@@ -1,46 +1,34 @@
 using Lander.src.Modules.Listings.Models;
-using System.Text.Json.Serialization;
-
+using Microsoft.AspNetCore.Mvc;
 namespace Lander.src.Modules.Listings.Dtos.InputDto;
-
 public class ApartmentFilterDto
 {
-    [JsonPropertyName("city")]
+    [FromQuery(Name = "listingType")]
+    public ListingType? ListingType { get; set; }
+    [FromQuery(Name = "city")]
     public string? City { get; set; }
-    
-    [JsonPropertyName("minRent")]
+    [FromQuery(Name = "minRent")]
     public decimal? MinRent { get; set; }
-    
-    [JsonPropertyName("maxRent")]
+    [FromQuery(Name = "maxRent")]
     public decimal? MaxRent { get; set; }
-    
-    [JsonPropertyName("numberOfRooms")]
+    [FromQuery(Name = "numberOfRooms")]
     public int? NumberOfRooms { get; set; }
-    
-    [JsonPropertyName("apartmentType")]
+    [FromQuery(Name = "apartmentType")]
     public ApartmentType? ApartmentType { get; set; }
-    
-    [JsonPropertyName("isFurnished")]
+    [FromQuery(Name = "isFurnished")]
     public bool? IsFurnished { get; set; }
-    
-    [JsonPropertyName("isPetFriendly")]
+    [FromQuery(Name = "isPetFriendly")]
     public bool? IsPetFriendly { get; set; }
-    
-    [JsonPropertyName("isSmokingAllowed")]
+    [FromQuery(Name = "isSmokingAllowed")]
     public bool? IsSmokingAllowed { get; set; }
-    
-    [JsonPropertyName("hasParking")]
+    [FromQuery(Name = "hasParking")]
     public bool? HasParking { get; set; }
-    
-    [JsonPropertyName("hasBalcony")]
+    [FromQuery(Name = "hasBalcony")]
     public bool? HasBalcony { get; set; }
-    
-    [JsonPropertyName("isImmediatelyAvailable")]
+    [FromQuery(Name = "isImmediatelyAvailable")]
     public bool? IsImmediatelyAvailable { get; set; }
-    
-    [JsonPropertyName("page")]
+    [FromQuery(Name = "page")]
     public int Page { get; set; } = 1;
-    
-    [JsonPropertyName("pageSize")]
+    [FromQuery(Name = "pageSize")]
     public int PageSize { get; set; } = 20;
 }

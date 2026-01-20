@@ -99,10 +99,10 @@ builder.Services.AddOutputCache(options =>
     options.AddBasePolicy(builder => builder.Cache());
     options.AddPolicy("ApartmentsList", builder => 
         builder.Expire(TimeSpan.FromMinutes(5))
-               .SetVaryByQuery(new[] { "City", "MinRent", "MaxRent", "Page", "PageSize", 
-                                       "NumberOfRooms", "ApartmentType", "IsFurnished", 
-                                       "IsPetFriendly", "IsSmokingAllowed", "HasParking", 
-                                       "HasBalcony", "IsImmediatelyAvailable" })
+               .SetVaryByQuery(new[] { "listingType", "city", "minRent", "maxRent", "page", "pageSize", 
+                                       "numberOfRooms", "apartmentType", "isFurnished", 
+                                       "isPetFriendly", "isSmokingAllowed", "hasParking", 
+                                       "hasBalcony", "isImmediatelyAvailable" })
                .Tag("apartments"));
     options.AddPolicy("ApartmentDetail", builder => 
         builder.Expire(TimeSpan.FromMinutes(10))

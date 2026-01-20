@@ -6,22 +6,18 @@ using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Models;
 using Microsoft.EntityFrameworkCore;
-
 namespace Lander.src.Modules.Roommates.Implementation;
-
 public class RoommateService : IRoommateService
 {
     private readonly RoommatesContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     public RoommateService(RoommatesContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
     }
-
     public async Task<IEnumerable<RoommateDto>> GetAllRoommatesAsync(
         string? location = null, 
         decimal? minBudget = null, 
@@ -34,53 +30,41 @@ public class RoommateService : IRoommateService
         var query = _context.Roommates
             .Where(r => r.IsActive)
             .AsNoTracking();
-
         if (!string.IsNullOrEmpty(location))
         {
             query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(location));
         }
-
         if (minBudget.HasValue)
         {
             query = query.Where(r => r.BudgetMax == null || r.BudgetMax >= minBudget.Value);
         }
-
         if (maxBudget.HasValue)
         {
             query = query.Where(r => r.BudgetMin == null || r.BudgetMin <= maxBudget.Value);
         }
-
         if (smokingAllowed.HasValue)
         {
             query = query.Where(r => r.SmokingAllowed == smokingAllowed.Value);
         }
-
         if (petFriendly.HasValue)
         {
             query = query.Where(r => r.PetFriendly == petFriendly.Value);
         }
-
         if (!string.IsNullOrEmpty(lifestyle))
         {
             query = query.Where(r => r.Lifestyle == lifestyle);
         }
-
         if (apartmentId.HasValue)
         {
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
-
         var roommates = await query.ToListAsync();
-        
         var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
-        
         var users = await _usersContext.Users
             .Where(u => userIds.Contains(u.UserId))
             .AsNoTracking()
             .ToListAsync();
-        
         var userDict = users.ToDictionary(u => u.UserId);
-        
         var result = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
@@ -115,10 +99,8 @@ public class RoommateService : IRoommateService
                 IsActive = r.IsActive
             };
         }).ToList();
-
         return result;
     }
-
     public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(
         string? location, 
         decimal? minBudget, 
@@ -133,59 +115,46 @@ public class RoommateService : IRoommateService
         var query = _context.Roommates
             .Where(r => r.IsActive)
             .AsNoTracking();
-
         if (!string.IsNullOrEmpty(location))
         {
             query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(location));
         }
-
         if (minBudget.HasValue)
         {
             query = query.Where(r => r.BudgetMax == null || r.BudgetMax >= minBudget.Value);
         }
-
         if (maxBudget.HasValue)
         {
             query = query.Where(r => r.BudgetMin == null || r.BudgetMin <= maxBudget.Value);
         }
-
         if (smokingAllowed.HasValue)
         {
             query = query.Where(r => r.SmokingAllowed == smokingAllowed.Value);
         }
-
         if (petFriendly.HasValue)
         {
             query = query.Where(r => r.PetFriendly == petFriendly.Value);
         }
-
         if (!string.IsNullOrEmpty(lifestyle))
         {
             query = query.Where(r => r.Lifestyle == lifestyle);
         }
-
         if (apartmentId.HasValue)
         {
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
-
         var totalCount = await query.CountAsync();
-
         var roommates = await query
             .OrderByDescending(r => r.CreatedDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        
         var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
-        
         var users = await _usersContext.Users
             .Where(u => userIds.Contains(u.UserId))
             .AsNoTracking()
             .ToListAsync();
-        
         var userDict = users.ToDictionary(u => u.UserId);
-        
         var result = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
@@ -220,7 +189,6 @@ public class RoommateService : IRoommateService
                 IsActive = r.IsActive
             };
         }).ToList();
-
         return new PagedResult<RoommateDto>
         {
             Items = result,
@@ -229,21 +197,16 @@ public class RoommateService : IRoommateService
             PageSize = pageSize
         };
     }
-
     public async Task<RoommateDto?> GetRoommateByIdAsync(int id)
     {
         var roommate = await _context.Roommates
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.IsActive);
-
         if (roommate == null) return null;
-
         var user = await _usersContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == roommate.UserId);
-
         if (user == null) return null;
-
         return new RoommateDto
         {
             RoommateId = roommate.RoommateId,
@@ -274,36 +237,27 @@ public class RoommateService : IRoommateService
             IsActive = roommate.IsActive
         };
     }
-
     public async Task<RoommateDto?> GetRoommateByUserIdAsync(int userId)
     {
         var roommate = await _context.Roommates
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
-
         if (roommate == null) return null;
-
         return await GetRoommateByIdAsync(roommate.RoommateId);
     }
-
     public async Task<RoommateDto> CreateRoommateAsync(int userId, RoommateInputDto input)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-
-        // Proveri da li korisnik već ima roommate karticu
         var existingRoommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
-
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) throw new Exception("User not found");
-
         Roommate roommate;
         var transaction = await _context.BeginTransactionAsync();
         try
         {
             if (existingRoommate != null)
             {
-                // Ažuriraj postojeću roommate karticu
                 roommate = existingRoommate;
                 roommate.Bio = input.Bio;
                 roommate.Hobbies = input.Hobbies;
@@ -327,12 +281,10 @@ public class RoommateService : IRoommateService
                 roommate.IsActive = true;
                 roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
                 roommate.ModifiedDate = DateTime.UtcNow;
-                
                 _context.Roommates.Update(roommate);
             }
             else
             {
-                // Kreiraj novu roommate karticu
                 roommate = new Roommate
                 {
                     UserId = userId,
@@ -361,10 +313,8 @@ public class RoommateService : IRoommateService
                     ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
                     ModifiedDate = DateTime.UtcNow
                 };
-                
                 _context.Roommates.Add(roommate);
             }
-            
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
@@ -373,7 +323,6 @@ public class RoommateService : IRoommateService
             _context.RollBackTransaction();
             throw;
         }
-
         return new RoommateDto
         {
             RoommateId = roommate.RoommateId,
@@ -405,17 +354,13 @@ public class RoommateService : IRoommateService
             IsActive = roommate.IsActive
         };
     }
-
     public async Task<RoommateDto> UpdateRoommateAsync(int id, int userId, RoommateInputDto input)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-
         var roommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.UserId == userId);
-
         if (roommate == null)
             throw new Exception("Roommate not found or you don't have permission to update it");
-
         roommate.Bio = input.Bio;
         roommate.Hobbies = input.Hobbies;
         roommate.Profession = input.Profession;
@@ -436,7 +381,6 @@ public class RoommateService : IRoommateService
         roommate.PreferredLocation = input.PreferredLocation;
         roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
         roommate.ModifiedDate = DateTime.UtcNow;
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -448,17 +392,13 @@ public class RoommateService : IRoommateService
             _context.RollBackTransaction();
             throw;
         }
-
         return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new Exception("Failed to update roommate");
     }
-
     public async Task<bool> DeleteRoommateAsync(int id, int userId)
     {
         var roommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.UserId == userId);
-
         if (roommate == null) return false;
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -471,8 +411,6 @@ public class RoommateService : IRoommateService
             _context.RollBackTransaction();
             throw;
         }
-
         return true;
     }
 }
-

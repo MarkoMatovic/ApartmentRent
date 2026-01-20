@@ -33,5 +33,10 @@
   "lightMode": "Светлый режим",
   "language": "Язык",
   "lookingForRoommate": "Ищу соседа",
-  "lookingForRoommateDescription": "Включите это, чтобы показать другим, что вы ищете соседа"
+  "lookingForRoommateDescription": "Включите это, чтобы показать другим, что вы ищете соседа",
+  "previous": "← Назад",
+  "next": "Далее →",
+  "page": "Страница",
+  "deleting": "Удаление...",
+  "unknown": "Неизвестно"
 }

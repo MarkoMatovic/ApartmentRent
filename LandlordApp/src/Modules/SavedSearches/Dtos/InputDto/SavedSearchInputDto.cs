@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.SavedSearches.Dtos.InputDto;
-
 public class SavedSearchInputDto
 {
     public string Name { get; set; } = null!;
@@ -7,4 +6,3 @@ public class SavedSearchInputDto
     public string? FiltersJson { get; set; }
     public bool EmailNotificationsEnabled { get; set; } = true;
 }
-

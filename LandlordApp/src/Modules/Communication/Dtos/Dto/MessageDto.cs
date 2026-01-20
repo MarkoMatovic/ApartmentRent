@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Communication.Dtos.Dto;
-
 public class MessageDto
 {
     public int MessageId { get; set; }
@@ -13,7 +12,6 @@ public class MessageDto
     public string? SenderProfilePicture { get; set; }
     public string? ReceiverProfilePicture { get; set; }
 }
-
 public class ConversationDto
 {
     public int OtherUserId { get; set; }
@@ -22,7 +20,6 @@ public class ConversationDto
     public MessageDto? LastMessage { get; set; }
     public int UnreadCount { get; set; }
 }
-
 public class ConversationMessagesDto
 {
     public int TotalCount { get; set; }

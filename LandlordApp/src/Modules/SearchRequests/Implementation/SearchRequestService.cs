@@ -6,22 +6,18 @@ using Lander.src.Modules.SearchRequests.Dtos.InputDto;
 using Lander.src.Modules.SearchRequests.Interfaces;
 using Lander.src.Modules.SearchRequests.Models;
 using Microsoft.EntityFrameworkCore;
-
 namespace Lander.src.Modules.SearchRequests.Implementation;
-
 public class SearchRequestService : ISearchRequestService
 {
     private readonly SearchRequestsContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     public SearchRequestService(SearchRequestsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
     }
-
     public async Task<IEnumerable<SearchRequestDto>> GetAllSearchRequestsAsync(
         SearchRequestType? requestType = null,
         string? city = null,
@@ -31,27 +27,22 @@ public class SearchRequestService : ISearchRequestService
         var query = _context.SearchRequests
             .Where(sr => sr.IsActive)
             .AsNoTracking();
-
         if (requestType.HasValue)
         {
             query = query.Where(sr => sr.RequestType == requestType.Value);
         }
-
         if (!string.IsNullOrEmpty(city))
         {
             query = query.Where(sr => sr.City != null && sr.City.Contains(city));
         }
-
         if (minBudget.HasValue)
         {
             query = query.Where(sr => sr.BudgetMax == null || sr.BudgetMax >= minBudget.Value);
         }
-
         if (maxBudget.HasValue)
         {
             query = query.Where(sr => sr.BudgetMin == null || sr.BudgetMin <= maxBudget.Value);
         }
-
         var result = await (from sr in query
                            join u in _usersContext.Users on sr.UserId equals u.UserId
                            orderby sr.CreatedDate descending
@@ -85,10 +76,8 @@ public class SearchRequestService : ISearchRequestService
                                IsActive = sr.IsActive,
                                CreatedDate = sr.CreatedDate
                            }).ToListAsync();
-
         return result;
     }
-
     public async Task<PagedResult<SearchRequestDto>> GetAllSearchRequestsAsync(
         SearchRequestType? requestType,
         string? city,
@@ -100,29 +89,23 @@ public class SearchRequestService : ISearchRequestService
         var query = _context.SearchRequests
             .Where(sr => sr.IsActive)
             .AsNoTracking();
-
         if (requestType.HasValue)
         {
             query = query.Where(sr => sr.RequestType == requestType.Value);
         }
-
         if (!string.IsNullOrEmpty(city))
         {
             query = query.Where(sr => sr.City != null && sr.City.Contains(city));
         }
-
         if (minBudget.HasValue)
         {
             query = query.Where(sr => sr.BudgetMax == null || sr.BudgetMax >= minBudget.Value);
         }
-
         if (maxBudget.HasValue)
         {
             query = query.Where(sr => sr.BudgetMin == null || sr.BudgetMin <= maxBudget.Value);
         }
-
         var totalCount = await query.CountAsync();
-
         var result = await (from sr in query
                            join u in _usersContext.Users on sr.UserId equals u.UserId
                            orderby sr.CreatedDate descending
@@ -159,7 +142,6 @@ public class SearchRequestService : ISearchRequestService
                            .Skip((page - 1) * pageSize)
                            .Take(pageSize)
                            .ToListAsync();
-
         return new PagedResult<SearchRequestDto>
         {
             Items = result,
@@ -168,21 +150,16 @@ public class SearchRequestService : ISearchRequestService
             PageSize = pageSize
         };
     }
-
     public async Task<SearchRequestDto?> GetSearchRequestByIdAsync(int id)
     {
         var searchRequest = await _context.SearchRequests
             .AsNoTracking()
             .FirstOrDefaultAsync(sr => sr.SearchRequestId == id && sr.IsActive);
-
         if (searchRequest == null) return null;
-
         var user = await _usersContext.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == searchRequest.UserId);
-
         if (user == null) return null;
-
         return new SearchRequestDto
         {
             SearchRequestId = searchRequest.SearchRequestId,
@@ -214,7 +191,6 @@ public class SearchRequestService : ISearchRequestService
             CreatedDate = searchRequest.CreatedDate
         };
     }
-
     public async Task<IEnumerable<SearchRequestDto>> GetSearchRequestsByUserIdAsync(int userId)
     {
         var result = await (from sr in _context.SearchRequests
@@ -251,14 +227,11 @@ public class SearchRequestService : ISearchRequestService
                                IsActive = sr.IsActive,
                                CreatedDate = sr.CreatedDate
                            }).AsNoTracking().ToListAsync();
-
         return result;
     }
-
     public async Task<SearchRequestDto> CreateSearchRequestAsync(int userId, SearchRequestInputDto input)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-
         var searchRequest = new SearchRequest
         {
             UserId = userId,
@@ -288,7 +261,6 @@ public class SearchRequestService : ISearchRequestService
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             ModifiedDate = DateTime.UtcNow
         };
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -301,20 +273,15 @@ public class SearchRequestService : ISearchRequestService
             _context.RollBackTransaction();
             throw;
         }
-
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to create search request");
     }
-
     public async Task<SearchRequestDto> UpdateSearchRequestAsync(int id, int userId, SearchRequestInputDto input)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-
         var searchRequest = await _context.SearchRequests
             .FirstOrDefaultAsync(sr => sr.SearchRequestId == id && sr.UserId == userId);
-
         if (searchRequest == null)
             throw new Exception("Search request not found or you don't have permission to update it");
-
         searchRequest.RequestType = input.RequestType;
         searchRequest.Title = input.Title;
         searchRequest.Description = input.Description;
@@ -337,7 +304,6 @@ public class SearchRequestService : ISearchRequestService
         searchRequest.PreferredLifestyle = input.PreferredLifestyle;
         searchRequest.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
         searchRequest.ModifiedDate = DateTime.UtcNow;
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -349,17 +315,13 @@ public class SearchRequestService : ISearchRequestService
             _context.RollBackTransaction();
             throw;
         }
-
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to update search request");
     }
-
     public async Task<bool> DeleteSearchRequestAsync(int id, int userId)
     {
         var searchRequest = await _context.SearchRequests
             .FirstOrDefaultAsync(sr => sr.SearchRequestId == id && sr.UserId == userId);
-
         if (searchRequest == null) return false;
-
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -372,8 +334,6 @@ public class SearchRequestService : ISearchRequestService
             _context.RollBackTransaction();
             throw;
         }
-
         return true;
     }
 }
-
