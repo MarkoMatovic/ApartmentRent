@@ -25,9 +25,14 @@ import {
     Home as HomeIcon,
     People as PeopleIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { analyticsApi } from '../shared/api/analytics';
+import { Link } from '@mui/material';
 
 const AnalyticsDashboardPage: React.FC = () => {
+    const { t } = useTranslation(['common', 'dashboard']);
+    const navigate = useNavigate();
     const [dateRange] = useState({
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         to: new Date().toISOString().split('T')[0],
@@ -64,10 +69,10 @@ const AnalyticsDashboardPage: React.FC = () => {
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h4" gutterBottom>
-                Analytics Dashboard
+                {t('dashboard:analyticsDashboard')}
             </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-                Last 30 days
+                {t('dashboard:last30Days')}
             </Typography>
 
             {/* Summary Cards */}
@@ -77,7 +82,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <VisibilityIcon color="primary" sx={{ mr: 1 }} />
-                                <Typography variant="h6">Total Events</Typography>
+                                <Typography variant="h6">{t('dashboard:totalEvents')}</Typography>
                             </Box>
                             <Typography variant="h4">{summary?.totalEvents || 0}</Typography>
                         </CardContent>
@@ -89,7 +94,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <HomeIcon color="success" sx={{ mr: 1 }} />
-                                <Typography variant="h6">Apartment Views</Typography>
+                                <Typography variant="h6">{t('dashboard:apartmentViews')}</Typography>
                             </Box>
                             <Typography variant="h4">{summary?.totalApartmentViews || 0}</Typography>
                         </CardContent>
@@ -101,7 +106,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <PeopleIcon color="info" sx={{ mr: 1 }} />
-                                <Typography variant="h6">Roommate Views</Typography>
+                                <Typography variant="h6">{t('dashboard:roommateViews')}</Typography>
                             </Box>
                             <Typography variant="h4">{summary?.totalRoommateViews || 0}</Typography>
                         </CardContent>
@@ -113,7 +118,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <SearchIcon color="warning" sx={{ mr: 1 }} />
-                                <Typography variant="h6">Searches</Typography>
+                                <Typography variant="h6">{t('dashboard:searches')}</Typography>
                             </Box>
                             <Typography variant="h4">{summary?.totalSearches || 0}</Typography>
                         </CardContent>
@@ -125,7 +130,7 @@ const AnalyticsDashboardPage: React.FC = () => {
             <Paper sx={{ mt: 4, p: 3 }}>
                 <Typography variant="h5" gutterBottom>
                     <TrendingUpIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                    Top Viewed Apartments
+                    {t('dashboard:topViewedApartments')}
                 </Typography>
                 {apartmentsLoading ? (
                     <CircularProgress />
@@ -134,9 +139,10 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Rank</TableCell>
-                                    <TableCell>Apartment ID</TableCell>
-                                    <TableCell align="right">Views</TableCell>
+                                    <TableCell>{t('dashboard:rank')}</TableCell>
+                                    <TableCell>{t('dashboard:apartmentTitle', { defaultValue: 'Apartment' })}</TableCell>
+                                    <TableCell>{t('dashboard:details', { defaultValue: 'Details' })}</TableCell>
+                                    <TableCell align="right">{t('dashboard:views')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -145,7 +151,23 @@ const AnalyticsDashboardPage: React.FC = () => {
                                         <TableCell>
                                             <Chip label={`#${index + 1}`} color={index < 3 ? 'primary' : 'default'} size="small" />
                                         </TableCell>
-                                        <TableCell>{apt.entityId}</TableCell>
+                                        <TableCell>
+                                            {apt.entityTitle ? (
+                                                <Link
+                                                    component="button"
+                                                    variant="body2"
+                                                    onClick={() => navigate(`/apartments/${apt.entityId}`)}
+                                                    sx={{ textDecoration: 'none', cursor: 'pointer' }}
+                                                >
+                                                    {apt.entityTitle}
+                                                </Link>
+                                            ) : (
+                                                `ID: ${apt.entityId}`
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {apt.entityDetails || '-'}
+                                        </TableCell>
                                         <TableCell align="right">{apt.viewCount}</TableCell>
                                     </TableRow>
                                 ))}
@@ -153,7 +175,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         </Table>
                     </TableContainer>
                 ) : (
-                    <Alert severity="info">No apartment views yet</Alert>
+                    <Alert severity="info">{t('dashboard:noApartmentViews')}</Alert>
                 )}
             </Paper>
 
@@ -161,7 +183,7 @@ const AnalyticsDashboardPage: React.FC = () => {
             <Paper sx={{ mt: 4, p: 3 }}>
                 <Typography variant="h5" gutterBottom>
                     <TrendingUpIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                    Top Viewed Roommates
+                    {t('dashboard:topViewedRoommates')}
                 </Typography>
                 {roommatesLoading ? (
                     <CircularProgress />
@@ -170,9 +192,9 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Rank</TableCell>
-                                    <TableCell>Roommate ID</TableCell>
-                                    <TableCell align="right">Views</TableCell>
+                                    <TableCell>{t('dashboard:rank')}</TableCell>
+                                    <TableCell>{t('dashboard:roommateId')}</TableCell>
+                                    <TableCell align="right">{t('dashboard:views')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -189,7 +211,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         </Table>
                     </TableContainer>
                 ) : (
-                    <Alert severity="info">No roommate views yet</Alert>
+                    <Alert severity="info">{t('dashboard:noRoommateViews')}</Alert>
                 )}
             </Paper>
 
@@ -197,7 +219,7 @@ const AnalyticsDashboardPage: React.FC = () => {
             <Paper sx={{ mt: 4, p: 3 }}>
                 <Typography variant="h5" gutterBottom>
                     <SearchIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-                    Popular Search Terms
+                    {t('dashboard:popularSearchTerms')}
                 </Typography>
                 {searchesLoading ? (
                     <CircularProgress />
@@ -206,8 +228,8 @@ const AnalyticsDashboardPage: React.FC = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Search Term</TableCell>
-                                    <TableCell align="right">Count</TableCell>
+                                    <TableCell>{t('dashboard:searchTerm')}</TableCell>
+                                    <TableCell align="right">{t('dashboard:count')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -225,7 +247,7 @@ const AnalyticsDashboardPage: React.FC = () => {
                         </Table>
                     </TableContainer>
                 ) : (
-                    <Alert severity="info">No searches yet</Alert>
+                    <Alert severity="info">{t('dashboard:noSearches')}</Alert>
                 )}
             </Paper>
         </Container>

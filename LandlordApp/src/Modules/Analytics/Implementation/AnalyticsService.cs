@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lander;
 using Lander.src.Modules.Analytics.Dtos.Dto;
 using Lander.src.Modules.Analytics.Interfaces;
 using Lander.src.Modules.Analytics.Models;
@@ -7,9 +8,11 @@ namespace Lander.src.Modules.Analytics.Implementation;
 public class AnalyticsService : IAnalyticsService
 {
     private readonly AnalyticsContext _context;
-    public AnalyticsService(AnalyticsContext context)
+    private readonly ListingsContext _listingsContext;
+    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext)
     {
         _context = context;
+        _listingsContext = listingsContext;
     }
     public async Task TrackEventAsync(
         string eventType, 
@@ -85,6 +88,26 @@ public class AnalyticsService : IAnalyticsService
             .OrderByDescending(x => x.ViewCount)
             .Take(count)
             .ToListAsync();
+
+        // Fetch apartment details for the top apartments
+        var apartmentIds = topApartments.Select(a => a.EntityId).ToList();
+        var apartments = await _listingsContext.Apartments
+            .Where(a => apartmentIds.Contains(a.ApartmentId) && !a.IsDeleted)
+            .Select(a => new { a.ApartmentId, a.Title, a.City, a.Rent, a.Address })
+            .ToListAsync();
+
+        var apartmentDict = apartments.ToDictionary(a => a.ApartmentId);
+
+        // Populate titles and details
+        foreach (var apartment in topApartments)
+        {
+            if (apartmentDict.TryGetValue(apartment.EntityId, out var apt))
+            {
+                apartment.EntityTitle = apt.Title;
+                apartment.EntityDetails = $"{apt.City ?? "N/A"} - {apt.Rent:C}/month";
+            }
+        }
+
         return topApartments;
     }
     public async Task<List<TopEntityDto>> GetTopViewedRoommatesAsync(int count = 10, DateTime? from = null, DateTime? to = null)
