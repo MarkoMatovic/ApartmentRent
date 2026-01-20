@@ -1,0 +1,22 @@
+{
+  "analyticsDashboard": "Панель аналитики",
+  "last30Days": "Последние 30 дней",
+  "totalEvents": "Всего событий",
+  "apartmentViews": "Просмотры квартир",
+  "roommateViews": "Просмотры соседей",
+  "searches": "Поиски",
+  "topViewedApartments": "Самые просматриваемые квартиры",
+  "topViewedRoommates": "Самые просматриваемые соседи",
+  "popularSearchTerms": "Популярные поисковые запросы",
+  "rank": "Ранг",
+  "apartmentId": "ID квартиры",
+  "apartmentTitle": "Квартира",
+  "roommateId": "ID соседа",
+  "views": "Просмотры",
+  "searchTerm": "Поисковый запрос",
+  "count": "Количество",
+  "details": "Детали",
+  "noApartmentViews": "Просмотров квартир пока нет",
+  "noRoommateViews": "Просмотров соседей пока нет",
+  "noSearches": "Поисков пока нет"
+}

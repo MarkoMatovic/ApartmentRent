@@ -1,0 +1,22 @@
+{
+  "analyticsDashboard": "Analitički Dashboard",
+  "last30Days": "Poslednjih 30 dana",
+  "totalEvents": "Ukupno događaja",
+  "apartmentViews": "Pregledi stanova",
+  "roommateViews": "Pregledi cimera",
+  "searches": "Pretrage",
+  "topViewedApartments": "Najgledaniji stanovi",
+  "topViewedRoommates": "Najgledaniji cimeri",
+  "popularSearchTerms": "Popularni pojmovi pretrage",
+  "rank": "Rang",
+  "apartmentId": "ID stana",
+  "apartmentTitle": "Stan",
+  "roommateId": "ID cimera",
+  "views": "Pregledi",
+  "searchTerm": "Pojam pretrage",
+  "count": "Broj",
+  "details": "Detalji",
+  "noApartmentViews": "Još nema pregleda stanova",
+  "noRoommateViews": "Još nema pregleda cimera",
+  "noSearches": "Još nema pretraga"
+}
