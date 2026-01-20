@@ -8,6 +8,9 @@ import srAuth from '../../locales/sr/auth.json';
 import srRoommates from '../../locales/sr/roommates.json';
 import srChat from '../../locales/sr/chat.json';
 import srDashboard from '../../locales/sr/dashboard.json';
+import srSupport from '../../locales/sr/support.json';
+import srPricing from '../../locales/sr/pricing.json';
+import srFooter from '../../locales/sr/footer.json';
 
 import enCommon from '../../locales/en/common.json';
 import enApartments from '../../locales/en/apartments.json';
@@ -15,6 +18,9 @@ import enAuth from '../../locales/en/auth.json';
 import enRoommates from '../../locales/en/roommates.json';
 import enChat from '../../locales/en/chat.json';
 import enDashboard from '../../locales/en/dashboard.json';
+import enSupport from '../../locales/en/support.json';
+import enPricing from '../../locales/en/pricing.json';
+import enFooter from '../../locales/en/footer.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruApartments from '../../locales/ru/apartments.json';
@@ -22,6 +28,9 @@ import ruAuth from '../../locales/ru/auth.json';
 import ruRoommates from '../../locales/ru/roommates.json';
 import ruChat from '../../locales/ru/chat.json';
 import ruDashboard from '../../locales/ru/dashboard.json';
+import ruSupport from '../../locales/ru/support.json';
+import ruPricing from '../../locales/ru/pricing.json';
+import ruFooter from '../../locales/ru/footer.json';
 
 import deCommon from '../../locales/de/common.json';
 import deApartments from '../../locales/de/apartments.json';
@@ -29,6 +38,9 @@ import deAuth from '../../locales/de/auth.json';
 import deRoommates from '../../locales/de/roommates.json';
 import deChat from '../../locales/de/chat.json';
 import deDashboard from '../../locales/de/dashboard.json';
+import deSupport from '../../locales/de/support.json';
+import dePricing from '../../locales/de/pricing.json';
+import deFooter from '../../locales/de/footer.json';
 
 i18n
   .use(LanguageDetector)
@@ -42,6 +54,9 @@ i18n
         roommates: srRoommates,
         chat: srChat,
         dashboard: srDashboard,
+        support: srSupport,
+        pricing: srPricing,
+        footer: srFooter,
       },
       en: {
         common: enCommon,
@@ -50,6 +65,9 @@ i18n
         roommates: enRoommates,
         chat: enChat,
         dashboard: enDashboard,
+        support: enSupport,
+        pricing: enPricing,
+        footer: enFooter,
       },
       ru: {
         common: ruCommon,
@@ -58,6 +76,9 @@ i18n
         roommates: ruRoommates,
         chat: ruChat,
         dashboard: ruDashboard,
+        support: ruSupport,
+        pricing: ruPricing,
+        footer: ruFooter,
       },
       de: {
         common: deCommon,
@@ -66,11 +87,14 @@ i18n
         roommates: deRoommates,
         chat: deChat,
         dashboard: deDashboard,
+        support: deSupport,
+        pricing: dePricing,
+        footer: deFooter,
       },
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard'],
+    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer'],
     interpolation: {
       escapeValue: false,
     },
