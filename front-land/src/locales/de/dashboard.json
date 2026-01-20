@@ -1,0 +1,22 @@
+{
+  "analyticsDashboard": "Analytics-Dashboard",
+  "last30Days": "Letzte 30 Tage",
+  "totalEvents": "Gesamt-Ereignisse",
+  "apartmentViews": "Wohnungsaufrufe",
+  "roommateViews": "Mitbewohner-Aufrufe",
+  "searches": "Suchen",
+  "topViewedApartments": "Meist angesehene Wohnungen",
+  "topViewedRoommates": "Meist angesehene Mitbewohner",
+  "popularSearchTerms": "Beliebte Suchbegriffe",
+  "rank": "Rang",
+  "apartmentId": "Wohnungs-ID",
+  "apartmentTitle": "Wohnung",
+  "roommateId": "Mitbewohner-ID",
+  "views": "Aufrufe",
+  "searchTerm": "Suchbegriff",
+  "count": "Anzahl",
+  "details": "Details",
+  "noApartmentViews": "Noch keine Wohnungsaufrufe",
+  "noRoommateViews": "Noch keine Mitbewohner-Aufrufe",
+  "noSearches": "Noch keine Suchen"
+}
