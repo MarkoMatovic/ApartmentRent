@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { roommatesApi } from '../shared/api/roommates';
+import { analyticsApi } from '../shared/api/analytics';
 import ApartmentMap from '../components/Map/ApartmentMap';
 import RoommateCard from '../components/Roommate/RoommateCard';
 import ApartmentImageGallery from '../components/Apartment/ApartmentImageGallery';
@@ -48,6 +49,18 @@ const ApartmentDetailPage: React.FC = () => {
     queryFn: () => roommatesApi.getAll({ apartmentId: Number(id) } as any),
     enabled: !!id,
   });
+
+  // Track apartment view when component mounts and apartment data is loaded
+  useEffect(() => {
+    if (apartment && id) {
+      analyticsApi.trackEvent(
+        'ApartmentView',
+        'Listings',
+        Number(id),
+        'Apartment'
+      );
+    }
+  }, [apartment, id]);
 
   if (isLoading) {
     return (
@@ -292,6 +305,13 @@ const ApartmentDetailPage: React.FC = () => {
                 sx={{ mt: 1 }}
                 onClick={() => {
                   if (apartment.landlordId) {
+                    // Track contact click
+                    analyticsApi.trackEvent(
+                      'ContactClick',
+                      'Listings',
+                      Number(id),
+                      'Apartment'
+                    );
                     navigate(`/messages?userId=${apartment.landlordId}`);
                   }
                 }}

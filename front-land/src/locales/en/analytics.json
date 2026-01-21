@@ -1,0 +1,25 @@
+{
+    "analytics": {
+        "personalAnalytics": "Personal Analytics",
+        "viewYourActivity": "View your activity and statistics",
+        "viewedApartments": "Viewed Apartments",
+        "apartmentsIViewed": "Apartments I viewed",
+        "myApartmentViews": "My Apartment Views",
+        "viewsOfMyApartments": "How many times my apartments were viewed",
+        "messagesSent": "Messages Sent",
+        "numberOfMessagesSent": "Number of messages sent",
+        "apartmentsMostViewed": "My Apartment Views",
+        "myApartmentsStats": "My apartments - view statistics",
+        "errorLoading": "Error loading data",
+        "noApartmentsViewed": "You haven't viewed any apartments yet",
+        "noApartmentsOwned": "You don't have any published apartments or no one has viewed your apartments yet",
+        "rank": "Rank",
+        "apartment": "Apartment",
+        "details": "Details",
+        "views": "Views",
+        "city": "City",
+        "price": "Price",
+        "viewCount": "View Count",
+        "lastViewed": "Last Viewed"
+    }
+}

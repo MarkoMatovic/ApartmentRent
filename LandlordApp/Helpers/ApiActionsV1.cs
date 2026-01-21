@@ -106,10 +106,19 @@ public static class ApiActionsV1
 
     #region Analytics
     public const string Analytics = $"{V1}/analytics";
+    public const string TrackEvent = "track-event";
     public const string GetAnalyticsSummary = "summary";
     public const string GetTopViewedApartments = "top-apartments";
     public const string GetTopViewedRoommates = "top-roommates";
     public const string GetTopSearchTerms = "top-searches";
     public const string GetEventTrends = "trends";
+    
+    // User-specific analytics
+    public const string GetUserRoommateSummary = "user-roommate-summary";
+    public const string GetUserTopRoommates = "user-top-roommates";
+    public const string GetUserSearches = "user-searches";
+    public const string GetUserRoommateTrends = "user-roommate-trends";
+    public const string GetUserTopApartments = "user-top-apartments";
+    public const string GetUserCompleteAnalytics = "user-complete-analytics";
     #endregion
 }

@@ -34,6 +34,7 @@ import { messagesApi, ConversationDto, MessageDto } from '../api/messagesApi';
 import { useChatSignalR } from '../hooks/useChatSignalR';
 import { useAuth } from '../shared/context/AuthContext';
 import { useNotifications } from '../shared/context/NotificationContext';
+import { analyticsApi } from '../shared/api/analytics';
 import axios from 'axios';
 
 const chatColors = {
@@ -120,7 +121,7 @@ const ChatPage: React.FC = () => {
     if (newMessage) {
       // Ažuriraj listu konverzacija kada stigne nova poruka
       loadConversations();
-      
+
       if (selectedConversation &&
         (newMessage.senderId === selectedConversation.otherUserId ||
           newMessage.receiverId === selectedConversation.otherUserId)) {
@@ -145,7 +146,7 @@ const ChatPage: React.FC = () => {
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
-    
+
     scrollTimeoutRef.current = setTimeout(() => {
       scrollToBottom();
     }, 100);
@@ -167,7 +168,7 @@ const ChatPage: React.FC = () => {
       // Prvo učitaj konverzacije da dobiješ pravo ime korisnika
       const conversationsData = await messagesApi.getUserConversations(currentUserId);
       setConversations(conversationsData);
-      
+
       // Proveri da li konverzacija već postoji u listi
       const existing = conversationsData.find(c => c.otherUserId === userId);
       if (existing) {
@@ -259,7 +260,7 @@ const ChatPage: React.FC = () => {
       const data = await messagesApi.getConversation(currentUserId, conv.otherUserId);
       setMessages(data.messages);
       setSelectedConversation(conv);
-      
+
       // Označi sve nepročitane poruke kao pročitane kada se otvori konverzacija
       const unreadMessages = data.messages.filter(m => m.receiverId === currentUserId && !m.isRead);
       for (const msg of unreadMessages) {
@@ -269,10 +270,10 @@ const ChatPage: React.FC = () => {
           // Ignoriši greške
         }
       }
-      
+
       // Ažuriraj broj nepročitanih poruka nakon označavanja poruka kao pročitanih
       await refreshUnreadMessagesCount();
-      
+
       // Ažuriraj listu konverzacija bez pozivanja loadConversations (da izbegnemo circular dependency)
       try {
         const conversationsData = await messagesApi.getUserConversations(currentUserId);
@@ -301,22 +302,25 @@ const ChatPage: React.FC = () => {
         setMessages(prev => [...prev, newMsg]);
       }
 
+      // Track message sent event
+      await analyticsApi.trackEvent('MessageSent', 'Communication');
+
       setMessageText('');
-      
+
       // Ažuriraj lokalno stanje konverzacije umesto pozivanja loadConversations
-      setConversations(prev => prev.map(conv => 
+      setConversations(prev => prev.map(conv =>
         conv.otherUserId === selectedConversation.otherUserId
-          ? { 
-              ...conv, 
-              lastMessage: { 
-                messageId: 0,
-                senderId: currentUserId,
-                receiverId: selectedConversation.otherUserId,
-                messageText: messageToSend,
-                sentAt: new Date().toISOString(),
-                isRead: true,
-              }
+          ? {
+            ...conv,
+            lastMessage: {
+              messageId: 0,
+              senderId: currentUserId,
+              receiverId: selectedConversation.otherUserId,
+              messageText: messageToSend,
+              sentAt: new Date().toISOString(),
+              isRead: true,
             }
+          }
           : conv
       ));
     } catch (error) {
@@ -337,7 +341,7 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const filteredConversations = useMemo(() => 
+  const filteredConversations = useMemo(() =>
     conversations.filter(conv =>
       conv.otherUserName?.toLowerCase().includes(searchQuery.toLowerCase())
     ),
@@ -380,10 +384,10 @@ const ChatPage: React.FC = () => {
             p: 3,
             borderBottom: `1px solid ${chatColors.borderColor}`,
           }}>
-            <Typography 
-              variant="h5" 
-              fontWeight="700" 
-              sx={{ 
+            <Typography
+              variant="h5"
+              fontWeight="700"
+              sx={{
                 color: chatColors.headerBg,
                 mb: 2,
                 letterSpacing: '-0.5px'
@@ -402,7 +406,7 @@ const ChatPage: React.FC = () => {
                   bgcolor: theme.palette.mode === 'dark' ? 'background.default' : '#f1f5f9',
                   borderRadius: 3,
                   border: 'none',
-                  '& fieldset': { 
+                  '& fieldset': {
                     border: 'none',
                   },
                   '&:hover': {
@@ -428,10 +432,10 @@ const ChatPage: React.FC = () => {
           <List sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
             {filteredConversations.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Box sx={{ 
-                  width: 80, 
-                  height: 80, 
-                  borderRadius: '50%', 
+                <Box sx={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
                   bgcolor: chatColors.bgLight,
                   display: 'flex',
                   alignItems: 'center',
@@ -468,72 +472,72 @@ const ChatPage: React.FC = () => {
                     }
                   }}
                 >
-                    <ListItemAvatar>
-                      <Badge
-                        badgeContent={conv.unreadCount}
-                        color="error"
-                        overlap="circular"
+                  <ListItemAvatar>
+                    <Badge
+                      badgeContent={conv.unreadCount}
+                      color="error"
+                      overlap="circular"
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          bgcolor: '#ef4444',
+                          fontWeight: 600,
+                        }
+                      }}
+                    >
+                      <Avatar
+                        src={conv.otherUserProfilePicture || undefined}
                         sx={{
-                          '& .MuiBadge-badge': {
-                            bgcolor: '#ef4444',
-                            fontWeight: 600,
-                          }
+                          width: 52,
+                          height: 52,
+                          bgcolor: chatColors.primary,
+                          fontSize: '1.2rem',
+                          fontWeight: 600,
                         }}
                       >
-                        <Avatar
-                          src={conv.otherUserProfilePicture || undefined}
-                          sx={{
-                            width: 52,
-                            height: 52,
-                            bgcolor: chatColors.primary,
-                            fontSize: '1.2rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {conv.otherUserName?.charAt(0).toUpperCase()}
-                        </Avatar>
-                      </Badge>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography 
-                          variant="subtitle1" 
-                          fontWeight={conv.unreadCount > 0 ? 700 : 500}
-                          sx={{ color: 'text.primary' }}
-                        >
-                          {conv.otherUserName}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            fontWeight: conv.unreadCount > 0 ? 500 : 400,
-                            color: conv.unreadCount > 0 ? 'text.primary' : 'text.secondary',
-                          }}
-                        >
-                          {conv.lastMessage?.messageText || t('startConversation', 'Započni razgovor')}
-                        </Typography>
-                      }
-                      sx={{ ml: 1.5 }}
-                    />
-                    {conv.lastMessage && (
-                      <Typography 
-                        variant="caption" 
-                        sx={{ 
-                          alignSelf: 'flex-start', 
-                          mt: 0.5,
-                          color: chatColors.textMuted,
-                          fontWeight: 500
-                        }}
+                        {conv.otherUserName?.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </Badge>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={conv.unreadCount > 0 ? 700 : 500}
+                        sx={{ color: 'text.primary' }}
                       >
-                        {formatTime(conv.lastMessage.sentAt)}
+                        {conv.otherUserName}
                       </Typography>
-                    )}
-                  </ListItemButton>
+                    }
+                    secondary={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontWeight: conv.unreadCount > 0 ? 500 : 400,
+                          color: conv.unreadCount > 0 ? 'text.primary' : 'text.secondary',
+                        }}
+                      >
+                        {conv.lastMessage?.messageText || t('startConversation', 'Započni razgovor')}
+                      </Typography>
+                    }
+                    sx={{ ml: 1.5 }}
+                  />
+                  {conv.lastMessage && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        alignSelf: 'flex-start',
+                        mt: 0.5,
+                        color: chatColors.textMuted,
+                        fontWeight: 500
+                      }}
+                    >
+                      {formatTime(conv.lastMessage.sentAt)}
+                    </Typography>
+                  )}
+                </ListItemButton>
               ))
             )}
           </List>
@@ -558,10 +562,10 @@ const ChatPage: React.FC = () => {
               gap: 3,
               bgcolor: theme.palette.mode === 'dark' ? 'background.default' : chatColors.bgLight,
             }}>
-              <Box sx={{ 
-                width: 120, 
-                height: 120, 
-                borderRadius: '50%', 
+              <Box sx={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
                 bgcolor: theme.palette.mode === 'dark' ? 'action.hover' : chatColors.bgMedium,
                 display: 'flex',
                 alignItems: 'center',
@@ -603,8 +607,8 @@ const ChatPage: React.FC = () => {
                         {selectedConversation.otherUserName?.charAt(0).toUpperCase()}
                       </Avatar>
                       {connected && (
-                        <CircleIcon 
-                          sx={{ 
+                        <CircleIcon
+                          sx={{
                             position: 'absolute',
                             bottom: 2,
                             right: 2,
@@ -612,7 +616,7 @@ const ChatPage: React.FC = () => {
                             color: chatColors.online,
                             bgcolor: 'background.paper',
                             borderRadius: '50%',
-                          }} 
+                          }}
                         />
                       )}
                     </Box>
@@ -648,10 +652,10 @@ const ChatPage: React.FC = () => {
               }}>
                 {messages.length === 0 && (
                   <Box sx={{ textAlign: 'center', py: 8 }}>
-                    <Box sx={{ 
-                      width: 100, 
-                      height: 100, 
-                      borderRadius: '50%', 
+                    <Box sx={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: '50%',
                       bgcolor: theme.palette.mode === 'dark' ? 'action.hover' : chatColors.bgMedium,
                       display: 'flex',
                       alignItems: 'center',
@@ -688,10 +692,10 @@ const ChatPage: React.FC = () => {
                       {isOwn && showAvatar && (
                         <Avatar
                           src={user?.profilePicture || undefined}
-                          sx={{ 
-                            width: 32, 
-                            height: 32, 
-                            mr: 1, 
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            mr: 1,
                             mb: 0.5,
                             bgcolor: chatColors.primary,
                             fontSize: '0.875rem',
@@ -712,24 +716,24 @@ const ChatPage: React.FC = () => {
                           sx={{
                             px: 2,
                             py: 1.25,
-                            borderRadius: isOwn 
+                            borderRadius: isOwn
                               ? isLastInGroup ? '20px 20px 20px 4px' : '20px 20px 20px 20px' // Moje poruke: zaobljeni levi ugao
                               : isLastInGroup ? '20px 20px 4px 20px' : '20px 20px 20px 20px', // Primljene poruke: zaobljeni desni ugao
-                            bgcolor: isOwn 
-                              ? chatColors.messageSent 
+                            bgcolor: isOwn
+                              ? chatColors.messageSent
                               : (theme.palette.mode === 'dark' ? chatColors.messageReceivedDark : chatColors.messageReceived),
-                            color: isOwn 
-                              ? chatColors.textOnPrimary 
+                            color: isOwn
+                              ? chatColors.textOnPrimary
                               : (theme.palette.mode === 'dark' ? chatColors.textOnReceivedDark : chatColors.textOnReceived), // Svetlo sivi tekst u dark mode, tamno sivi u light mode
-                            boxShadow: isOwn 
-                              ? '0 1px 2px rgba(0, 0, 0, 0.1)' 
+                            boxShadow: isOwn
+                              ? '0 1px 2px rgba(0, 0, 0, 0.1)'
                               : '0 1px 2px rgba(0, 0, 0, 0.08)',
                             border: isOwn ? 'none' : `1px solid ${theme.palette.mode === 'dark' ? '#4b5563' : chatColors.borderColor}`,
                           }}
                         >
-                          <Typography 
-                            variant="body1" 
-                            sx={{ 
+                          <Typography
+                            variant="body1"
+                            sx={{
                               lineHeight: 1.5,
                               wordBreak: 'break-word',
                               color: 'inherit',
@@ -772,10 +776,10 @@ const ChatPage: React.FC = () => {
                       {!isOwn && showAvatar && (
                         <Avatar
                           src={selectedConversation.otherUserProfilePicture || undefined}
-                          sx={{ 
-                            width: 32, 
-                            height: 32, 
-                            ml: 1, 
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            ml: 1,
                             mb: 0.5,
                             bgcolor: chatColors.accent,
                             fontSize: '0.875rem',
@@ -855,7 +859,7 @@ const ChatPage: React.FC = () => {
                   <Chip
                     label={t('offline', 'Offline - poruke će biti poslate kad se povežeš')}
                     size="small"
-                    sx={{ 
+                    sx={{
                       mt: 1.5,
                       bgcolor: '#fef3c7',
                       color: '#92400e',

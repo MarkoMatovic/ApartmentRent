@@ -34,7 +34,15 @@ const LoginPage: React.FC = () => {
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
         setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
       } else {
-        setError(err.response?.data || t('invalidCredentials'));
+        // Handle error response - could be string or object with message property
+        const errorMessage = err.response?.data;
+        if (typeof errorMessage === 'string') {
+          setError(errorMessage);
+        } else if (errorMessage && typeof errorMessage === 'object' && errorMessage.message) {
+          setError(String(errorMessage.message));
+        } else {
+          setError(t('invalidCredentials'));
+        }
       }
     } finally {
       setLoading(false);

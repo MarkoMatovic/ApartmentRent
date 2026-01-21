@@ -1,0 +1,25 @@
+{
+    "analytics": {
+        "personalAnalytics": "Личная Аналитика",
+        "viewYourActivity": "Обзор вашей активности и статистики",
+        "viewedApartments": "Просмотренные Квартиры",
+        "apartmentsIViewed": "Квартиры, которые я просмотрел",
+        "myApartmentViews": "Просмотры Моих Квартир",
+        "viewsOfMyApartments": "Сколько раз мои квартиры были просмотрены",
+        "messagesSent": "Отправленные Сообщения",
+        "numberOfMessagesSent": "Количество отправленных сообщений",
+        "apartmentsMostViewed": "Просмотры Моих Квартир",
+        "myApartmentsStats": "Мои квартиры - статистика просмотров",
+        "errorLoading": "Ошибка при загрузке данных",
+        "noApartmentsViewed": "Вы еще не просмотрели ни одной квартиры",
+        "noApartmentsOwned": "У вас нет опубликованных квартир или никто еще не просмотрел ваши квартиры",
+        "rank": "Ранг",
+        "apartment": "Квартира",
+        "details": "Детали",
+        "views": "Просмотры",
+        "city": "Город",
+        "price": "Цена",
+        "viewCount": "Количество Просмотров",
+        "lastViewed": "Последний Просмотр"
+    }
+}
