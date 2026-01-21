@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -14,6 +14,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { roommatesApi } from '../shared/api/roommates';
+import { analyticsApi } from '../shared/api/analytics';
 import {
   Person as PersonIcon,
   LocationOn as LocationIcon,
@@ -36,6 +37,18 @@ const RoommateDetailPage: React.FC = () => {
     },
     enabled: !!id,
   });
+
+  // Track roommate view when component mounts and roommate data is loaded
+  useEffect(() => {
+    if (roommate && id) {
+      analyticsApi.trackEvent(
+        'RoommateView',
+        'Roommates',
+        roommate.roommateId,
+        'Roommate'
+      );
+    }
+  }, [roommate, id]);
 
   if (isLoading) {
     return (

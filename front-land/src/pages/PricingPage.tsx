@@ -32,13 +32,25 @@ const PricingPage: React.FC = () => {
 
         <Divider sx={{ my: 4 }} />
 
-        {/* Analytics Price */}
-        <Box>
+        {/* Analytics Landlord Price */}
+        <Box sx={{ mb: 4 }}>
           <Typography variant="body1" gutterBottom sx={{ mb: 1 }}>
-            {t('pricing:analyticsTitle')}
+            {t('pricing:analyticsLandlordTitle')}
           </Typography>
           <Typography variant="h5" color="secondary.main" sx={{ fontWeight: 700 }}>
-            {t('pricing:analyticsPrice')}
+            {t('pricing:analyticsLandlordPrice')}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 4 }} />
+
+        {/* Analytics Roommate Price */}
+        <Box>
+          <Typography variant="body1" gutterBottom sx={{ mb: 1 }}>
+            {t('pricing:analyticsRoommateTitle')}
+          </Typography>
+          <Typography variant="h5" color="secondary.main" sx={{ fontWeight: 700 }}>
+            {t('pricing:analyticsRoommatePrice')}
           </Typography>
         </Box>
       </Paper>

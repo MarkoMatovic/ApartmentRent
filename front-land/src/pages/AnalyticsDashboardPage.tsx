@@ -38,14 +38,24 @@ const AnalyticsDashboardPage: React.FC = () => {
         to: new Date().toISOString().split('T')[0],
     });
 
-    const { data: summary, isLoading: summaryLoading } = useQuery({
+    const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery({
         queryKey: ['analytics-summary', dateRange.from, dateRange.to],
-        queryFn: () => analyticsApi.getSummary(dateRange.from, dateRange.to),
+        queryFn: async () => {
+            console.log('📊 Fetching analytics summary...', { from: dateRange.from, to: dateRange.to });
+            const result = await analyticsApi.getSummary(dateRange.from, dateRange.to);
+            console.log('📊 Summary result:', result);
+            return result;
+        },
     });
 
-    const { data: topApartments, isLoading: apartmentsLoading } = useQuery({
+    const { data: topApartments, isLoading: apartmentsLoading, error: apartmentsError } = useQuery({
         queryKey: ['top-apartments', dateRange.from, dateRange.to],
-        queryFn: () => analyticsApi.getTopApartments(10, dateRange.from, dateRange.to),
+        queryFn: async () => {
+            console.log('🏠 Fetching top apartments...');
+            const result = await analyticsApi.getTopApartments(10, dateRange.from, dateRange.to);
+            console.log('🏠 Top apartments result:', result);
+            return result;
+        },
     });
 
     const { data: topRoommates, isLoading: roommatesLoading } = useQuery({
@@ -62,6 +72,17 @@ const AnalyticsDashboardPage: React.FC = () => {
         return (
             <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
                 <CircularProgress />
+            </Container>
+        );
+    }
+
+    if (summaryError) {
+        console.error('❌ Summary error:', summaryError);
+        return (
+            <Container maxWidth="xl" sx={{ mt: 4 }}>
+                <Alert severity="error">
+                    Error loading analytics: {(summaryError as any).message}
+                </Alert>
             </Container>
         );
     }

@@ -11,6 +11,9 @@ import srDashboard from '../../locales/sr/dashboard.json';
 import srSupport from '../../locales/sr/support.json';
 import srPricing from '../../locales/sr/pricing.json';
 import srFooter from '../../locales/sr/footer.json';
+import srRoommateAnalytics from '../../locales/sr/roommateAnalytics.json';
+import srAnalytics from '../../locales/sr/analytics.json';
+import srPremium from '../../locales/sr/premium.json';
 
 import enCommon from '../../locales/en/common.json';
 import enApartments from '../../locales/en/apartments.json';
@@ -21,6 +24,9 @@ import enDashboard from '../../locales/en/dashboard.json';
 import enSupport from '../../locales/en/support.json';
 import enPricing from '../../locales/en/pricing.json';
 import enFooter from '../../locales/en/footer.json';
+import enRoommateAnalytics from '../../locales/en/roommateAnalytics.json';
+import enAnalytics from '../../locales/en/analytics.json';
+import enPremium from '../../locales/en/premium.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruApartments from '../../locales/ru/apartments.json';
@@ -31,6 +37,9 @@ import ruDashboard from '../../locales/ru/dashboard.json';
 import ruSupport from '../../locales/ru/support.json';
 import ruPricing from '../../locales/ru/pricing.json';
 import ruFooter from '../../locales/ru/footer.json';
+import ruRoommateAnalytics from '../../locales/ru/roommateAnalytics.json';
+import ruAnalytics from '../../locales/ru/analytics.json';
+import ruPremium from '../../locales/ru/premium.json';
 
 import deCommon from '../../locales/de/common.json';
 import deApartments from '../../locales/de/apartments.json';
@@ -41,6 +50,9 @@ import deDashboard from '../../locales/de/dashboard.json';
 import deSupport from '../../locales/de/support.json';
 import dePricing from '../../locales/de/pricing.json';
 import deFooter from '../../locales/de/footer.json';
+import deRoommateAnalytics from '../../locales/de/roommateAnalytics.json';
+import deAnalytics from '../../locales/de/analytics.json';
+import dePremium from '../../locales/de/premium.json';
 
 i18n
   .use(LanguageDetector)
@@ -57,6 +69,9 @@ i18n
         support: srSupport,
         pricing: srPricing,
         footer: srFooter,
+        roommateAnalytics: srRoommateAnalytics,
+        analytics: srAnalytics,
+        premium: srPremium,
       },
       en: {
         common: enCommon,
@@ -68,6 +83,9 @@ i18n
         support: enSupport,
         pricing: enPricing,
         footer: enFooter,
+        roommateAnalytics: enRoommateAnalytics,
+        analytics: enAnalytics,
+        premium: enPremium,
       },
       ru: {
         common: ruCommon,
@@ -79,6 +97,9 @@ i18n
         support: ruSupport,
         pricing: ruPricing,
         footer: ruFooter,
+        roommateAnalytics: ruRoommateAnalytics,
+        analytics: ruAnalytics,
+        premium: ruPremium,
       },
       de: {
         common: deCommon,
@@ -90,11 +111,14 @@ i18n
         support: deSupport,
         pricing: dePricing,
         footer: deFooter,
+        roommateAnalytics: deRoommateAnalytics,
+        analytics: deAnalytics,
+        premium: dePremium,
       },
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer'],
+    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium'],
     interpolation: {
       escapeValue: false,
     },

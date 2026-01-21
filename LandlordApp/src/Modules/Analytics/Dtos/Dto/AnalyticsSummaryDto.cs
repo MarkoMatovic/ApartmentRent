@@ -30,3 +30,32 @@ public class EventTrendDto
     public string EventType { get; set; } = null!;
     public int Count { get; set; }
 }
+
+// User-specific analytics DTOs
+public class UserRoommateAnalyticsSummaryDto
+{
+    public int RoommateViews { get; set; }
+    public int MessagesSent { get; set; }
+    public int ApplicationsSent { get; set; }
+    public int Searches { get; set; }
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
+}
+
+public class UserRoommateTrendsDto
+{
+    public List<PopularCityDto> PopularCities { get; set; } = new();
+    public List<AveragePriceDto> AveragePrices { get; set; } = new();
+}
+
+public class PopularCityDto
+{
+    public string City { get; set; } = null!;
+    public int ViewCount { get; set; }
+}
+
+public class AveragePriceDto
+{
+    public string City { get; set; } = null!;
+    public decimal AveragePrice { get; set; }
+}

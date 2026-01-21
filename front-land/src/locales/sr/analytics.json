@@ -1,0 +1,25 @@
+{
+    "analytics": {
+        "personalAnalytics": "Personalna Analitika",
+        "viewYourActivity": "Pregled vaše aktivnosti i statistike",
+        "viewedApartments": "Pregledani Apartmani",
+        "apartmentsIViewed": "Apartmani koje sam pogledao",
+        "myApartmentViews": "Pregledi Mojih Apartmana",
+        "viewsOfMyApartments": "Koliko puta su moji apartmani pogledani",
+        "messagesSent": "Poslate Poruke",
+        "numberOfMessagesSent": "Broj poslatih poruka",
+        "apartmentsMostViewed": "Pregledi Mojih Apartmana",
+        "myApartmentsStats": "Moji apartmani - statistika pregleda",
+        "errorLoading": "Greška pri učitavanju podataka",
+        "noApartmentsViewed": "Niste još pregledali nijedan apartman",
+        "noApartmentsOwned": "Nemate objavljene apartmane ili još niko nije pogledao vaše apartmane",
+        "rank": "Rang",
+        "apartment": "Apartman",
+        "details": "Detalji",
+        "views": "Pregleda",
+        "city": "Grad",
+        "price": "Cena",
+        "viewCount": "Broj Pregleda",
+        "lastViewed": "Poslednji Pregled"
+    }
+}

@@ -76,11 +76,20 @@ public class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentDetail")]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
+        // Extract userId from claims if user is authenticated
+        int? userId = null;
+        var userIdClaim = User?.FindFirst("userId");
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var parsedUserId))
+        {
+            userId = parsedUserId;
+        }
+
         _ = _analyticsService.TrackEventAsync(
             "ApartmentView", 
             "Listings", 
             entityId: id,
             entityType: "Apartment",
+            userId: userId,
             ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
         );
