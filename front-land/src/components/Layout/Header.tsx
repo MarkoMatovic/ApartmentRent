@@ -259,6 +259,10 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/my-apartments'); handleMenuClose(); }}>
                   {t('myApartments')}
                 </MenuItem>
+                <MenuItem onClick={() => { navigate('/analytics/roommate'); handleMenuClose(); }}>
+                  <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                  {t('common:personalAnalytics')}
+                </MenuItem>
                 {user?.userRoleId === 1 && (
                   <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
                     <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />

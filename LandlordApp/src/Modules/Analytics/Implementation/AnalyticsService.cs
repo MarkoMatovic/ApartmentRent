@@ -9,10 +9,12 @@ public class AnalyticsService : IAnalyticsService
 {
     private readonly AnalyticsContext _context;
     private readonly ListingsContext _listingsContext;
-    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext)
+    private readonly RoommatesContext _roommatesContext;
+    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext, RoommatesContext roommatesContext)
     {
         _context = context;
         _listingsContext = listingsContext;
+        _roommatesContext = roommatesContext;
     }
     public async Task TrackEventAsync(
         string eventType, 
@@ -169,5 +171,284 @@ public class AnalyticsService : IAnalyticsService
             .OrderBy(x => x.Date)
             .ToListAsync();
         return trends;
+    }
+
+    // User-specific analytics implementation
+    public async Task<UserRoommateAnalyticsSummaryDto> GetUserRoommateSummaryAsync(int userId, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents.Where(e => e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var roommateViews = await query.CountAsync(e => e.EventType == "RoommateView");
+        var messagesSent = await query.CountAsync(e => e.EventType == "MessageSent");
+        var applicationsSent = await query.CountAsync(e => e.EventType == "ApplicationSent");
+        var searches = await query.CountAsync(e => e.EventType.Contains("Search"));
+
+        return new UserRoommateAnalyticsSummaryDto
+        {
+            RoommateViews = roommateViews,
+            MessagesSent = messagesSent,
+            ApplicationsSent = applicationsSent,
+            Searches = searches,
+            FromDate = from,
+            ToDate = to
+        };
+    }
+
+    public async Task<List<TopEntityDto>> GetUserTopRoommatesAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType == "RoommateView" && e.EntityId.HasValue && e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var topRoommates = await query
+            .GroupBy(e => e.EntityId!.Value)
+            .Select(g => new TopEntityDto
+            {
+                EntityId = g.Key,
+                EntityType = "Roommate",
+                ViewCount = g.Count()
+            })
+            .OrderByDescending(x => x.ViewCount)
+            .Take(count)
+            .ToListAsync();
+
+        return topRoommates;
+    }
+
+    public async Task<List<SearchTermDto>> GetUserSearchesAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType.Contains("Search") && !string.IsNullOrEmpty(e.SearchQuery) && e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var searches = await query
+            .GroupBy(e => e.SearchQuery!)
+            .Select(g => new SearchTermDto
+            {
+                SearchTerm = g.Key,
+                SearchCount = g.Count(),
+                LastSearched = g.Max(e => e.CreatedDate)
+            })
+            .OrderByDescending(x => x.SearchCount)
+            .Take(count)
+            .ToListAsync();
+
+        return searches;
+    }
+
+    public async Task<UserRoommateTrendsDto> GetUserRoommateTrendsAsync(int userId, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType == "RoommateView" && e.EntityId.HasValue && e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var events = await query.ToListAsync();
+
+        // Get roommate IDs from events
+        var roommateIds = events.Select(e => e.EntityId!.Value).Distinct().ToList();
+
+        // Fetch roommate details from RoommatesContext
+        var roommates = await _roommatesContext.Roommates
+            .Where(r => roommateIds.Contains(r.RoommateId) && r.IsActive)
+            .Select(r => new { r.RoommateId, r.PreferredLocation, r.BudgetMax })
+            .ToListAsync();
+
+        // Calculate popular cities (using PreferredLocation as city)
+        var popularCities = roommates
+            .Where(r => !string.IsNullOrEmpty(r.PreferredLocation))
+            .GroupBy(r => r.PreferredLocation!)
+            .Select(g => new PopularCityDto
+            {
+                City = g.Key,
+                ViewCount = g.Count()
+            })
+            .OrderByDescending(x => x.ViewCount)
+            .Take(5)
+            .ToList();
+
+        // Calculate average prices by city
+        var averagePrices = roommates
+            .Where(r => !string.IsNullOrEmpty(r.PreferredLocation) && r.BudgetMax.HasValue && r.BudgetMax.Value > 0)
+            .GroupBy(r => r.PreferredLocation!)
+            .Select(g => new AveragePriceDto
+            {
+                City = g.Key,
+                AveragePrice = g.Average(r => r.BudgetMax!.Value)
+            })
+            .OrderBy(x => x.City)
+            .ToList();
+
+        return new UserRoommateTrendsDto
+        {
+            PopularCities = popularCities,
+            AveragePrices = averagePrices
+        };
+    }
+
+    // Complete user analytics - what user has done
+    public async Task<List<TopEntityDto>> GetUserTopApartmentsAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType == "ApartmentView" && e.EntityId.HasValue && e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var topApartments = await query
+            .GroupBy(e => e.EntityId!.Value)
+            .Select(g => new TopEntityDto
+            {
+                EntityId = g.Key,
+                EntityType = "Apartment",
+                ViewCount = g.Count()
+            })
+            .OrderByDescending(x => x.ViewCount)
+            .Take(count)
+            .ToListAsync();
+
+        // Fetch apartment details
+        var apartmentIds = topApartments.Select(a => a.EntityId).ToList();
+        var apartments = await _listingsContext.Apartments
+            .Where(a => apartmentIds.Contains(a.ApartmentId) && !a.IsDeleted)
+            .Select(a => new { a.ApartmentId, a.Title, a.City, a.Rent })
+            .ToListAsync();
+
+        var apartmentDict = apartments.ToDictionary(a => a.ApartmentId);
+
+        foreach (var apartment in topApartments)
+        {
+            if (apartmentDict.TryGetValue(apartment.EntityId, out var apt))
+            {
+                apartment.EntityTitle = apt.Title;
+                apartment.EntityDetails = $"{apt.City ?? "N/A"} - €{apt.Rent}/month";
+            }
+        }
+
+        return topApartments;
+    }
+
+    public async Task<AnalyticsSummaryDto> GetUserCompleteAnalyticsAsync(int userId, DateTime? from = null, DateTime? to = null)
+    {
+        var query = _context.AnalyticsEvents.Where(e => e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+
+        var totalEvents = await query.CountAsync();
+        var apartmentViews = await query.CountAsync(e => e.EventType == "ApartmentView");
+        var roommateViews = await query.CountAsync(e => e.EventType == "RoommateView");
+        var searches = await query.CountAsync(e => e.EventType.Contains("Search"));
+        var contactClicks = await query.CountAsync(e => e.EventType == "ContactClick");
+        var messagesSent = await query.CountAsync(e => e.EventType == "MessageSent");
+
+        var eventsByCategory = await query
+            .GroupBy(e => e.EventCategory)
+            .Select(g => new { Category = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Category, x => x.Count);
+
+        return new AnalyticsSummaryDto
+        {
+            TotalEvents = totalEvents,
+            TotalApartmentViews = apartmentViews,
+            TotalRoommateViews = roommateViews,
+            TotalSearches = searches,
+            TotalContactClicks = contactClicks,
+            EventsByCategory = eventsByCategory,
+            FromDate = from,
+            ToDate = to
+        };
+    }
+
+    // Personal analytics - new methods
+    public async Task<List<ApartmentViewStatsDto>> GetLandlordApartmentViewsAsync(int landlordUserId, DateTime? from = null, DateTime? to = null)
+    {
+        // Get landlord's apartments
+        var myApartments = await _listingsContext.Apartments
+            .Where(a => a.LandlordId == landlordUserId && !a.IsDeleted)
+            .Select(a => new { a.ApartmentId, a.Title, a.City, a.Rent })
+            .ToListAsync();
+        
+        if (!myApartments.Any())
+        {
+            return new List<ApartmentViewStatsDto>();
+        }
+        
+        var apartmentIds = myApartments.Select(a => a.ApartmentId).ToList();
+        
+        // Get view counts for those apartments
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType == "ApartmentView" && 
+                        e.EntityId.HasValue && 
+                        apartmentIds.Contains(e.EntityId.Value));
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+        
+        var viewStats = await query
+            .GroupBy(e => e.EntityId.Value)
+            .Select(g => new 
+            { 
+                ApartmentId = g.Key, 
+                ViewCount = g.Count(),
+                LastViewed = g.Max(e => e.CreatedDate)
+            })
+            .ToListAsync();
+        
+        // Join with apartment details
+        var result = myApartments
+            .Select(a =>
+            {
+                var stats = viewStats.FirstOrDefault(v => v.ApartmentId == a.ApartmentId);
+                return new ApartmentViewStatsDto
+                {
+                    ApartmentId = a.ApartmentId,
+                    Title = a.Title,
+                    City = a.City,
+                    Rent = a.Rent,
+                    ViewCount = stats?.ViewCount ?? 0,
+                    LastViewed = stats?.LastViewed
+                };
+            })
+            .OrderByDescending(a => a.ViewCount)
+            .ToList();
+        
+        return result;
+    }
+
+    public async Task<int> GetUserMessageCountAsync(int userId, DateTime? from = null, DateTime? to = null)
+    {
+        // Count MessageSent events for this user
+        var query = _context.AnalyticsEvents
+            .Where(e => e.EventType == "MessageSent" && e.UserId == userId);
+        
+        if (from.HasValue)
+            query = query.Where(e => e.CreatedDate >= from.Value);
+        if (to.HasValue)
+            query = query.Where(e => e.CreatedDate <= to.Value);
+        
+        return await query.CountAsync();
     }
 }

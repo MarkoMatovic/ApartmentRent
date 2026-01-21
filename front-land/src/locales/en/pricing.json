@@ -2,6 +2,8 @@
   "title": "Pricing",
   "listingTitle": "Monthly Apartment Listing",
   "listingPrice": "600 Dinars",
-  "analyticsTitle": "Monthly Analytics",
-  "analyticsPrice": "200 Dinars"
+  "analyticsLandlordTitle": "Analytics for Landlords (Monthly)",
+  "analyticsLandlordPrice": "200 Dinars",
+  "analyticsRoommateTitle": "Personal Analytics (Monthly)",
+  "analyticsRoommatePrice": "120 Dinars"
 }

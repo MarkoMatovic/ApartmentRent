@@ -1,0 +1,19 @@
+{
+  "title": "Personalna Analitika",
+  "subtitle": "Pregledajte svoju aktivnost i statistike",
+  "loginRequired": "Morate biti prijavljeni da biste pristupili analitici",
+  "apiNotAvailable": "Analitika će biti dostupna uskoro. Backend endpoint-i su u razvoju.",
+  "roommateViews": "Pregledi oglasa za cimere",
+  "messagesSent": "Poslate poruke",
+  "applicationsSent": "Poslate aplikacije",
+  "searches": "Pretrage",
+  "topViewedRoommates": "Najgledaniji oglasi za cimere",
+  "roommate": "Cimer",
+  "yourSearches": "Vaše pretrage",
+  "trends": "Trendovi i statistike",
+  "popularCities": "Popularni gradovi",
+  "averagePrices": "Prosečne cene",
+  "currency": "din",
+  "noRoommateViews": "Još niste pregledali nijedan oglas za cimera",
+  "noSearches": "Još niste izvršili nijednu pretragu"
+}

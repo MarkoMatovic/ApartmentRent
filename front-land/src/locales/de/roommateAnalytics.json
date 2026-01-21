@@ -1,0 +1,18 @@
+{
+  "title": "Persönliche Analytik",
+  "subtitle": "Sehen Sie Ihre Aktivität und Statistiken",
+  "loginRequired": "Sie müssen angemeldet sein, um auf die Analytik zuzugreifen",
+  "roommateViews": "Mitbewohner-Anzeigenaufrufe",
+  "messagesSent": "Gesendete Nachrichten",
+  "applicationsSent": "Gesendete Bewerbungen",
+  "searches": "Suchen",
+  "topViewedRoommates": "Meistgesehene Mitbewohner-Anzeigen",
+  "roommate": "Mitbewohner",
+  "yourSearches": "Ihre Suchen",
+  "trends": "Trends und Statistiken",
+  "popularCities": "Beliebte Städte",
+  "averagePrices": "Durchschnittspreise",
+  "currency": "Din",
+  "noRoommateViews": "Sie haben noch keine Mitbewohner-Anzeigen angesehen",
+  "noSearches": "Sie haben noch keine Suchen durchgeführt"
+}

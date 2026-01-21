@@ -1,0 +1,25 @@
+{
+    "analytics": {
+        "personalAnalytics": "Persönliche Analytik",
+        "viewYourActivity": "Übersicht Ihrer Aktivitäten und Statistiken",
+        "viewedApartments": "Angesehene Wohnungen",
+        "apartmentsIViewed": "Wohnungen, die ich angesehen habe",
+        "myApartmentViews": "Aufrufe meiner Wohnungen",
+        "viewsOfMyApartments": "Wie oft meine Wohnungen angesehen wurden",
+        "messagesSent": "Gesendete Nachrichten",
+        "numberOfMessagesSent": "Anzahl gesendeter Nachrichten",
+        "apartmentsMostViewed": "Aufrufe meiner Wohnungen",
+        "myApartmentsStats": "Meine Wohnungen - Aufrufstatistiken",
+        "errorLoading": "Fehler beim Laden der Daten",
+        "noApartmentsViewed": "Sie haben noch keine Wohnungen angesehen",
+        "noApartmentsOwned": "Sie haben keine veröffentlichten Wohnungen oder niemand hat Ihre Wohnungen angesehen",
+        "rank": "Rang",
+        "apartment": "Wohnung",
+        "details": "Details",
+        "views": "Aufrufe",
+        "city": "Stadt",
+        "price": "Preis",
+        "viewCount": "Anzahl der Aufrufe",
+        "lastViewed": "Zuletzt angesehen"
+    }
+}

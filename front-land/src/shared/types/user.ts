@@ -11,6 +11,9 @@ export interface User {
   dateOfBirth?: string;
   isActive: boolean;
   isLookingForRoommate?: boolean;
+  hasPersonalAnalytics?: boolean;
+  hasLandlordAnalytics?: boolean;
+  subscriptionExpiresAt?: string;
 }
 
 export interface UserRole {
