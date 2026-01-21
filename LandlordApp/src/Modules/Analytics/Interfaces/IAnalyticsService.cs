@@ -17,4 +17,19 @@ public interface IAnalyticsService
     Task<List<TopEntityDto>> GetTopViewedRoommatesAsync(int count = 10, DateTime? from = null, DateTime? to = null);
     Task<List<SearchTermDto>> GetTopSearchTermsAsync(int count = 10, DateTime? from = null, DateTime? to = null);
     Task<List<EventTrendDto>> GetEventTrendsAsync(DateTime from, DateTime to, string? eventType = null);
+    
+    // User-specific analytics
+    Task<UserRoommateAnalyticsSummaryDto> GetUserRoommateSummaryAsync(int userId, DateTime? from = null, DateTime? to = null);
+    Task<List<TopEntityDto>> GetUserTopRoommatesAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null);
+    Task<List<SearchTermDto>> GetUserSearchesAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null);
+    Task<UserRoommateTrendsDto> GetUserRoommateTrendsAsync(int userId, DateTime? from = null, DateTime? to = null);
+    
+    
+    // Complete user analytics (all activities)
+    Task<List<TopEntityDto>> GetUserTopApartmentsAsync(int userId, int count = 10, DateTime? from = null, DateTime? to = null);
+    Task<AnalyticsSummaryDto> GetUserCompleteAnalyticsAsync(int userId, DateTime? from = null, DateTime? to = null);
+    
+    // Personal analytics - new methods
+    Task<List<ApartmentViewStatsDto>> GetLandlordApartmentViewsAsync(int landlordUserId, DateTime? from = null, DateTime? to = null);
+    Task<int> GetUserMessageCountAsync(int userId, DateTime? from = null, DateTime? to = null);
 }

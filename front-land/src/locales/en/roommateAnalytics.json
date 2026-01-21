@@ -1,0 +1,18 @@
+{
+  "title": "Personal Analytics",
+  "subtitle": "View your activity and statistics",
+  "loginRequired": "You must be logged in to access analytics",
+  "roommateViews": "Roommate listing views",
+  "messagesSent": "Messages sent",
+  "applicationsSent": "Applications sent",
+  "searches": "Searches",
+  "topViewedRoommates": "Most viewed roommate listings",
+  "roommate": "Roommate",
+  "yourSearches": "Your searches",
+  "trends": "Trends and statistics",
+  "popularCities": "Popular cities",
+  "averagePrices": "Average prices",
+  "currency": "din",
+  "noRoommateViews": "You haven't viewed any roommate listings yet",
+  "noSearches": "You haven't performed any searches yet"
+}

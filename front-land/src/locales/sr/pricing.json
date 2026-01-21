@@ -2,6 +2,8 @@
   "title": "Cenovnik",
   "listingTitle": "Izdavanje Apartmana na mesecnom nivou",
   "listingPrice": "600 Dinara",
-  "analyticsTitle": "Analitika na mesecnom nivou",
-  "analyticsPrice": "200 Dinara"
+  "analyticsLandlordTitle": "Analitika za Stanodavce na mesecnom nivou",
+  "analyticsLandlordPrice": "200 Dinara",
+  "analyticsRoommateTitle": "Personalna Analitika na mesecnom nivou",
+  "analyticsRoommatePrice": "120 Dinara"
 }

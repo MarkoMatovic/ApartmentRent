@@ -21,6 +21,7 @@ import EditApartmentPage from './pages/EditApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import SupportPage from './pages/SupportPage';
 import PricingPage from './pages/PricingPage';
+import UserRoommateAnalyticsPage from './pages/UserRoommateAnalyticsPage';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
                 <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/analytics/roommate" element={<UserRoommateAnalyticsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

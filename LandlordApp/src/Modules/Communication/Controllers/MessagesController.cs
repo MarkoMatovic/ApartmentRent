@@ -11,9 +11,11 @@ namespace Lander.src.Modules.Communication.Controllers;
 public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
-    public MessagesController(IMessageService messageService)
+    private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
+    public MessagesController(IMessageService messageService, Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
     {
         _messageService = messageService;
+        _analyticsService = analyticsService;
     }
     [HttpGet(ApiActionsV1.GetConversation, Name = nameof(ApiActionsV1.GetConversation))]
     public async Task<ActionResult<ConversationMessagesDto>> GetConversation(
@@ -35,6 +37,18 @@ public class MessagesController : ControllerBase
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
         var message = await _messageService.SendMessageAsync(input.SenderId, input.ReceiverId, input.MessageText);
+        
+        // Track MessageSent analytics event
+        _ = _analyticsService.TrackEventAsync(
+            "MessageSent",
+            "Communication",
+            entityId: input.ReceiverId,
+            entityType: "User",
+            userId: input.SenderId,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+        );
+        
         return Ok(message);
     }
     [HttpPut(ApiActionsV1.MarkMessageAsRead, Name = nameof(ApiActionsV1.MarkMessageAsRead))]

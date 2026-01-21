@@ -51,6 +51,9 @@ const decodeToken = (token: string): User | null => {
       isActive: payload.isActive === 'true' || payload.isActive === true || payload.active === true,
       isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
+      hasPersonalAnalytics: payload.hasPersonalAnalytics === 'true' || payload.hasPersonalAnalytics === true,
+      hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
+      subscriptionExpiresAt: payload.subscriptionExpiresAt || undefined,
     };
   } catch (error) {
     return null;
