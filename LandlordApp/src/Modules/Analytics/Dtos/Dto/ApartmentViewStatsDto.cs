@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Analytics.Dtos.Dto;
-
 public class ApartmentViewStatsDto
 {
     public int ApartmentId { get; set; }

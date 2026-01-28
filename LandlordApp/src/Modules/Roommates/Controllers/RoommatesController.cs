@@ -57,14 +57,12 @@ public class RoommatesController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<RoommateDto>> GetRoommate([FromQuery] int id)
     {
-        // Extract userId from claims if user is authenticated
         int? userId = null;
         var userIdClaim = User?.FindFirst("userId");
         if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var parsedUserId))
         {
             userId = parsedUserId;
         }
-
         _ = _analyticsService.TrackEventAsync(
             "RoommateView",
             "Roommates",
