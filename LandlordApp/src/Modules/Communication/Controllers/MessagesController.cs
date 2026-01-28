@@ -37,8 +37,6 @@ public class MessagesController : ControllerBase
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
         var message = await _messageService.SendMessageAsync(input.SenderId, input.ReceiverId, input.MessageText);
-        
-        // Track MessageSent analytics event
         _ = _analyticsService.TrackEventAsync(
             "MessageSent",
             "Communication",
@@ -48,7 +46,6 @@ public class MessagesController : ControllerBase
             ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
         );
-        
         return Ok(message);
     }
     [HttpPut(ApiActionsV1.MarkMessageAsRead, Name = nameof(ApiActionsV1.MarkMessageAsRead))]

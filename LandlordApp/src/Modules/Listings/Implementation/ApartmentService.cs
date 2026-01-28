@@ -274,9 +274,26 @@ public class ApartmentService : IApartmentService
             query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
         }
         var totalCount = await query.CountAsync();
-        var apartments = await query
+        var sortBy = filters.SortBy?.ToLower() ?? "date";
+        var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
+        IOrderedQueryable<Apartment> orderedQuery = sortBy switch
+        {
+            "rent" => sortOrder == "asc" 
+                ? query.OrderBy(a => a.Rent) 
+                : query.OrderByDescending(a => a.Rent),
+            "price" => sortOrder == "asc" 
+                ? query.OrderBy(a => a.Price) 
+                : query.OrderByDescending(a => a.Price),
+            "size" => sortOrder == "asc" 
+                ? query.OrderBy(a => a.SizeSquareMeters) 
+                : query.OrderByDescending(a => a.SizeSquareMeters),
+            "date" => sortOrder == "asc" 
+                ? query.OrderBy(a => a.CreatedDate) 
+                : query.OrderByDescending(a => a.CreatedDate),
+            _ => query.OrderByDescending(a => a.CreatedDate)
+        };
+        var apartments = await orderedQuery
             .Include(a => a.ApartmentImages)
-            .OrderBy(a => a.Rent)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
             .AsSplitQuery()

@@ -1,5 +1,4 @@
 namespace Lander.src.Modules.Analytics.Dtos.InputDto;
-
 public class TrackEventInputDto
 {
     public string EventType { get; set; } = null!;

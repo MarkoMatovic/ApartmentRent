@@ -3,6 +3,7 @@ import { AuthProvider } from './shared/context/AuthContext';
 import { ThemeProvider } from './shared/context/ThemeContext';
 import { NotificationProvider } from './shared/context/NotificationContext';
 import Layout from './components/Layout/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import ApartmentListPage from './pages/ApartmentListPage';
 import ApartmentDetailPage from './pages/ApartmentDetailPage';
@@ -29,6 +30,7 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <Router>
+            <ScrollToTop />
             <Layout>
               <Routes>
                 <Route path="/" element={<HomePage />} />

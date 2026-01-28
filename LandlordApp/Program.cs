@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Text;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Lander;
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Hubs;
@@ -20,6 +22,7 @@ using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Lander.src.Notifications.Implementation;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.NotificationsHub;
+using Lander.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -72,6 +75,12 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
+
+// Add FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
@@ -186,6 +195,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 var app = builder.Build();
+
+// Global exception handler - must be first in the pipeline
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
