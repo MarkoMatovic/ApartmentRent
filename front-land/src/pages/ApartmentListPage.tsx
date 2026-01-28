@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Grid,
@@ -21,7 +21,7 @@ import ApartmentCard from '../components/Apartment/ApartmentCard';
 const ApartmentListPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const [searchParams] = useSearchParams();
-  
+
   const [filters, setFilters] = useState({
     listingType: '',
     city: searchParams.get('location') || '',
@@ -30,25 +30,31 @@ const ApartmentListPage: React.FC = () => {
     numberOfRooms: '',
     apartmentType: '',
     isFurnished: '',
+    sortBy: 'date',
+    sortOrder: 'desc',
   });
 
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const [sortBy, setSortBy] = useState('date');
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['apartments', filters.listingType, filters.city, filters.minRent, filters.maxRent, filters.numberOfRooms, filters.apartmentType, filters.isFurnished, page],
+    queryKey: ['apartments', filters.listingType, filters.city, filters.minRent, filters.maxRent, filters.numberOfRooms, filters.apartmentType, filters.isFurnished, filters.sortBy, filters.sortOrder, page],
     queryFn: () => {
       const filterParams: any = {
         page: page,
         pageSize: pageSize,
       };
-      
+
       // ListingType filter
       if (filters.listingType && filters.listingType !== '') {
         filterParams.listingType = Number(filters.listingType);
       }
-      
+
       // Other filters
       if (filters.city) filterParams.city = filters.city;
       if (filters.minRent) filterParams.minRent = Number(filters.minRent);
@@ -56,7 +62,11 @@ const ApartmentListPage: React.FC = () => {
       if (filters.numberOfRooms) filterParams.numberOfRooms = Number(filters.numberOfRooms);
       if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
       if (filters.isFurnished) filterParams.isFurnished = filters.isFurnished === 'true';
-      
+
+      // Sorting
+      if (filters.sortBy) filterParams.sortBy = filters.sortBy;
+      if (filters.sortOrder) filterParams.sortOrder = filters.sortOrder;
+
       return apartmentsApi.getAll(filterParams);
     },
     staleTime: 0,
@@ -72,20 +82,25 @@ const ApartmentListPage: React.FC = () => {
   };
 
   const handleSortChange = (value: string) => {
-    setSortBy(value);
-    // Implement sorting logic
+    // Map frontend sort values to backend format
+    const sortMapping: { [key: string]: { sortBy: string; sortOrder: string } } = {
+      'date': { sortBy: 'date', sortOrder: 'desc' },
+      'price-asc': { sortBy: 'rent', sortOrder: 'asc' },
+      'price-desc': { sortBy: 'rent', sortOrder: 'desc' },
+    };
+
+    const sort = sortMapping[value] || { sortBy: 'date', sortOrder: 'desc' };
+    setFilters(prev => ({ ...prev, sortBy: sort.sortBy, sortOrder: sort.sortOrder }));
+    setPage(1);
   };
 
-  const sortedApartments = apartments.length > 0 ? [...apartments].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-asc':
-        return a.rent - b.rent;
-      case 'price-desc':
-        return b.rent - a.rent;
-      default:
-        return 0;
-    }
-  }) : [];
+  // Determine current sort value for the select
+  const getCurrentSortValue = () => {
+    if (filters.sortBy === 'date') return 'date';
+    if (filters.sortBy === 'rent' && filters.sortOrder === 'asc') return 'price-asc';
+    if (filters.sortBy === 'rent' && filters.sortOrder === 'desc') return 'price-desc';
+    return 'date';
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -100,7 +115,7 @@ const ApartmentListPage: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               {t('apartments:filters')}
             </Typography>
-            
+
             <FormControl fullWidth margin="normal" size="small">
               <InputLabel>{t('apartments:listingType', { defaultValue: 'Listing Type' })}</InputLabel>
               <Select
@@ -113,7 +128,7 @@ const ApartmentListPage: React.FC = () => {
                 <MenuItem value="2">{t('apartments:sale', { defaultValue: 'Sale' })}</MenuItem>
               </Select>
             </FormControl>
-            
+
             <TextField
               fullWidth
               label={t('apartments:location')}
@@ -122,7 +137,7 @@ const ApartmentListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <TextField
               fullWidth
               label={`${t('apartments:price')} (Min)`}
@@ -132,7 +147,7 @@ const ApartmentListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <TextField
               fullWidth
               label={`${t('apartments:price')} (Max)`}
@@ -142,7 +157,7 @@ const ApartmentListPage: React.FC = () => {
               margin="normal"
               size="small"
             />
-            
+
             <FormControl fullWidth margin="normal" size="small">
               <InputLabel>{t('apartments:rooms')}</InputLabel>
               <Select
@@ -168,7 +183,11 @@ const ApartmentListPage: React.FC = () => {
             </Typography>
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>{t('apartments:sortBy')}</InputLabel>
-              <Select value={sortBy} onChange={(e) => handleSortChange(e.target.value)} label={t('apartments:sortBy')}>
+              <Select
+                value={getCurrentSortValue()}
+                onChange={(e) => handleSortChange(e.target.value)}
+                label={t('apartments:sortBy')}
+              >
                 <MenuItem value="date">{t('apartments:sortDateNewest')}</MenuItem>
                 <MenuItem value="price-asc">{t('apartments:sortPriceAsc')}</MenuItem>
                 <MenuItem value="price-desc">{t('apartments:sortPriceDesc')}</MenuItem>
@@ -186,7 +205,7 @@ const ApartmentListPage: React.FC = () => {
                 </Grid>
               ))}
             </Grid>
-          ) : sortedApartments.length === 0 ? (
+          ) : apartments.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 8 }}>
               <Typography variant="h6" color="text.secondary">
                 {t('apartments:noApartments')}
@@ -195,13 +214,13 @@ const ApartmentListPage: React.FC = () => {
           ) : (
             <>
               <Grid container spacing={3}>
-                {sortedApartments.map((apartment) => (
+                {apartments.map((apartment) => (
                   <Grid item xs={12} sm={6} key={apartment.apartmentId}>
                     <ApartmentCard apartment={apartment} />
                   </Grid>
                 ))}
               </Grid>
-              
+
               {/* Pagination */}
               <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 4 }}>
                 <Button
