@@ -13,7 +13,8 @@ public class PricePredictionService : IPricePredictionService
     private readonly string _metricsPath;
     private MLContext _mlContext;
     private ITransformer? _trainedModel;
-    private static readonly object _lock = new object();
+    // .NET 10 Feature: Modern Lock type for thread synchronization
+    private static readonly Lock _lock = new();
     public PricePredictionService(ListingsContext listingsContext, IWebHostEnvironment environment)
     {
         _listingsContext = listingsContext;
@@ -46,7 +47,7 @@ public class PricePredictionService : IPricePredictionService
         }
         if (_trainedModel == null)
         {
-            lock (_lock)
+            using (_lock.EnterScope()) // .NET 10: Automatic lock release
             {
                 if (_trainedModel == null)
                 {
@@ -129,7 +130,7 @@ public class PricePredictionService : IPricePredictionService
         var model = pipeline.Fit(trainTestSplit.TrainSet);
         var predictions = model.Transform(trainTestSplit.TestSet);
         var metrics = _mlContext.Regression.Evaluate(predictions, labelColumnName: "Label");
-        lock (_lock)
+        using (_lock.EnterScope()) // .NET 10: Automatic lock release
         {
             _mlContext.Model.Save(model, dataView.Schema, _modelPath);
             _trainedModel = model;
