@@ -423,6 +423,9 @@ public class ListingsContext : DbContext, IUnitofWork
 
             entity.ToTable("Apartments", "Listings");
 
+            // .NET 10 Feature: Named Query Filter for soft deletes
+            entity.HasQueryFilter(a => !a.IsDeleted && a.IsActive);
+
             entity.Property(e => e.Address).HasMaxLength(255);
             entity.Property(e => e.City).HasMaxLength(100);
             entity.Property(e => e.CreatedDate)
@@ -432,6 +435,7 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.PostalCode).HasMaxLength(10);
             entity.Property(e => e.Rent).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Title).HasMaxLength(255);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
@@ -447,15 +451,11 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.ApartmentType)
                 .HasConversion<int>();
             
-            entity.Property(e => e.IsFurnished).HasDefaultValue(false);
-            entity.Property(e => e.HasBalcony).HasDefaultValue(false);
-            entity.Property(e => e.HasElevator).HasDefaultValue(false);
-            entity.Property(e => e.HasParking).HasDefaultValue(false);
-            entity.Property(e => e.HasInternet).HasDefaultValue(false);
-            entity.Property(e => e.HasAirCondition).HasDefaultValue(false);
-            
-            entity.Property(e => e.IsPetFriendly).HasDefaultValue(false);
-            entity.Property(e => e.IsSmokingAllowed).HasDefaultValue(false);
+            // .NET 10 Feature: JSON column mapping for Features
+            entity.OwnsOne(e => e.Features, features =>
+            {
+                features.ToJson(); // Store as JSON column
+            });
             
             entity.Property(e => e.DepositAmount).HasColumnType("decimal(10,2)");
             entity.Property(e => e.MinimumStayMonths);
