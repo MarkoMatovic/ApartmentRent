@@ -1,24 +1,30 @@
 using Lander.Helpers;
+using Lander.src.Modules.Analytics.Interfaces;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
-using Lander.src.Modules.Listings.Models;
-using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Lander.src.Modules.MachineLearning.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 namespace Lander.src.Modules.Listings.Controllers;
+
 [Route(ApiActionsV1.Rent)]
 [ApiController]
-public class ApartmentsController : ControllerBase
+public partial class ApartmentsController : ControllerBase
 {
-    private readonly IApartmentService _apartmentServie;
-    private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
-    public ApartmentsController(IApartmentService apartmentServie, Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
+    private readonly IApartmentService _apartmentService;
+    private readonly IAnalyticsService _analyticsService;
+    private readonly SimpleEmbeddingService _embeddingService;
+
+    public ApartmentsController(
+        IApartmentService apartmentService,
+        IAnalyticsService analyticsService,
+        SimpleEmbeddingService embeddingService)
     {
-        _apartmentServie = apartmentServie;
+        _apartmentService = apartmentService;
         _analyticsService = analyticsService;
+        _embeddingService = embeddingService;
     }
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
     [Authorize]
@@ -26,7 +32,7 @@ public class ApartmentsController : ControllerBase
     {
         try
         {
-            var result = await _apartmentServie.CreateApartmentAsync(apartmentInputDto);
+            var result = await _apartmentService.CreateApartmentAsync(apartmentInputDto);
             await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
                 .EvictByTagAsync("apartments", default);
             return Ok(result);
@@ -50,14 +56,14 @@ public class ApartmentsController : ControllerBase
             {
                 var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent},ListingType:{filters.ListingType}";
                 _ = _analyticsService.TrackEventAsync(
-                    "ApartmentSearch", 
-                    "Listings", 
+                    "ApartmentSearch",
+                    "Listings",
                     searchQuery: searchQuery,
                     ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
                     userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
                 );
             }
-            return Ok(await _apartmentServie.GetAllApartmentsAsync(filters));
+            return Ok(await _apartmentService.GetAllApartmentsAsync(filters));
         }
         catch (Exception ex)
         {
@@ -68,7 +74,7 @@ public class ApartmentsController : ControllerBase
     [Authorize]
     public async Task<ActionResult> GetMyApartments()
     {
-        var result = await _apartmentServie.GetMyApartmentsAsync();
+        var result = await _apartmentService.GetMyApartmentsAsync();
         return Ok(result);
     }
     [HttpGet(ApiActionsV1.GetApartment, Name = nameof(ApiActionsV1.GetApartment))]
@@ -83,21 +89,21 @@ public class ApartmentsController : ControllerBase
             userId = parsedUserId;
         }
         _ = _analyticsService.TrackEventAsync(
-            "ApartmentView", 
-            "Listings", 
+            "ApartmentView",
+            "Listings",
             entityId: id,
             entityType: "Apartment",
             userId: userId,
             ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
         );
-        return Ok(await _apartmentServie.GetApartmentByIdAsync(id));
+        return Ok(await _apartmentService.GetApartmentByIdAsync(id));
     }
     [HttpPut(ApiActionsV1.UpdateApartment, Name = nameof(ApiActionsV1.UpdateApartment))]
     [Authorize]
     public async Task<ActionResult<ApartmentDto>> UpdateApartment([FromRoute] int id, [FromBody] ApartmentUpdateInputDto updateDto)
     {
-        var result = await _apartmentServie.UpdateApartmentAsync(id, updateDto);
+        var result = await _apartmentService.UpdateApartmentAsync(id, updateDto);
         await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
             .EvictByTagAsync("apartments", default);
         return Ok(result);
@@ -106,7 +112,7 @@ public class ApartmentsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<bool>> DeleteApartment([FromRoute] int id)
     {
-        var result = await _apartmentServie.DeleteApartmentAsync(id);
+        var result = await _apartmentService.DeleteApartmentAsync(id);
         await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
             .EvictByTagAsync("apartments", default);
         return Ok(result);
@@ -115,7 +121,7 @@ public class ApartmentsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<bool>> ActivateApartment(int id)
     {
-        var result = await _apartmentServie.ActivateApartmentAsync(id);
+        var result = await _apartmentService.ActivateApartmentAsync(id);
         await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
             .EvictByTagAsync("apartments", default);
         return Ok(result);

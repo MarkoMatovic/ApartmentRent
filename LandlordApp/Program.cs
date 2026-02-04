@@ -22,6 +22,7 @@ using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Lander.src.Notifications.Implementation;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.NotificationsHub;
+using Lander.src.Notifications.Services; // .NET 10: SSE Support
 using Lander.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -133,6 +134,12 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
 builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
 builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoommateMatchingService, Lander.src.Modules.MachineLearning.Implementation.RoommateMatchingService>();
+
+// .NET 10 Feature: Server-Sent Events for real-time notifications
+builder.Services.AddSingleton<NotificationStreamService>();
+
+// .NET 10 Feature: Vector Search for semantic apartment search
+builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();
 
 builder.Services.AddSingleton<TokenProvider>();
 builder.Services.AddHttpContextAccessor();

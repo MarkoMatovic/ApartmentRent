@@ -17,6 +17,9 @@ public class ApartmentDto
     public bool? IsImmediatelyAvailable { get; set; }
     public bool IsLookingForRoommate { get; set; }
     public List<ApartmentImageDto>? ApartmentImages { get; set; }
+    
+    // .NET 10 Feature: Vector Search support
+    public string? DescriptionEmbedding { get; set; }
 }
 public class GetApartmentDto
 {

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Endpoints Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .result {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-top: 10px;
+            border-left: 4px solid #4CAF50;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+
+        input,
+        select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        label {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🤖 ML Endpoints Test - Landlord App</h1>
+
+    <!-- Check if Model is Trained -->
+    <div class="test-section">
+        <h2>1. Check if Model is Trained</h2>
+        <button onclick="checkModelTrained()">Check Model Status</button>
+        <div id="modelStatus" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Price Prediction -->
+    <div class="test-section">
+        <h2>2. Price Prediction</h2>
+        <div>
+            <label>Size (m²): <input type="number" id="size" value="75"></label>
+            <label>Rooms: <input type="number" id="rooms" value="2"></label>
+            <label>City: <input type="text" id="city" value="Belgrade"></label>
+        </div>
+        <div>
+            <label><input type="checkbox" id="furnished"> Furnished</label>
+            <label><input type="checkbox" id="balcony" checked> Balcony</label>
+            <label><input type="checkbox" id="parking"> Parking</label>
+            <label><input type="checkbox" id="elevator" checked> Elevator</label>
+        </div>
+        <div>
+            <label><input type="checkbox" id="ac"> Air Condition</label>
+            <label><input type="checkbox" id="internet" checked> Internet</label>
+            <label><input type="checkbox" id="pets"> Pet Friendly</label>
+            <label><input type="checkbox" id="smoking"> Smoking Allowed</label>
+        </div>
+        <button onclick="predictPrice()">Predict Price</button>
+        <div id="priceResult" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Train Model (Admin only) -->
+    <div class="test-section">
+        <h2>3. Train Model (Admin Only)</h2>
+        <p>Note: This requires admin authentication</p>
+        <label>Admin Token: <input type="text" id="adminToken" placeholder="Enter JWT token"
+                style="width: 400px;"></label>
+        <button onclick="trainModel()">Train Model</button>
+        <div id="trainResult" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Get Model Metrics (Admin only) -->
+    <div class="test-section">
+        <h2>4. Get Model Metrics (Admin Only)</h2>
+        <button onclick="getMetrics()">Get Metrics</button>
+        <div id="metricsResult" class="result" style="display:none;"></div>
+    </div>
+
+    <!-- Roommate Matching -->
+    <div class="test-section">
+        <h2>5. Roommate Matching</h2>
+        <p>Note: This requires user authentication</p>
+        <label>User Token: <input type="text" id="userToken" placeholder="Enter JWT token"
+                style="width: 400px;"></label>
+        <label>User ID: <input type="number" id="userId" value="1"></label>
+        <label>Top N: <input type="number" id="topN" value="5"></label>
+        <button onclick="getRoommateMatches()">Get Matches</button>
+        <div id="matchesResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5197/api/v1/ml';
+
+        async function checkModelTrained() {
+            const resultDiv = document.getElementById('modelStatus');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(`${API_BASE}/is-model-trained`);
+                const data = await response.json();
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function predictPrice() {
+            const resultDiv = document.getElementById('priceResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            const requestBody = {
+                sizeSquareMeters: parseFloat(document.getElementById('size').value),
+                numberOfRooms: parseInt(document.getElementById('rooms').value),
+                city: document.getElementById('city').value,
+                isFurnished: document.getElementById('furnished').checked,
+                hasBalcony: document.getElementById('balcony').checked,
+                hasParking: document.getElementById('parking').checked,
+                hasElevator: document.getElementById('elevator').checked,
+                hasAirCondition: document.getElementById('ac').checked,
+                hasInternet: document.getElementById('internet').checked,
+                isPetFriendly: document.getElementById('pets').checked,
+                isSmokingAllowed: document.getElementById('smoking').checked,
+                apartmentType: 0
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/predict-price`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Prediction Result:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function trainModel() {
+            const resultDiv = document.getElementById('trainResult');
+            const token = document.getElementById('adminToken').value;
+
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Training model... This may take a while...';
+
+            try {
+                const response = await fetch(`${API_BASE}/train-model`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Training Complete:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function getMetrics() {
+            const resultDiv = document.getElementById('metricsResult');
+            const token = document.getElementById('adminToken').value;
+
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(`${API_BASE}/model-metrics`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function getRoommateMatches() {
+            const resultDiv = document.getElementById('matchesResult');
+            const token = document.getElementById('userToken').value;
+            const userId = document.getElementById('userId').value;
+            const topN = document.getElementById('topN').value;
+
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(`${API_BASE}/roommate-matches?userId=${userId}&topN=${topN}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+
+</html>

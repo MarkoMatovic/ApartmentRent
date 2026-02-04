@@ -4,6 +4,7 @@ using Lander;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,14 +12,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lander.Migrations.Listings
 {
     [DbContext(typeof(ListingsContext))]
-    partial class ListingsContextModelSnapshot : ModelSnapshot
+    [Migration("20260129131537_AddApartmentPerformanceIndexes")]
+    partial class AddApartmentPerformanceIndexes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("Listings")
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -66,8 +69,30 @@ namespace Lander.Migrations.Listings
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<string>("DescriptionEmbedding")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool>("HasAirCondition")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("HasBalcony")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("HasElevator")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("HasInternet")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("HasParking")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -79,6 +104,11 @@ namespace Lander.Migrations.Listings
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsFurnished")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsImmediatelyAvailable")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -86,6 +116,16 @@ namespace Lander.Migrations.Listings
 
                     b.Property<bool>("IsLookingForRoommate")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsPetFriendly")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsSmokingAllowed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int?>("LandlordId")
                         .HasColumnType("int");
@@ -119,7 +159,7 @@ namespace Lander.Migrations.Listings
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(10, 2)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("Rent")
                         .HasColumnType("decimal(10, 2)");
@@ -142,11 +182,35 @@ namespace Lander.Migrations.Listings
 
                     b.HasIndex("ApartmentType");
 
+                    b.HasIndex("City");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("IsDeleted");
+
                     b.HasIndex("IsImmediatelyAvailable");
 
                     b.HasIndex("LandlordId");
 
+                    b.HasIndex("ListingType");
+
+                    b.HasIndex("NumberOfRooms");
+
+                    b.HasIndex("Rent");
+
+                    b.HasIndex("SizeSquareMeters");
+
+                    b.HasIndex("City", "NumberOfRooms");
+
+                    b.HasIndex("City", "Rent");
+
                     b.HasIndex("Latitude", "Longitude");
+
+                    b.HasIndex("IsActive", "IsDeleted", "City");
+
+                    b.HasIndex("ListingType", "City", "Rent");
 
                     b.ToTable("Apartments", "Listings");
                 });
@@ -195,42 +259,6 @@ namespace Lander.Migrations.Listings
                     b.HasIndex("ApartmentId");
 
                     b.ToTable("ApartmentImages", "Listings");
-                });
-
-            modelBuilder.Entity("Lander.src.Modules.Listings.Models.Apartment", b =>
-                {
-                    b.OwnsOne("Lander.src.Modules.Listings.Models.ApartmentFeatures", "Features", b1 =>
-                        {
-                            b1.Property<int>("ApartmentId");
-
-                            b1.Property<bool>("HasAirCondition");
-
-                            b1.Property<bool>("HasBalcony");
-
-                            b1.Property<bool>("HasElevator");
-
-                            b1.Property<bool>("HasInternet");
-
-                            b1.Property<bool>("HasParking");
-
-                            b1.Property<bool>("IsFurnished");
-
-                            b1.Property<bool>("IsPetFriendly");
-
-                            b1.Property<bool>("IsSmokingAllowed");
-
-                            b1.HasKey("ApartmentId");
-
-                            b1.ToTable("Apartments", "Listings");
-
-                            b1.ToJson("Features");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ApartmentId");
-                        });
-
-                    b.Navigation("Features")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lander.src.Modules.Listings.Models.ApartmentImage", b =>

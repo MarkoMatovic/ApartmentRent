@@ -9,6 +9,7 @@ using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
@@ -173,7 +174,7 @@ public class ApartmentService : IApartmentService
     {
         var apartments = await _context.Apartments
             .Include(a => a.ApartmentImages)
-            .Where(a => !a.IsDeleted && a.IsActive)
+            // Named query filter automatically applies: !a.IsDeleted && a.IsActive
             .AsNoTracking()
             .AsSplitQuery()
             .OrderBy(a => a.Rent)
@@ -223,7 +224,7 @@ public class ApartmentService : IApartmentService
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
         var query = _context.Apartments
-            .Where(a => !a.IsDeleted && a.IsActive)
+            // Named query filter automatically applies: !a.IsDeleted && a.IsActive
             .AsNoTracking();
         if (filters.ListingType.HasValue)
         {
@@ -276,21 +277,20 @@ public class ApartmentService : IApartmentService
         var totalCount = await query.CountAsync();
         var sortBy = filters.SortBy?.ToLower() ?? "date";
         var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
-        IOrderedQueryable<Apartment> orderedQuery = sortBy switch
+        
+        // Modern .NET 10 approach: Use pattern matching with tuple switch expression
+        IOrderedQueryable<Apartment> orderedQuery = (sortBy, sortOrder) switch
         {
-            "rent" => sortOrder == "asc" 
-                ? query.OrderBy(a => a.Rent) 
-                : query.OrderByDescending(a => a.Rent),
-            "price" => sortOrder == "asc" 
-                ? query.OrderBy(a => a.Price) 
-                : query.OrderByDescending(a => a.Price),
-            "size" => sortOrder == "asc" 
-                ? query.OrderBy(a => a.SizeSquareMeters) 
-                : query.OrderByDescending(a => a.SizeSquareMeters),
-            "date" => sortOrder == "asc" 
-                ? query.OrderBy(a => a.CreatedDate) 
-                : query.OrderByDescending(a => a.CreatedDate),
-            _ => query.OrderByDescending(a => a.CreatedDate)
+            // For price sorting: Use Rent if > 0 (rentals), otherwise use Price (sales)
+            // This handles both ListingType.Rent (has Rent > 0) and ListingType.Sale (has Price > 0, Rent = 0)
+            ("rent" or "price", "asc") => query.OrderBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            ("rent" or "price", "desc") => query.OrderByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            
+            ("size", "asc") => query.OrderBy(a => a.SizeSquareMeters),
+            ("size", "desc") => query.OrderByDescending(a => a.SizeSquareMeters),
+            
+            ("date", "asc") => query.OrderBy(a => a.CreatedDate),
+            ("date", "desc") or _ => query.OrderByDescending(a => a.CreatedDate)
         };
         var apartments = await orderedQuery
             .Include(a => a.ApartmentImages)
@@ -569,5 +569,53 @@ public class ApartmentService : IApartmentService
             IsFurnished = apartment.IsFurnished,
             IsImmediatelyAvailable = apartment.IsImmediatelyAvailable
         };
+    }
+    
+    // .NET 10 Feature: Vector Search implementation
+    public async Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync()
+    {
+        var apartments = await _context.Apartments
+            .AsNoTracking()
+            .Select(a => new ApartmentDto
+            {
+                ApartmentId = a.ApartmentId,
+                Title = a.Title,
+                Rent = a.Rent,
+                Price = a.Price,
+                Address = a.Address,
+                City = a.City,
+                Latitude = a.Latitude,
+                Longitude = a.Longitude,
+                SizeSquareMeters = a.SizeSquareMeters,
+                ApartmentType = a.ApartmentType,
+                ListingType = a.ListingType,
+                IsFurnished = a.IsFurnished,
+                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+                DescriptionEmbedding = a.DescriptionEmbedding
+            })
+            .ToListAsync();
+        
+        return apartments;
+    }
+    
+    public async Task<int> GenerateEmbeddingsForAllApartmentsAsync(SimpleEmbeddingService embeddingService)
+    {
+        var apartments = await _context.Apartments
+            .IgnoreQueryFilters()
+            .ToListAsync();
+        
+        int count = 0;
+        foreach (var apartment in apartments)
+        {
+            if (!string.IsNullOrWhiteSpace(apartment.Description))
+            {
+                var embedding = embeddingService.GenerateEmbedding(apartment.Description);
+                apartment.DescriptionEmbedding = System.Text.Json.JsonSerializer.Serialize(embedding);
+                count++;
+            }
+        }
+        
+        await _context.SaveChangesAsync();
+        return count;
     }
 }
