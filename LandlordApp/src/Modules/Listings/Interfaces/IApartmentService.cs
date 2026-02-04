@@ -1,6 +1,7 @@
 using Lander.src.Common;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
+using Lander.src.Modules.MachineLearning.Services;
 namespace Lander.src.Modules.Listings.Interfaces;
 public interface IApartmentService
 {
@@ -12,4 +13,8 @@ public interface IApartmentService
     Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto);
     Task<bool> DeleteApartmentAsync(int apartmentId);
     Task<bool> ActivateApartmentAsync(int apartmentId);
+    
+    // .NET 10 Feature: Vector Search methods
+    Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync();
+    Task<int> GenerateEmbeddingsForAllApartmentsAsync(SimpleEmbeddingService embeddingService);
 }
