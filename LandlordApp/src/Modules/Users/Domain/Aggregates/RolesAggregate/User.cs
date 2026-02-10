@@ -19,6 +19,16 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public string? PhoneNumber { get; set; }
         public string? ProfilePicture { get; set; }
         public bool IsLookingForRoommate { get; set; } = false;
+
+        // Privacy Settings
+        public bool AnalyticsConsent { get; set; } = true;
+        public bool ChatHistoryConsent { get; set; } = true;
+        public bool ProfileVisibility { get; set; } = true;
+
+        // Premium Features
+        public bool HasPersonalAnalytics { get; set; } = false;
+        public bool HasLandlordAnalytics { get; set; } = false;
+
         public int? UserRoleId { get; set; }
         public Guid? CreatedByGuid { get; set; }
         public DateTime? CreatedDate { get; set; }

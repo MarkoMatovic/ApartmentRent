@@ -19,6 +19,12 @@ using Lander.src.Modules.SavedSearches.Implementation;
 using Lander.src.Modules.SavedSearches.Interfaces;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Lander.src.Modules.Users.Domain.IRepository;
+using Lander.src.Modules.Users.Infrastructure.Repository;
+using Lander.src.Modules.Users.Domain.IService;
+using Lander.src.Modules.Users.Implementation.PermissionImplementation;
+using Lander.src.Infrastructure.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Lander.src.Notifications.Implementation;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.NotificationsHub;
@@ -55,6 +61,9 @@ builder.Services.AddDbContext<SavedSearchesContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<AnalyticsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 builder.Services.AddCors(options =>
 {
@@ -104,6 +113,7 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
     options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
+builder.Services.AddMemoryCache();
 builder.Services.AddOutputCache(options =>
 {
     options.AddBasePolicy(builder => builder.Cache());
@@ -121,6 +131,11 @@ builder.Services.AddOutputCache(options =>
 });
 
 builder.Services.AddScoped<IUserInterface, UserService>();
+
+// RBAC: Permission Repository and Service
+builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IRoommateService, RoommateService>();
@@ -138,11 +153,25 @@ builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoomma
 // .NET 10 Feature: Server-Sent Events for real-time notifications
 builder.Services.AddSingleton<NotificationStreamService>();
 
+builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
+
+// .NET 10 Feature: Payment Integration (Stripe)
+builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IStripeService, Lander.src.Modules.Payments.Implementation.StripeService>();
+
 // .NET 10 Feature: Vector Search for semantic apartment search
 builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();
 
-builder.Services.AddSingleton<TokenProvider>();
+// Appointment Booking System
+builder.Services.AddScoped<Lander.src.Modules.Appointments.Interfaces.IAppointmentService, Lander.src.Modules.Appointments.Implementation.AppointmentService>();
+
+
+builder.Services.AddScoped<TokenProvider>();
 builder.Services.AddHttpContextAccessor();
+
+// RBAC: Authorization Infrastructure
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>

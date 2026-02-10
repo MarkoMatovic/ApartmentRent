@@ -1,5 +1,13 @@
 {
   "lockedTitle": "Premium Feature",
   "lockedMessage": "This feature is only available for premium users. {{feature}}",
-  "upgradeButton": "Upgrade to Premium"
+  "upgradeButton": "Upgrade to Premium",
+  "upgradeToPremium": "Upgrade to Premium",
+  "premiumSubtitle": "Get access to advanced analytics and insights for just €1.99/month",
+  "alreadyPremium": "You already have Premium access! Enjoy your benefits.",
+  "paymentSuccess": "Payment Successful!",
+  "paymentSuccessMessage": "Thank you for subscribing to Premium! You now have access to advanced analytics and insights.",
+  "premiumFeaturesNote": "Please log out and log back in to see your new Premium features.",
+  "viewProfile": "View Profile",
+  "goHome": "Go to Home"
 }

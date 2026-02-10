@@ -28,13 +28,16 @@ public class RoommatesController : ControllerBase
         [FromQuery] bool? smokingAllowed = null,
         [FromQuery] bool? petFriendly = null,
         [FromQuery] string? lifestyle = null,
+        [FromQuery] string? profession = null,
+        [FromQuery] DateOnly? availableFrom = null,
+        [FromQuery] int? stayDuration = null,
         [FromQuery] int? apartmentId = null,
         [FromQuery] int? page = null,
         [FromQuery] int? pageSize = null)
     {
-        if (location != null || minBudget.HasValue || maxBudget.HasValue || smokingAllowed.HasValue || petFriendly.HasValue || lifestyle != null)
+        if (location != null || minBudget.HasValue || maxBudget.HasValue || smokingAllowed.HasValue || petFriendly.HasValue || lifestyle != null || profession != null)
         {
-            var searchQuery = $"Location:{location},Budget:{minBudget}-{maxBudget},Smoking:{smokingAllowed},Pets:{petFriendly},Lifestyle:{lifestyle}";
+            var searchQuery = $"Location:{location},Budget:{minBudget}-{maxBudget},Smoking:{smokingAllowed},Pets:{petFriendly},Lifestyle:{lifestyle},Profession:{profession}";
             _ = _analyticsService.TrackEventAsync(
                 "RoommateSearch",
                 "Roommates",
@@ -46,11 +49,11 @@ public class RoommatesController : ControllerBase
         if (page.HasValue && pageSize.HasValue)
         {
             var pagedResult = await _roommateService.GetAllRoommatesAsync(
-                location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, apartmentId, page.Value, pageSize.Value);
+                location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, profession, availableFrom, stayDuration, apartmentId, page.Value, pageSize.Value);
             return Ok(pagedResult);
         }
         var roommates = await _roommateService.GetAllRoommatesAsync(
-            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, apartmentId);
+            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, profession, availableFrom, stayDuration, apartmentId);
         return Ok(roommates);
     }
     [HttpGet(ApiActionsV1.GetRoommate, Name = nameof(ApiActionsV1.GetRoommate))]

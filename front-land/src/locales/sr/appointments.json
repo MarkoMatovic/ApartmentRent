@@ -1,0 +1,29 @@
+{
+    "scheduleViewing": "Zakaži pregled",
+    "selectDate": "Izaberi datum",
+    "selectTime": "Izaberi vreme",
+    "availableSlots": "Dostupni termini",
+    "noSlotsAvailable": "Nema dostupnih termina za ovaj datum",
+    "appointmentNotes": "Napomene (opciono)",
+    "appointmentNotesPlaceholder": "Posebni zahtevi ili pitanja...",
+    "confirmAppointment": "Potvrdi termin",
+    "myAppointments": "Moji termini",
+    "landlordAppointments": "Zahtevi za termine",
+    "appointmentDetails": "Detalji termina",
+    "appointmentWith": "Termin sa",
+    "scheduledFor": "Zakazano za",
+    "cancelAppointment": "Otkaži termin",
+    "confirmAppointmentAction": "Potvrdi",
+    "rejectAppointment": "Odbij",
+    "status": {
+        "pending": "Na čekanju",
+        "confirmed": "Potvrđeno",
+        "cancelled": "Otkazano",
+        "completed": "Završeno",
+        "rejected": "Odbijeno"
+    },
+    "noAppointments": "Još nema termina",
+    "appointmentCancelled": "Termin uspešno otkazan",
+    "appointmentConfirmed": "Termin uspešno potvrđen",
+    "appointmentRejected": "Termin odbijen"
+}

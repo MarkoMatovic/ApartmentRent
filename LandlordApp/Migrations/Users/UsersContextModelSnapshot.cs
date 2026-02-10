@@ -18,7 +18,7 @@ namespace Lander.Migrations.Users
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("UsersRoles")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -103,6 +103,30 @@ namespace Lander.Migrations.Users
                     b.ToTable("Roles", "UsersRoles");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CreatedByGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.HasKey("RoleId", "PermissionId")
+                        .HasName("PK__RolePerm__RolePermission");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions", "UsersRoles");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -110,6 +134,12 @@ namespace Lander.Migrations.Users
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+
+                    b.Property<bool>("AnalyticsConsent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ChatHistoryConsent")
+                        .HasColumnType("bit");
 
                     b.Property<Guid?>("CreatedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -131,6 +161,12 @@ namespace Lander.Migrations.Users
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("HasLandlordAnalytics")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasPersonalAnalytics")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -161,6 +197,9 @@ namespace Lander.Migrations.Users
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<bool>("ProfileVisibility")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("UserGuid")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier")
@@ -183,6 +222,27 @@ namespace Lander.Migrations.Users
                     b.ToTable("Users", "UsersRoles");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__RolePerm__PermId");
+
+                    b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__RolePerm__RoleId");
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", b =>
                 {
                     b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", "UserRole")
@@ -194,8 +254,15 @@ namespace Lander.Migrations.Users
                     b.Navigation("UserRole");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", b =>
                 {
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("Users");
                 });
 #pragma warning restore 612, 618

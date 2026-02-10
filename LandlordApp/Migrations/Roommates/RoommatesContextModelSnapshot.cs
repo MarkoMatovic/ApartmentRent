@@ -18,7 +18,7 @@ namespace Lander.Migrations.Roommates
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("Roommates")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -120,6 +120,14 @@ namespace Lander.Migrations.Roommates
 
                     b.HasKey("RoommateId")
                         .HasName("PK__Roommates__RoommateId");
+
+                    b.HasIndex("AvailableFrom");
+
+                    b.HasIndex("BudgetMax");
+
+                    b.HasIndex("BudgetMin");
+
+                    b.HasIndex("CreatedDate");
 
                     b.HasIndex("UserId");
 

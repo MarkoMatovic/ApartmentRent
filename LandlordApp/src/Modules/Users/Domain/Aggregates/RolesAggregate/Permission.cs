@@ -10,5 +10,8 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public DateTime? CreatedDate { get; set; }
         public Guid? ModifiedByGuid { get; set; }
         public DateTime? ModifiedDate { get; set; }
+        
+        // Navigation properties
+        public virtual ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
     }
 }
