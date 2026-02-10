@@ -27,10 +27,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     return (
         <List sx={{ width: '100%', bgcolor: 'background.paper', p: 0 }}>
             {conversations.map((conversation, index) => (
-                <React.Fragment key={conversation.conversationId}>
+                <React.Fragment key={conversation.otherUserId}>
                     <ListItemButton
-                        selected={selectedConversationId === conversation.conversationId}
-                        onClick={() => onSelectConversation(conversation.conversationId)}
+                        selected={selectedConversationId === conversation.otherUserId}
+                        onClick={() => onSelectConversation(conversation.otherUserId)}
                     >
                         <ListItemAvatar>
                             <Badge
@@ -63,11 +63,11 @@ export const MessageList: React.FC<MessageListProps> = ({
                                         noWrap
                                         sx={{ maxWidth: 200 }}
                                     >
-                                        {conversation.lastMessage || 'No messages yet'}
+                                        {conversation.lastMessage?.messageText || 'No messages yet'}
                                     </Typography>
-                                    {conversation.lastMessageAt && (
+                                    {conversation.lastMessage?.sentAt && (
                                         <Typography variant="caption" color="text.secondary">
-                                            {format(parseISO(conversation.lastMessageAt), 'MMM d, HH:mm')}
+                                            {format(parseISO(conversation.lastMessage.sentAt), 'MMM d, HH:mm')}
                                         </Typography>
                                     )}
                                 </Box>

@@ -15,6 +15,10 @@ import srRoommateAnalytics from '../../locales/sr/roommateAnalytics.json';
 import srAnalytics from '../../locales/sr/analytics.json';
 import srPremium from '../../locales/sr/premium.json';
 import srMessages from '../../locales/sr/messages.json';
+import srSavedSearches from '../../locales/sr/savedSearches.json';
+import srSearchRequests from '../../locales/sr/searchRequests.json';
+import srMachineLearning from '../../locales/sr/machineLearning.json';
+import srNotifications from '../../locales/sr/notifications.json';
 
 import enCommon from '../../locales/en/common.json';
 import enApartments from '../../locales/en/apartments.json';
@@ -29,6 +33,10 @@ import enRoommateAnalytics from '../../locales/en/roommateAnalytics.json';
 import enAnalytics from '../../locales/en/analytics.json';
 import enPremium from '../../locales/en/premium.json';
 import enMessages from '../../locales/en/messages.json';
+import enSavedSearches from '../../locales/en/savedSearches.json';
+import enSearchRequests from '../../locales/en/searchRequests.json';
+import enMachineLearning from '../../locales/en/machineLearning.json';
+import enNotifications from '../../locales/en/notifications.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruApartments from '../../locales/ru/apartments.json';
@@ -77,6 +85,10 @@ i18n
         analytics: srAnalytics,
         premium: srPremium,
         messages: srMessages,
+        savedSearches: srSavedSearches,
+        searchRequests: srSearchRequests,
+        machineLearning: srMachineLearning,
+        notifications: srNotifications,
       },
       en: {
         common: enCommon,
@@ -92,6 +104,10 @@ i18n
         analytics: enAnalytics,
         premium: enPremium,
         messages: enMessages,
+        savedSearches: enSavedSearches,
+        searchRequests: enSearchRequests,
+        machineLearning: enMachineLearning,
+        notifications: enNotifications,
       },
       ru: {
         common: ruCommon,
@@ -126,7 +142,7 @@ i18n
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages'],
+    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications'],
     interpolation: {
       escapeValue: false,
     },

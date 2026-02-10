@@ -8,7 +8,7 @@ interface JwtPayload {
 }
 
 const getUserId = (): number => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken'); // Changed from 'token' to 'authToken'
     if (!token) throw new Error('No auth token');
     const decoded = jwtDecode<JwtPayload>(token);
     return parseInt(decoded.userId);
@@ -19,9 +19,18 @@ export const messagesApi = {
      * Get all conversations for the current user
      */
     getConversations: async (): Promise<Conversation[]> => {
-        const userId = getUserId();
-        const response = await apiClient.get(`/api/v1/messages/user/${userId}`);
-        return response.data;
+        try {
+            const userId = getUserId();
+            console.log('Fetching conversations for userId:', userId);
+            const response = await apiClient.get(`/api/v1/messages/user/${userId}`);
+            console.log('Conversations response:', response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error('Error fetching conversations:', error);
+            console.error('Error response:', error.response?.data);
+            console.error('Error status:', error.response?.status);
+            throw error;
+        }
     },
 
     /**

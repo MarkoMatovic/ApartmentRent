@@ -1,0 +1,1 @@
+export { SearchRequestsPage } from './SearchRequestsPage';
