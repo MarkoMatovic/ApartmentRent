@@ -11,7 +11,12 @@ import {
   InputLabel,
   Skeleton,
   Button,
+  Drawer,
+  IconButton,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
+import { FilterList as FilterListIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +26,9 @@ import ApartmentCard from '../components/Apartment/ApartmentCard';
 const ApartmentListPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const [searchParams] = useSearchParams();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     listingType: '',
@@ -30,6 +38,12 @@ const ApartmentListPage: React.FC = () => {
     numberOfRooms: '',
     apartmentType: '',
     isFurnished: '',
+    hasParking: '',
+    hasBalcony: '',
+    isPetFriendly: '',
+    isSmokingAllowed: '',
+    isImmediatelyAvailable: false,
+    availableFrom: '',
     sortBy: 'date',
     sortOrder: 'desc',
   });
@@ -43,7 +57,7 @@ const ApartmentListPage: React.FC = () => {
   }, [page]);
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['apartments', filters.listingType, filters.city, filters.minRent, filters.maxRent, filters.numberOfRooms, filters.apartmentType, filters.isFurnished, filters.sortBy, filters.sortOrder, page],
+    queryKey: ['apartments', filters],
     queryFn: () => {
       const filterParams: any = {
         page: page,
@@ -61,7 +75,16 @@ const ApartmentListPage: React.FC = () => {
       if (filters.maxRent) filterParams.maxRent = Number(filters.maxRent);
       if (filters.numberOfRooms) filterParams.numberOfRooms = Number(filters.numberOfRooms);
       if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
+      if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
+
+      // Boolean filters
       if (filters.isFurnished) filterParams.isFurnished = filters.isFurnished === 'true';
+      if (filters.hasParking) filterParams.hasParking = filters.hasParking === 'true';
+      if (filters.hasBalcony) filterParams.hasBalcony = filters.hasBalcony === 'true';
+      if (filters.isPetFriendly) filterParams.isPetFriendly = filters.isPetFriendly === 'true';
+      if (filters.isSmokingAllowed) filterParams.isSmokingAllowed = filters.isSmokingAllowed === 'true';
+      if (filters.isImmediatelyAvailable) filterParams.isImmediatelyAvailable = true;
+      if (filters.availableFrom) filterParams.availableFrom = filters.availableFrom;
 
       // Sorting
       if (filters.sortBy) filterParams.sortBy = filters.sortBy;
@@ -103,14 +126,26 @@ const ApartmentListPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        {t('apartments:title')}
-      </Typography>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" component="h1" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
+          {t('apartments:title')}
+        </Typography>
+        {isMobile && (
+          <Button
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={() => setFilterDrawerOpen(true)}
+            sx={{ minHeight: '44px' }}
+          >
+            Filters
+          </Button>
+        )}
+      </Box>
 
       <Grid container spacing={3}>
-        {/* Filters Sidebar */}
-        <Grid item xs={12} md={3}>
+        {/* Filters Sidebar - Desktop only */}
+        <Grid item xs={12} md={3} sx={{ display: { xs: 'none', md: 'block' } }}>
           <Box sx={{ position: 'sticky', top: 100 }}>
             <Typography variant="h6" gutterBottom>
               {t('apartments:filters')}
@@ -172,6 +207,51 @@ const ApartmentListPage: React.FC = () => {
                 <MenuItem value="4">4+</MenuItem>
               </Select>
             </FormControl>
+
+            <TextField
+              fullWidth
+              label="Available From"
+              type="date"
+              value={filters.availableFrom}
+              onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
+              margin="normal"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {[
+                { key: 'isImmediatelyAvailable', label: 'Immed. Available', type: 'boolean' },
+                { key: 'isFurnished', label: 'Furnished', type: 'select' },
+                { key: 'isPetFriendly', label: 'Pet Friendly', type: 'select' },
+                { key: 'hasParking', label: 'Parking', type: 'select' },
+              ].map((filter) => {
+                if (filter.type === 'boolean') {
+                  return (
+                    <Button
+                      key={filter.key}
+                      variant={filters.isImmediatelyAvailable ? "contained" : "outlined"}
+                      size="small"
+                      onClick={() => handleFilterChange('isImmediatelyAvailable', !filters.isImmediatelyAvailable)}
+                      sx={{ borderRadius: 4, minWidth: 'auto', px: 1.5, fontSize: '0.75rem' }}
+                    >
+                      {filter.label}
+                    </Button>
+                  );
+                }
+                return (
+                  <Button
+                    key={filter.key}
+                    variant={(filters as any)[filter.key] === 'true' ? "contained" : "outlined"}
+                    size="small"
+                    onClick={() => handleFilterChange(filter.key, (filters as any)[filter.key] === 'true' ? '' : 'true')}
+                    sx={{ borderRadius: 4, minWidth: 'auto', px: 1.5, fontSize: '0.75rem' }}
+                  >
+                    {filter.label}
+                  </Button>
+                );
+              })}
+            </Box>
           </Box>
         </Grid>
 
@@ -245,6 +325,161 @@ const ApartmentListPage: React.FC = () => {
           )}
         </Grid>
       </Grid>
+
+      {/* Mobile Filter Drawer */}
+      {isMobile && (
+        <Drawer
+          anchor="bottom"
+          open={filterDrawerOpen}
+          onClose={() => setFilterDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              maxHeight: '85vh',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              p: 2,
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">{t('apartments:filters')}</Typography>
+            <IconButton onClick={() => setFilterDrawerOpen(false)} edge="end">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ overflowY: 'auto', maxHeight: 'calc(85vh - 120px)' }}>
+            <FormControl fullWidth margin="normal" size="small">
+              <InputLabel>{t('apartments:listingType', { defaultValue: 'Listing Type' })}</InputLabel>
+              <Select
+                value={filters.listingType}
+                onChange={(e) => handleFilterChange('listingType', e.target.value)}
+                label={t('apartments:listingType', { defaultValue: 'Listing Type' })}
+              >
+                <MenuItem value="">{t('apartments:all', { defaultValue: 'All' })}</MenuItem>
+                <MenuItem value="1">{t('apartments:forRent', { defaultValue: 'For Rent' })}</MenuItem>
+                <MenuItem value="2">{t('apartments:sale', { defaultValue: 'Sale' })}</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label={t('apartments:location')}
+              value={filters.city}
+              onChange={(e) => handleFilterChange('city', e.target.value)}
+              margin="normal"
+              size="small"
+            />
+
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                fullWidth
+                label={`${t('apartments:price')} (Min)`}
+                type="number"
+                value={filters.minRent}
+                onChange={(e) => handleFilterChange('minRent', e.target.value)}
+                margin="normal"
+                size="small"
+              />
+              <TextField
+                fullWidth
+                label={`${t('apartments:price')} (Max)`}
+                type="number"
+                value={filters.maxRent}
+                onChange={(e) => handleFilterChange('maxRent', e.target.value)}
+                margin="normal"
+                size="small"
+              />
+            </Box>
+
+            <FormControl fullWidth margin="normal" size="small">
+              <InputLabel>{t('apartments:rooms')}</InputLabel>
+              <Select
+                value={filters.numberOfRooms}
+                onChange={(e) => handleFilterChange('numberOfRooms', e.target.value)}
+                label={t('apartments:rooms')}
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="1">1</MenuItem>
+                <MenuItem value="2">2</MenuItem>
+                <MenuItem value="3">3</MenuItem>
+                <MenuItem value="4">4+</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Button
+                variant={filters.isImmediatelyAvailable ? "contained" : "outlined"}
+                size="small"
+                onClick={() => handleFilterChange('isImmediatelyAvailable', !filters.isImmediatelyAvailable)}
+                sx={{ borderRadius: 4, minHeight: '40px' }}
+              >
+                Immed. Available
+              </Button>
+              <Button
+                variant={filters.isFurnished === 'true' ? "contained" : "outlined"}
+                size="small"
+                onClick={() => handleFilterChange('isFurnished', filters.isFurnished === 'true' ? '' : 'true')}
+                sx={{ borderRadius: 4, minHeight: '40px' }}
+              >
+                Furnished
+              </Button>
+              <Button
+                variant={filters.isPetFriendly === 'true' ? "contained" : "outlined"}
+                size="small"
+                onClick={() => handleFilterChange('isPetFriendly', filters.isPetFriendly === 'true' ? '' : 'true')}
+                sx={{ borderRadius: 4, minHeight: '40px' }}
+              >
+                Pet Friendly
+              </Button>
+              <Button
+                variant={filters.hasParking === 'true' ? "contained" : "outlined"}
+                size="small"
+                onClick={() => handleFilterChange('hasParking', filters.hasParking === 'true' ? '' : 'true')}
+                sx={{ borderRadius: 4, minHeight: '40px' }}
+              >
+                Parking
+              </Button>
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 2, display: 'flex', gap: 1, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                setFilters({
+                  listingType: '',
+                  city: '',
+                  minRent: '',
+                  maxRent: '',
+                  numberOfRooms: '',
+                  apartmentType: '',
+                  isFurnished: '',
+                  hasParking: '',
+                  hasBalcony: '',
+                  isPetFriendly: '',
+                  isSmokingAllowed: '',
+                  isImmediatelyAvailable: false,
+                  availableFrom: '',
+                  sortBy: 'date',
+                  sortOrder: 'desc',
+                });
+                setFilterDrawerOpen(false);
+              }}
+            >
+              Clear All
+            </Button>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => setFilterDrawerOpen(false)}
+            >
+              Apply
+            </Button>
+          </Box>
+        </Drawer>
+      )}
     </Container>
   );
 };

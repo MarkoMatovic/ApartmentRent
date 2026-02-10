@@ -26,6 +26,7 @@ export const apartmentsApi = {
       if (filters.isPetFriendly !== undefined) params.isPetFriendly = filters.isPetFriendly;
       if (filters.isSmokingAllowed !== undefined) params.isSmokingAllowed = filters.isSmokingAllowed;
       if (filters.isImmediatelyAvailable !== undefined) params.isImmediatelyAvailable = filters.isImmediatelyAvailable;
+      if (filters.availableFrom) params.availableFrom = filters.availableFrom;
       if (filters.page) params.page = filters.page;
       if (filters.pageSize) params.pageSize = filters.pageSize;
     }

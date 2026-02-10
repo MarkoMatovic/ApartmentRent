@@ -14,6 +14,8 @@
   "profile": "Profile",
   "settings": "Settings",
   "myApartments": "My Apartments",
+  "myAppointments": "My Appointments",
+  "manageAppointments": "Manage Appointments",
   "myApplications": "My Applications",
   "loading": "Loading...",
   "error": "Error",
@@ -39,5 +41,18 @@
   "page": "Page",
   "deleting": "Deleting...",
   "unknown": "Unknown",
-  "personalAnalytics": "Personal Analytics"
+  "personalAnalytics": "Personal Analytics",
+  "upgradeToPremium": "Upgrade to Premium",
+  "premiumSubtitle": "Get access to advanced analytics and insights for just €1.99/month",
+  "alreadyPremium": "You already have Premium access! Enjoy your benefits.",
+  "paymentSuccess": "Payment Successful!",
+  "paymentSuccessMessage": "Thank you for subscribing to Premium! You now have access to advanced analytics and insights.",
+  "premiumFeaturesNote": "Please log out and log back in to see your new Premium features.",
+  "viewProfile": "View Profile",
+  "goHome": "Go to Home",
+  "typeMessage": "Type a message...",
+  "noConversations": "No conversations yet",
+  "selectConversation": "Select a conversation to start messaging",
+  "errorLoadingMessages": "Failed to load messages",
+  "errorLoadingData": "Failed to load data"
 }

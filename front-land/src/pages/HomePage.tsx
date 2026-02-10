@@ -66,14 +66,11 @@ const HomePage: React.FC = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box>
         {/* Welcome Section */}
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom>
+        <Container maxWidth="lg" sx={{ py: { xs: 1, md: 2 }, px: { xs: 2, md: 3 } }}>
+          <Typography variant="h3" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' }, mb: 0 }}>
             {isAuthenticated && user
               ? t('welcome', { name: user.firstName })
               : t('welcomeGuest')}
-          </Typography>
-          <Typography variant="h6" color="text.secondary" paragraph>
-            {t('subtitle')}
           </Typography>
         </Container>
 
@@ -81,22 +78,22 @@ const HomePage: React.FC = () => {
         <Box
           sx={{
             bgcolor: 'secondary.main',
-            py: 6,
+            py: { xs: 3, md: 6 },
             color: 'white',
           }}
         >
-          <Container maxWidth="lg">
-            <Typography variant="h4" component="h2" gutterBottom align="center">
+          <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 } }}>
+            <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
               {t('apartments:discoverTitle')}
             </Typography>
-            <Typography variant="body1" align="center" sx={{ mb: 4 }}>
+            <Typography variant="body1" align="center" sx={{ mb: { xs: 2, md: 4 }, fontSize: { xs: '0.875rem', md: '1rem' } }}>
               {t('apartments:discoverSubtitle')}
             </Typography>
 
             <Paper
               elevation={3}
               sx={{
-                p: 3,
+                p: { xs: 2, md: 3 },
                 bgcolor: 'background.paper',
                 borderRadius: 2,
                 maxWidth: 900,
@@ -163,8 +160,10 @@ const HomePage: React.FC = () => {
                     onClick={handleSearch}
                     startIcon={<SearchIcon />}
                     sx={{
-                      height: '56px',
+                      height: { xs: '48px', md: '56px' },
                       fontWeight: 600,
+                      fontSize: { xs: '0.875rem', md: '1rem' },
+                      minHeight: '44px', // Touch-friendly
                     }}
                   >
                     {t('apartments:quickSearch')}

@@ -1,0 +1,10 @@
+{
+    "messages": "Nachrichten",
+    "typeMessage": "Nachricht eingeben...",
+    "noConversations": "Noch keine Unterhaltungen",
+    "selectConversation": "Wählen Sie eine Unterhaltung aus, um mit dem Messaging zu beginnen",
+    "errorLoadingMessages": "Fehler beim Laden von Nachrichten",
+    "sendMessage": "Nachricht senden",
+    "messageSent": "Nachricht gesendet",
+    "conversationWith": "Unterhaltung mit"
+}

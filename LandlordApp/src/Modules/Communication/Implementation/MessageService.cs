@@ -2,6 +2,9 @@ using System.Security.Claims;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Communication.Models;
+using Lander.src.Modules.Communication.Hubs;
+using Lander.src.Notifications.NotificationsHub;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 namespace Lander.src.Modules.Communication.Implementation;
 public class MessageService : IMessageService
@@ -10,16 +13,23 @@ public class MessageService : IMessageService
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailService _emailService;
+    private readonly IHubContext<ChatHub> _chatHubContext;
+    private readonly IHubContext<NotificationHub> _notificationHubContext;
+
     public MessageService(
         CommunicationsContext context, 
         UsersContext usersContext, 
         IHttpContextAccessor httpContextAccessor,
-        IEmailService emailService)
+        IEmailService emailService,
+        IHubContext<ChatHub> chatHubContext,
+        IHubContext<NotificationHub> notificationHubContext)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
         _emailService = emailService;
+        _chatHubContext = chatHubContext;
+        _notificationHubContext = notificationHubContext;
     }
     public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText)
     {
@@ -56,7 +66,7 @@ public class MessageService : IMessageService
             var preview = messageText.Length > 100 ? messageText.Substring(0, 100) + "..." : messageText;
             _ = _emailService.SendNewMessageEmailAsync(receiver.Email, senderName, preview);
         }
-        return new MessageDto
+        var messageDto = new MessageDto
         {
             MessageId = message.MessageId,
             SenderId = senderId,
@@ -69,6 +79,18 @@ public class MessageService : IMessageService
             SenderProfilePicture = sender?.ProfilePicture,
             ReceiverProfilePicture = receiver?.ProfilePicture
         };
+
+        // Broadcast to ChatHub (Real-time Chat)
+        await _chatHubContext.Clients.Group($"user_{receiverId}").SendAsync("ReceiveMessage", messageDto);
+        await _chatHubContext.Clients.Group($"user_{senderId}").SendAsync("MessageSent", messageDto);
+
+        // Broadcast to NotificationHub (Global Notification Bell)
+        await _notificationHubContext.Clients.Group(receiverId.ToString()).SendAsync("ReceiveNotification", 
+            "New Message", 
+            $"You have a new message from {messageDto.SenderName}", 
+            "info");
+
+        return messageDto;
     }
     public async Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50)
     {

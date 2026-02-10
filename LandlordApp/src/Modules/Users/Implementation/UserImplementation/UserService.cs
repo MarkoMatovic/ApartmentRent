@@ -11,23 +11,34 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+
+using Lander.src.Modules.Listings.Interfaces;
+using Lander.src.Modules.Roommates.Interfaces;
 namespace Lander.src.Modules.Users.Implementation.UserImplementation;
 public class UserService : IUserInterface
 {
     private readonly UsersContext _context;
     private readonly TokenProvider _tokenProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
+
     private readonly IEmailService _emailService;
+    private readonly IApartmentService _apartmentService;
+    private readonly IRoommateService _roommateService;
     public UserService(
         UsersContext context, 
         TokenProvider tokenProvider, 
         IHttpContextAccessor httpContextAccessor,
-        IEmailService emailService)
+        IEmailService emailService,
+        IApartmentService apartmentService,
+        IRoommateService roommateService)
     {
         _context = context;
         _tokenProvider = tokenProvider;
         _httpContextAccessor = httpContextAccessor;
+
         _emailService = emailService;
+        _apartmentService = apartmentService;
+        _roommateService = roommateService;
     }
     public async Task<string?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
     {
@@ -43,7 +54,7 @@ public class UserService : IUserInterface
         {
             return null;
         }
-        var token = _tokenProvider.Create(user);
+        var token = await _tokenProvider.CreateAsync(user);
         return token;
     }
     public async Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto)
@@ -162,6 +173,10 @@ public class UserService : IUserInterface
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deleteUserInputDto.UserGuid);
         if (user != null)
         {
+            // GDPR Cleanup: Delete related data first
+            await _apartmentService.DeleteApartmentsByLandlordIdAsync(user.UserId);
+            await _roommateService.DeleteRoommateByUserIdAsync(user.UserId);
+
             var transaction = await _context.BeginTransactionAsync();
             try
             {
@@ -225,6 +240,7 @@ public class UserService : IUserInterface
     public async Task<UserProfileDto?> GetUserProfileAsync(int userId)
     {
         var user = await _context.Users
+            .Include(u => u.UserRole)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) return null;
@@ -240,7 +256,11 @@ public class UserService : IUserInterface
             DateOfBirth = user.DateOfBirth,
             IsActive = user.IsActive,
             IsLookingForRoommate = user.IsLookingForRoommate,
+            AnalyticsConsent = user.AnalyticsConsent,
+            ChatHistoryConsent = user.ChatHistoryConsent,
+            ProfileVisibility = user.ProfileVisibility,
             UserRoleId = user.UserRoleId,
+            RoleName = user.UserRole?.RoleName,
             CreatedDate = user.CreatedDate
         };
     }
@@ -283,8 +303,95 @@ public class UserService : IUserInterface
             DateOfBirth = user.DateOfBirth,
             IsActive = user.IsActive,
             IsLookingForRoommate = user.IsLookingForRoommate,
+            AnalyticsConsent = user.AnalyticsConsent,
+            ChatHistoryConsent = user.ChatHistoryConsent,
+            ProfileVisibility = user.ProfileVisibility,
             UserRoleId = user.UserRoleId,
             CreatedDate = user.CreatedDate
         };
+    }
+
+
+    public async Task<UserProfileDto> UpdatePrivacySettingsAsync(int userId, PrivacySettingsDto privacySettingsDto)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        user.AnalyticsConsent = privacySettingsDto.AnalyticsConsent;
+        user.ChatHistoryConsent = privacySettingsDto.ChatHistoryConsent;
+        user.ProfileVisibility = privacySettingsDto.ProfileVisibility;
+        user.ModifiedDate = DateTime.UtcNow;
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+
+        return new UserProfileDto
+        {
+            UserId = user.UserId,
+            UserGuid = user.UserGuid,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            ProfilePicture = user.ProfilePicture,
+            DateOfBirth = user.DateOfBirth,
+            IsActive = user.IsActive,
+            IsLookingForRoommate = user.IsLookingForRoommate,
+            AnalyticsConsent = user.AnalyticsConsent,
+            ChatHistoryConsent = user.ChatHistoryConsent,
+            ProfileVisibility = user.ProfileVisibility,
+            UserRoleId = user.UserRoleId,
+            CreatedDate = user.CreatedDate
+        };
+    }
+
+
+    public async Task<UserExportDto> ExportUserDataAsync(int userId)
+    {
+        var userProfile = await GetUserProfileAsync(userId);
+        if (userProfile == null) throw new Exception("User not found");
+
+        var apartments = await _apartmentService.GetApartmentsByLandlordIdAsync(userId);
+        var roommateProfile = await _roommateService.GetRoommateByUserIdAsync(userId);
+
+        return new UserExportDto
+        {
+            UserProfile = userProfile,
+            ListedApartments = apartments,
+            RoommateProfile = roommateProfile,
+            ExportedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task UpgradeUserRoleAsync(int userId, string targetRoleName)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+        if (user == null)
+        {
+            throw new Exception("User not found");
+        }
+
+        var targetRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == targetRoleName);
+        if (targetRole == null)
+        {
+            throw new Exception($"Role '{targetRoleName}' not found");
+        }
+
+        user.UserRoleId = targetRole.RoleId;
+        user.ModifiedDate = DateTime.UtcNow;
+        
+        await _context.SaveEntitiesAsync();
     }
 }

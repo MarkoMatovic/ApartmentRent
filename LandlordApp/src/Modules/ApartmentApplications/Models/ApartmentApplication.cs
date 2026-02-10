@@ -12,6 +12,7 @@ public partial class ApartmentApplication
     public DateTime? CreatedDate { get; set; }
     public Guid? ModifiedByGuid { get; set; }
     public DateTime? ModifiedDate { get; set; }
+    
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual Apartment? Apartment { get; set; }
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

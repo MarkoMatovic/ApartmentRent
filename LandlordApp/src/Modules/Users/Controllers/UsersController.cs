@@ -85,5 +85,17 @@ namespace Lander.src.Modules.Users.Controllers
             var profile = await _userInterface.UpdateUserProfileAsync(userId, updateDto);
             return Ok(profile);
         }
+        [HttpPut("update-privacy-settings/{userId}")]
+        public async Task<ActionResult<UserProfileDto>> UpdatePrivacySettings([FromRoute] int userId, [FromBody] PrivacySettingsDto privacySettingsDto)
+        {
+            var profile = await _userInterface.UpdatePrivacySettingsAsync(userId, privacySettingsDto);
+            return Ok(profile);
+        }
+        [HttpGet("export-data/{userId}")]
+        public async Task<ActionResult<UserExportDto>> ExportUserData([FromRoute] int userId)
+        {
+            var exportData = await _userInterface.ExportUserDataAsync(userId);
+            return Ok(exportData);
+        }
     }
 }

@@ -126,6 +126,7 @@ export interface ApartmentFilters {
   isPetFriendly?: boolean;
   isSmokingAllowed?: boolean;
   isImmediatelyAvailable?: boolean;
+  availableFrom?: string;
   page?: number;
   pageSize?: number;
 }

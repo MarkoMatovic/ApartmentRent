@@ -14,6 +14,7 @@ import srFooter from '../../locales/sr/footer.json';
 import srRoommateAnalytics from '../../locales/sr/roommateAnalytics.json';
 import srAnalytics from '../../locales/sr/analytics.json';
 import srPremium from '../../locales/sr/premium.json';
+import srMessages from '../../locales/sr/messages.json';
 
 import enCommon from '../../locales/en/common.json';
 import enApartments from '../../locales/en/apartments.json';
@@ -27,6 +28,7 @@ import enFooter from '../../locales/en/footer.json';
 import enRoommateAnalytics from '../../locales/en/roommateAnalytics.json';
 import enAnalytics from '../../locales/en/analytics.json';
 import enPremium from '../../locales/en/premium.json';
+import enMessages from '../../locales/en/messages.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruApartments from '../../locales/ru/apartments.json';
@@ -40,6 +42,7 @@ import ruFooter from '../../locales/ru/footer.json';
 import ruRoommateAnalytics from '../../locales/ru/roommateAnalytics.json';
 import ruAnalytics from '../../locales/ru/analytics.json';
 import ruPremium from '../../locales/ru/premium.json';
+import ruMessages from '../../locales/ru/messages.json';
 
 import deCommon from '../../locales/de/common.json';
 import deApartments from '../../locales/de/apartments.json';
@@ -53,6 +56,7 @@ import deFooter from '../../locales/de/footer.json';
 import deRoommateAnalytics from '../../locales/de/roommateAnalytics.json';
 import deAnalytics from '../../locales/de/analytics.json';
 import dePremium from '../../locales/de/premium.json';
+import deMessages from '../../locales/de/messages.json';
 
 i18n
   .use(LanguageDetector)
@@ -72,6 +76,7 @@ i18n
         roommateAnalytics: srRoommateAnalytics,
         analytics: srAnalytics,
         premium: srPremium,
+        messages: srMessages,
       },
       en: {
         common: enCommon,
@@ -86,6 +91,7 @@ i18n
         roommateAnalytics: enRoommateAnalytics,
         analytics: enAnalytics,
         premium: enPremium,
+        messages: enMessages,
       },
       ru: {
         common: ruCommon,
@@ -100,6 +106,7 @@ i18n
         roommateAnalytics: ruRoommateAnalytics,
         analytics: ruAnalytics,
         premium: ruPremium,
+        messages: ruMessages,
       },
       de: {
         common: deCommon,
@@ -114,11 +121,12 @@ i18n
         roommateAnalytics: deRoommateAnalytics,
         analytics: deAnalytics,
         premium: dePremium,
+        messages: deMessages,
       },
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium'],
+    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages'],
     interpolation: {
       escapeValue: false,
     },

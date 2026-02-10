@@ -15,4 +15,7 @@ public interface IUserInterface
     Task UpdateRoommateStatusAsync(UpdateRoommateStatusInputDto updateRoommateStatusInputDto);
     Task<UserProfileDto?> GetUserProfileAsync(int userId);
     Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto);
+    Task<UserProfileDto> UpdatePrivacySettingsAsync(int userId, PrivacySettingsDto privacySettingsDto);
+    Task<UserExportDto> ExportUserDataAsync(int userId);
+    Task UpgradeUserRoleAsync(int userId, string targetRoleName);
 }

@@ -4,15 +4,25 @@ using System.Text;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using JwtRegisteredClaimNames = System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames;
 
 namespace Lander.Helpers;
 
-public sealed class TokenProvider(IConfiguration configuration)
+public sealed class TokenProvider
 {
-    public string Create(User user)
+    private readonly IConfiguration _configuration;
+    private readonly UsersContext _context;
+
+    public TokenProvider(IConfiguration configuration, UsersContext context)
     {
-        string secretKey = configuration["Jwt:Secret"];
+        _configuration = configuration;
+        _context = context;
+    }
+
+    public async Task<string> CreateAsync(User user)
+    {
+        string secretKey = _configuration["Jwt:Secret"];
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -40,6 +50,18 @@ public sealed class TokenProvider(IConfiguration configuration)
         if (user.UserRoleId.HasValue)
         {
             claims.Add(new Claim("userRoleId", user.UserRoleId.Value.ToString()));
+
+            // Load permissions for the user's role and add them as claims
+            var permissions = await _context.RolePermissions
+                .Where(rp => rp.RoleId == user.UserRoleId.Value)
+                .Include(rp => rp.Permission)
+                .Select(rp => rp.Permission.PermissionName)
+                .ToListAsync();
+
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
         }
 
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -47,8 +69,8 @@ public sealed class TokenProvider(IConfiguration configuration)
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(60),
             SigningCredentials = credentials,
-            Issuer = configuration["Jwt:Issuer"],
-            Audience = configuration["Jwt:Audience"]
+            Issuer = _configuration["Jwt:Issuer"],
+            Audience = _configuration["Jwt:Audience"]
 
         };
         var handler = new JsonWebTokenHandler();

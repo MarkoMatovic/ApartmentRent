@@ -1,0 +1,10 @@
+{
+    "messages": "Сообщения",
+    "typeMessage": "Введите сообщение...",
+    "noConversations": "Пока нет разговоров",
+    "selectConversation": "Выберите разговор, чтобы начать обмен сообщениями",
+    "errorLoadingMessages": "Ошибка при загрузке сообщений",
+    "sendMessage": "Отправить сообщение",
+    "messageSent": "Сообщение отправлено",
+    "conversationWith": "Разговор с"
+}

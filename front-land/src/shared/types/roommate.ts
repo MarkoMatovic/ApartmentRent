@@ -38,6 +38,9 @@ export interface RoommateFilters {
   smokingAllowed?: boolean;
   petFriendly?: boolean;
   lifestyle?: string;
+  profession?: string;
+  availableFrom?: string;
+  stayDuration?: number;
   apartmentId?: number;
 }
 

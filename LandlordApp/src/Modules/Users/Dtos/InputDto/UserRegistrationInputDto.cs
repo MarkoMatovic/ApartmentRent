@@ -47,5 +47,7 @@ namespace Lander.src.Modules.Users.Dtos.InputDto
         public string? PhoneNumber { get; set; }
         public string? ProfilePicture { get; set; }
         public DateTime? DateOfBirth { get; set; }
+        public bool? HasPersonalAnalytics { get; set; }
+        public bool? HasLandlordAnalytics { get; set; }
     }
 }

@@ -11,12 +11,14 @@ namespace Lander.Migrations.Roommates
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Index for user's roommate profile
+            /*
             migrationBuilder.CreateIndex(
                 name: "IX_Roommates_UserId",
                 table: "Roommates",
                 schema: "Roommates",
                 column: "UserId",
                 unique: true);
+            */
 
             // Index for active roommate searches
             migrationBuilder.CreateIndex(

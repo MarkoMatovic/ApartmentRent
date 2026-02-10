@@ -98,10 +98,7 @@ const PersonalAnalyticsPage: React.FC = () => {
                 {t('analytics:analytics:viewYourActivity')}
             </Typography>
 
-            <PremiumBlur
-                feature="personalAnalytics"
-                requiredFeature="Personalna Analitika"
-            >
+            <PremiumBlur requiredFeature="Personalna Analitika">
                 {/* Summary Cards */}
                 <Grid container spacing={3} sx={{ mt: 2 }}>
                     <Grid item xs={12} sm={6} md={4}>

@@ -11,6 +11,10 @@ public class UserProfileDto
     public DateTime? DateOfBirth { get; set; }
     public bool IsActive { get; set; }
     public bool IsLookingForRoommate { get; set; }
+    public bool AnalyticsConsent { get; set; }
+    public bool ChatHistoryConsent { get; set; }
+    public bool ProfileVisibility { get; set; }
     public int? UserRoleId { get; set; }
+    public string? RoleName { get; set; }
     public DateTime? CreatedDate { get; set; }
 }
