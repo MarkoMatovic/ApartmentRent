@@ -1,0 +1,1 @@
+export { PricePredictorPage } from './PricePredictorPage';

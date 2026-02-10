@@ -39,7 +39,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard', 'premium']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
@@ -278,6 +278,15 @@ const Header: React.FC = () => {
                   <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                   {t('common:personalAnalytics')}
                 </MenuItem>
+                <MenuItem onClick={() => { navigate('/saved-searches'); handleMenuClose(); }}>
+                  {t('savedSearches:title')}
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/search-requests'); handleMenuClose(); }}>
+                  {t('searchRequests:title')}
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/price-predictor'); handleMenuClose(); }}>
+                  {t('machineLearning:pricePredictor.title')}
+                </MenuItem>
                 {!user?.roleName?.includes('Premium') && (
                   <MenuItem
                     onClick={() => { navigate('/pricing'); handleMenuClose(); }}
@@ -416,6 +425,21 @@ const Header: React.FC = () => {
                       <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                       <ListItemText primary={t('common:personalAnalytics')} />
                     </Box>
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/saved-searches'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('savedSearches:title')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/search-requests'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('searchRequests:title')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/price-predictor'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('machineLearning:pricePredictor.title')} />
                   </ListItemButton>
                 </ListItem>
                 {!user?.roleName?.includes('Premium') && (

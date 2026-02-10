@@ -78,7 +78,7 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ messages }) => {
                                 }}
                             >
                                 <Typography variant="body2">
-                                    {message.content}
+                                    {message.messageText}
                                 </Typography>
                             </Paper>
 

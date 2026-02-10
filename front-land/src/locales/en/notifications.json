@@ -1,0 +1,25 @@
+{
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "deleteAll": "Delete all",
+    "noNotifications": "No notifications",
+    "noNotificationsDescription": "Your notifications will appear here",
+    "markAsRead": "Mark as read",
+    "delete": "Delete",
+    "types": {
+        "info": "Info",
+        "success": "Success",
+        "warning": "Warning",
+        "error": "Error"
+    },
+    "messages": {
+        "newMessage": "New message",
+        "appointmentConfirmed": "Appointment confirmed",
+        "appointmentCancelled": "Appointment cancelled",
+        "newApplication": "New application",
+        "applicationAccepted": "Application accepted",
+        "applicationRejected": "Application rejected",
+        "newReview": "New review",
+        "paymentReceived": "Payment received"
+    }
+}
