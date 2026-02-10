@@ -145,7 +145,7 @@ const ProfilePage: React.FC = () => {
         updateData.dateOfBirth = formData.dateOfBirth;
       }
 
-      const response = await apiClient.put(`/api/v1/auth/update-profile/${user.userId}`, updateData);
+      const response = await apiClient.put(`/api/v1/users/update-profile/${user.userId}`, updateData);
 
       if (updateUser) {
         updateUser(response.data);

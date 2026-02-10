@@ -29,6 +29,9 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import MyAppointmentsPage from './pages/MyAppointmentsPage';
 import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
 import MessagesPage from './pages/MessagesPage';
+import { SavedSearchesPage } from './pages/SavedSearches';
+import { SearchRequestsPage } from './pages/SearchRequests';
+import { PricePredictorPage } from './pages/PricePredictor';
 
 function App() {
   return (
@@ -64,6 +67,9 @@ function App() {
                 <Route path="/appointments/my" element={<MyAppointmentsPage />} />
                 <Route path="/appointments/manage" element={<LandlordAppointmentsPage />} />
                 <Route path="/payment-success" element={<PaymentSuccessPage />} />
+                <Route path="/saved-searches" element={<SavedSearchesPage />} />
+                <Route path="/search-requests" element={<SearchRequestsPage />} />
+                <Route path="/price-predictor" element={<PricePredictorPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

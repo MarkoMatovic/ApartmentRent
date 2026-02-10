@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Container,
     Box,
-    Paper,
     Typography,
     Grid,
     CircularProgress,
@@ -33,7 +31,7 @@ const MessagesPage: React.FC = () => {
 
     const sendMessageMutation = useMutation({
         mutationFn: (content: string) => {
-            const selectedConversation = conversations?.find(c => c.conversationId === selectedConversationId);
+            const selectedConversation = conversations?.find(c => c.otherUserId === selectedConversationId);
             if (!selectedConversation) throw new Error('No conversation selected');
 
             return messagesApi.sendMessage({
@@ -47,30 +45,48 @@ const MessagesPage: React.FC = () => {
         },
     });
 
-    const handleSelectConversation = (conversationId: number) => {
-        setSelectedConversationId(conversationId);
+    const handleSelectConversation = (otherUserId: number) => {
+        setSelectedConversationId(otherUserId);
 
-        // Mark as read
-        messagesApi.markAsRead(conversationId).then(() => {
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        });
+        // Mark as read - need to find the last message ID
+        const conversation = conversations?.find(c => c.otherUserId === otherUserId);
+        if (conversation?.lastMessage?.messageId) {
+            messagesApi.markAsRead(conversation.lastMessage.messageId).then(() => {
+                queryClient.invalidateQueries({ queryKey: ['conversations'] });
+            });
+        }
     };
 
     if (conversationsLoading) {
         return (
-            <Container maxWidth="xl" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <CircularProgress />
-            </Container>
+            </Box>
         );
     }
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 3 }}>
-                {t('messages:messages')}
-            </Typography>
+        <Box
+            sx={{
+                position: 'fixed',
+                top: 64, // Header height
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'background.default',
+            }}
+        >
+            {/* Title Bar */}
+            <Box sx={{ px: 3, py: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Typography variant="h5" component="h1">
+                    {t('messages:messages')}
+                </Typography>
+            </Box>
 
-            <Paper elevation={3} sx={{ height: 'calc(100vh - 200px)', display: 'flex' }}>
+            {/* Chat Container */}
+            <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
                 <Grid container sx={{ height: '100%' }}>
                     {/* Conversations List */}
                     <Grid
@@ -81,6 +97,8 @@ const MessagesPage: React.FC = () => {
                             borderRight: { md: 1 },
                             borderColor: 'divider',
                             overflow: 'auto',
+                            height: '100%',
+                            bgcolor: 'background.paper',
                         }}
                     >
                         {conversations && conversations.length > 0 ? (
@@ -99,7 +117,17 @@ const MessagesPage: React.FC = () => {
                     </Grid>
 
                     {/* Message Thread */}
-                    <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Grid
+                        item
+                        xs={12}
+                        md={8}
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            bgcolor: 'background.default',
+                        }}
+                    >
                         {selectedConversationId ? (
                             <>
                                 {messagesLoading ? (
@@ -136,8 +164,8 @@ const MessagesPage: React.FC = () => {
                         )}
                     </Grid>
                 </Grid>
-            </Paper>
-        </Container>
+            </Box>
+        </Box>
     );
 };
 

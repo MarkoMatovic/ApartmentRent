@@ -1,0 +1,45 @@
+{
+    "pricePredictor": {
+        "title": "Predviđanje cene",
+        "subtitle": "Procenite tržišnu vrednost stana",
+        "city": "Grad",
+        "rooms": "Broj soba",
+        "size": "Površina (m²)",
+        "apartmentType": "Tip stana",
+        "furnished": "Namešten",
+        "balcony": "Terasa",
+        "parking": "Parking",
+        "elevator": "Lift",
+        "predict": "Predvidi cenu",
+        "predictedPrice": "Predviđena cena",
+        "confidence": "Pouzdanost",
+        "modelNotTrained": "Model još nije istreniran",
+        "error": "Greška pri predviđanju cene"
+    },
+    "roommateMatching": {
+        "title": "Pronađi cimera",
+        "subtitle": "Pametno uparivanje na osnovu kompatibilnosti",
+        "findMatches": "Pronađi kompatibilne cimere",
+        "matchScore": "Skor podudarnosti",
+        "topMatches": "Najbolja podudaranja",
+        "noMatches": "Nema pronađenih podudaranja",
+        "compatibility": {
+            "lifestyle": "Životni stil",
+            "cleanliness": "Čistoća",
+            "social": "Društvenost",
+            "budget": "Budžet"
+        }
+    },
+    "admin": {
+        "title": "ML Administracija",
+        "trainModel": "Treniraj model",
+        "modelMetrics": "Metrike modela",
+        "rSquared": "R² skor",
+        "mae": "Srednja apsolutna greška",
+        "rmse": "Korenska srednja kvadratna greška",
+        "trainedDate": "Datum treniranja",
+        "sampleCount": "Broj uzoraka",
+        "modelTrained": "Model uspešno istreniran",
+        "trainingError": "Greška pri treniranju modela"
+    }
+}

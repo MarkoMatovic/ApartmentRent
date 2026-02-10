@@ -1,0 +1,584 @@
+using Xunit;
+using Moq;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
+using Lander;
+using Lander.src.Modules.Appointments;
+using Lander.src.Modules.Appointments.Implementation;
+using Lander.src.Modules.Appointments.Models;
+using Lander.src.Modules.Appointments.Dtos;
+using Lander.src.Modules.Listings.Models;
+using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
+using Lander.src.Modules.Communication.Intefaces;
+
+namespace LandlordApp.Tests.Services;
+
+public class AppointmentServiceTests : IDisposable
+{
+    private readonly AppointmentsContext _appointmentsContext;
+    private readonly ListingsContext _listingsContext;
+    private readonly UsersContext _usersContext;
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
+    private readonly Mock<IEmailService> _mockEmailService;
+    private readonly Mock<ILogger<AppointmentService>> _mockLogger;
+    private readonly AppointmentService _appointmentService;
+    
+    private readonly int _testTenantId = 1;
+    private readonly Guid _testTenantGuid = Guid.NewGuid();
+    private readonly int _testLandlordId = 2;
+    private readonly Guid _testLandlordGuid = Guid.NewGuid();
+    private readonly int _testApartmentId = 1;
+
+    public AppointmentServiceTests()
+    {
+        // Setup in-memory databases
+        var appointmentsOptions = new DbContextOptionsBuilder<AppointmentsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
+        var listingsOptions = new DbContextOptionsBuilder<ListingsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
+        var usersOptions = new DbContextOptionsBuilder<UsersContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
+        _appointmentsContext = new AppointmentsContext(appointmentsOptions);
+        _listingsContext = new ListingsContext(listingsOptions);
+        _usersContext = new UsersContext(usersOptions);
+
+        // Setup mocks
+        _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+        _mockEmailService = new Mock<IEmailService>();
+        _mockLogger = new Mock<ILogger<AppointmentService>>();
+
+        // Setup default user context (tenant)
+        SetupUserContext(_testTenantId, _testTenantGuid);
+
+        // Create service instance
+        _appointmentService = new AppointmentService(
+            _appointmentsContext,
+            _listingsContext,
+            _usersContext,
+            _mockEmailService.Object,
+            _mockHttpContextAccessor.Object,
+            _mockLogger.Object
+        );
+
+        // Seed test data
+        SeedTestData().Wait();
+    }
+
+    private async Task SeedTestData()
+    {
+        // Create test apartment
+        var apartment = new Apartment
+        {
+            ApartmentId = _testApartmentId,
+            Title = "Test Apartment",
+            Rent = 500,
+            Address = "Test Address",
+            City = "Beograd",
+            LandlordId = _testLandlordId,
+            IsActive = true,
+            ListingType = ListingType.Rent
+        };
+        _listingsContext.Apartments.Add(apartment);
+        await _listingsContext.SaveChangesAsync();
+
+        // Create test users
+        var tenant = new User
+        {
+            UserId = _testTenantId,
+            UserGuid = _testTenantGuid,
+            FirstName = "Tenant",
+            LastName = "User",
+            Email = "tenant@test.com",
+            Password = "hashed",
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        var landlord = new User
+        {
+            UserId = _testLandlordId,
+            UserGuid = _testLandlordGuid,
+            FirstName = "Landlord",
+            LastName = "User",
+            Email = "landlord@test.com",
+            Password = "hashed",
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        _usersContext.Users.AddRange(tenant, landlord);
+        await _usersContext.SaveChangesAsync();
+    }
+
+    private void SetupUserContext(int userId, Guid userGuid)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim("userId", userId.ToString()),
+            new Claim("sub", userGuid.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userGuid.ToString()) // Required by GetCurrentUserGuid()
+        };
+
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        var httpContext = new DefaultHttpContext
+        {
+            User = claimsPrincipal
+        };
+
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+    }
+
+    public void Dispose()
+    {
+        _appointmentsContext.Database.EnsureDeleted();
+        _listingsContext.Database.EnsureDeleted();
+        _usersContext.Database.EnsureDeleted();
+        _appointmentsContext.Dispose();
+        _listingsContext.Dispose();
+        _usersContext.Dispose();
+    }
+
+    #region CreateAppointmentAsync Tests
+
+    [Fact]
+    public async Task CreateAppointmentAsync_ValidInput_ShouldCreateAppointment()
+    {
+        // Arrange
+        var futureDate = DateTime.Now.AddDays(2);
+        var dto = new CreateAppointmentDto
+        {
+            ApartmentId = _testApartmentId,
+            AppointmentDate = futureDate,
+            TenantNotes = "Looking forward to viewing the apartment"
+        };
+
+        // Act
+        var result = await _appointmentService.CreateAppointmentAsync(dto);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.ApartmentId.Should().Be(_testApartmentId);
+        result.TenantId.Should().Be(_testTenantId);
+        result.LandlordId.Should().Be(_testLandlordId);
+        result.Status.Should().Be(AppointmentStatus.Pending);
+        result.TenantNotes.Should().Be("Looking forward to viewing the apartment");
+
+        var appointmentInDb = await _appointmentsContext.Appointments
+            .FirstOrDefaultAsync(a => a.ApartmentId == _testApartmentId);
+        appointmentInDb.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_PastDate_ShouldThrowException()
+    {
+        // Arrange
+        var pastDate = DateTime.Now.AddDays(-1);
+        var dto = new CreateAppointmentDto
+        {
+            ApartmentId = _testApartmentId,
+            AppointmentDate = pastDate
+        };
+
+        // Act
+        var act = async () => await _appointmentService.CreateAppointmentAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Appointment date must be in the future");
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_NonExistentApartment_ShouldThrowException()
+    {
+        // Arrange
+        var dto = new CreateAppointmentDto
+        {
+            ApartmentId = 99999,
+            AppointmentDate = DateTime.Now.AddDays(1)
+        };
+
+        // Act
+        var act = async () => await _appointmentService.CreateAppointmentAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Apartment not found");
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_ConflictingTimeSlot_ShouldThrowException()
+    {
+        // Arrange
+        var appointmentDate = DateTime.Now.AddDays(3);
+        
+        // Create first appointment
+        var existingAppointment = new Appointment
+        {
+            AppointmentGuid = Guid.NewGuid(),
+            ApartmentId = _testApartmentId,
+            TenantId = 999,
+            LandlordId = _testLandlordId,
+            AppointmentDate = appointmentDate,
+            Status = AppointmentStatus.Confirmed,
+            CreatedDate = DateTime.UtcNow
+        };
+        _appointmentsContext.Appointments.Add(existingAppointment);
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Try to create conflicting appointment
+        var dto = new CreateAppointmentDto
+        {
+            ApartmentId = _testApartmentId,
+            AppointmentDate = appointmentDate
+        };
+
+        // Act
+        var act = async () => await _appointmentService.CreateAppointmentAsync(dto);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("This time slot is already booked");
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_ShouldSendEmailToLandlord()
+    {
+        // Arrange
+        var futureDate = DateTime.Now.AddDays(2);
+        var dto = new CreateAppointmentDto
+        {
+            ApartmentId = _testApartmentId,
+            AppointmentDate = futureDate
+        };
+
+        _mockEmailService
+            .Setup(x => x.SendAppointmentConfirmationEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _appointmentService.CreateAppointmentAsync(dto);
+
+        // Assert
+        _mockEmailService.Verify(
+            x => x.SendAppointmentConfirmationEmailAsync(
+                "landlord@test.com",
+                "Landlord",
+                futureDate,
+                "Test Apartment"),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region GetAvailableSlotsAsync Tests
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_ValidDate_ShouldReturnSlots()
+    {
+        // Arrange
+        var futureDate = DateTime.Now.AddDays(5).Date;
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, futureDate);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(slot => slot.StartTime.Date == futureDate);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_WithBookedSlots_ShouldMarkAsUnavailable()
+    {
+        // Arrange
+        var futureDate = DateTime.Now.AddDays(5).Date;
+        var bookedTime = new DateTime(futureDate.Year, futureDate.Month, futureDate.Day, 10, 0, 0);
+
+        var appointment = new Appointment
+        {
+            AppointmentGuid = Guid.NewGuid(),
+            ApartmentId = _testApartmentId,
+            TenantId = _testTenantId,
+            LandlordId = _testLandlordId,
+            AppointmentDate = bookedTime,
+            Status = AppointmentStatus.Confirmed,
+            CreatedDate = DateTime.UtcNow
+        };
+        _appointmentsContext.Appointments.Add(appointment);
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, futureDate);
+
+        // Assert
+        result.Should().NotBeNull();
+        var bookedSlot = result.FirstOrDefault(s => s.StartTime == bookedTime);
+        bookedSlot.Should().NotBeNull();
+        bookedSlot!.IsAvailable.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_CancelledAppointment_ShouldShowAsAvailable()
+    {
+        // Arrange
+        var futureDate = DateTime.Now.AddDays(5).Date;
+        var cancelledTime = new DateTime(futureDate.Year, futureDate.Month, futureDate.Day, 11, 0, 0);
+
+        var appointment = new Appointment
+        {
+            AppointmentGuid = Guid.NewGuid(),
+            ApartmentId = _testApartmentId,
+            TenantId = _testTenantId,
+            LandlordId = _testLandlordId,
+            AppointmentDate = cancelledTime,
+            Status = AppointmentStatus.Cancelled,
+            CreatedDate = DateTime.UtcNow
+        };
+        _appointmentsContext.Appointments.Add(appointment);
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, futureDate);
+
+        // Assert
+        var slot = result.FirstOrDefault(s => s.StartTime == cancelledTime);
+        slot.Should().NotBeNull();
+        slot!.IsAvailable.Should().BeTrue(); // Cancelled slots should be available
+    }
+
+    #endregion
+
+    #region UpdateAppointmentStatusAsync Tests
+
+    [Fact]
+    public async Task UpdateAppointmentStatusAsync_LandlordConfirms_ShouldUpdateStatus()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(_testLandlordId, _testLandlordGuid); // Switch to landlord
+
+        var updateDto = new UpdateAppointmentStatusDto
+        {
+            Status = AppointmentStatus.Confirmed,
+            LandlordNotes = "Looking forward to meeting you"
+        };
+
+        // Act
+        var result = await _appointmentService.UpdateAppointmentStatusAsync(appointment.AppointmentId, updateDto);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Status.Should().Be(AppointmentStatus.Confirmed);
+        result.LandlordNotes.Should().Be("Looking forward to meeting you");
+    }
+
+    [Fact]
+    public async Task UpdateAppointmentStatusAsync_LandlordRejects_ShouldUpdateStatus()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        var updateDto = new UpdateAppointmentStatusDto
+        {
+            Status = AppointmentStatus.Rejected,
+            LandlordNotes = "Sorry, not available at this time"
+        };
+
+        // Act
+        var result = await _appointmentService.UpdateAppointmentStatusAsync(appointment.AppointmentId, updateDto);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Status.Should().Be(AppointmentStatus.Rejected);
+    }
+
+    [Fact]
+    public async Task UpdateAppointmentStatusAsync_TenantTries_ShouldThrowUnauthorized()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(_testTenantId, _testTenantGuid); // Tenant trying to update
+
+        var updateDto = new UpdateAppointmentStatusDto
+        {
+            Status = AppointmentStatus.Confirmed
+        };
+
+        // Act
+        var act = async () => await _appointmentService.UpdateAppointmentStatusAsync(appointment.AppointmentId, updateDto);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("Only the landlord can update appointment status");
+    }
+
+    [Fact]
+    public async Task UpdateAppointmentStatusAsync_NonExistentAppointment_ShouldThrowException()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+        var updateDto = new UpdateAppointmentStatusDto { Status = AppointmentStatus.Confirmed };
+
+        // Act
+        var act = async () => await _appointmentService.UpdateAppointmentStatusAsync(99999, updateDto);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Appointment not found");
+    }
+
+    #endregion
+
+    #region CancelAppointmentAsync Tests
+
+    [Fact]
+    public async Task CancelAppointmentAsync_TenantCancels_ShouldCancelAppointment()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(_testTenantId, _testTenantGuid);
+
+        // Act
+        var result = await _appointmentService.CancelAppointmentAsync(appointment.AppointmentId);
+
+        // Assert
+        result.Should().BeTrue();
+        
+        var cancelledAppointment = await _appointmentsContext.Appointments
+            .FirstOrDefaultAsync(a => a.AppointmentId == appointment.AppointmentId);
+        cancelledAppointment!.Status.Should().Be(AppointmentStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task CancelAppointmentAsync_LandlordCancels_ShouldCancelAppointment()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        // Act
+        var result = await _appointmentService.CancelAppointmentAsync(appointment.AppointmentId);
+
+        // Assert
+        result.Should().BeTrue();
+        
+        var cancelledAppointment = await _appointmentsContext.Appointments
+            .FirstOrDefaultAsync(a => a.AppointmentId == appointment.AppointmentId);
+        cancelledAppointment!.Status.Should().Be(AppointmentStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task CancelAppointmentAsync_UnauthorizedUser_ShouldThrowException()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        SetupUserContext(999, Guid.NewGuid()); // Different user
+
+        // Act
+        var act = async () => await _appointmentService.CancelAppointmentAsync(appointment.AppointmentId);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    #endregion
+
+    #region GetMyAppointmentsAsync Tests
+
+    [Fact]
+    public async Task GetMyAppointmentsAsync_Tenant_ShouldReturnTenantAppointments()
+    {
+        // Arrange
+        await CreateTestAppointment();
+        await CreateTestAppointment();
+        SetupUserContext(_testTenantId, _testTenantGuid);
+
+        // Act
+        var result = await _appointmentService.GetMyAppointmentsAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCountGreaterThan(0);
+        result.Should().OnlyContain(a => a.TenantId == _testTenantId);
+    }
+
+    [Fact]
+    public async Task GetMyAppointmentsAsync_NoAppointments_ShouldReturnEmpty()
+    {
+        // Arrange
+        SetupUserContext(999, Guid.NewGuid()); // User with no appointments
+
+        // Act
+        var result = await _appointmentService.GetMyAppointmentsAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region GetLandlordAppointmentsAsync Tests
+
+    [Fact]
+    public async Task GetLandlordAppointmentsAsync_ShouldReturnLandlordAppointments()
+    {
+        // Arrange
+        await CreateTestAppointment();
+        await CreateTestAppointment();
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        // Act
+        var result = await _appointmentService.GetLandlordAppointmentsAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCountGreaterThan(0);
+        result.Should().OnlyContain(a => a.LandlordId == _testLandlordId);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private async Task<Appointment> CreateTestAppointment()
+    {
+        var appointment = new Appointment
+        {
+            AppointmentGuid = Guid.NewGuid(),
+            ApartmentId = _testApartmentId,
+            TenantId = _testTenantId,
+            LandlordId = _testLandlordId,
+            AppointmentDate = DateTime.Now.AddDays(7),
+            Duration = TimeSpan.FromMinutes(30),
+            Status = AppointmentStatus.Pending,
+            CreatedDate = DateTime.UtcNow,
+            CreatedByGuid = _testTenantGuid
+        };
+
+        _appointmentsContext.Appointments.Add(appointment);
+        await _appointmentsContext.SaveChangesAsync();
+        return appointment;
+    }
+
+    #endregion
+}
