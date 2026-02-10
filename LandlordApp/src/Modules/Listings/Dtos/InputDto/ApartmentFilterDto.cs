@@ -27,6 +27,8 @@ public class ApartmentFilterDto
     public bool? HasBalcony { get; set; }
     [FromQuery(Name = "isImmediatelyAvailable")]
     public bool? IsImmediatelyAvailable { get; set; }
+    [FromQuery(Name = "availableFrom")]
+    public DateOnly? AvailableFrom { get; set; }
     [FromQuery(Name = "page")]
     public int Page { get; set; } = 1;
     [FromQuery(Name = "pageSize")]

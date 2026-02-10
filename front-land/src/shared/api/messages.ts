@@ -1,0 +1,78 @@
+import { apiClient } from './client';
+import { Message, Conversation, SendMessageRequest } from '../types/message';
+import { jwtDecode } from 'jwt-decode';
+
+interface JwtPayload {
+    userId: string;
+    [key: string]: any;
+}
+
+const getUserId = (): number => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No auth token');
+    const decoded = jwtDecode<JwtPayload>(token);
+    return parseInt(decoded.userId);
+};
+
+export const messagesApi = {
+    /**
+     * Get all conversations for the current user
+     */
+    getConversations: async (): Promise<Conversation[]> => {
+        const userId = getUserId();
+        const response = await apiClient.get(`/api/v1/messages/user/${userId}`);
+        return response.data;
+    },
+
+    /**
+     * Get messages in a specific conversation
+     */
+    getConversationMessages: async (conversationId: number): Promise<Message[]> => {
+        // Need to get userId and otherUserId from conversation
+        // For now, use the conversation endpoint
+        const response = await apiClient.get(`/api/v1/messages/conversation`, {
+            params: { userId1: getUserId(), userId2: conversationId }
+        });
+        return response.data.messages || [];
+    },
+
+    /**
+     * Get messages with a specific user
+     */
+    getMessagesWithUser: async (userId: number): Promise<Message[]> => {
+        const response = await apiClient.get(`/api/v1/messages/conversation`, {
+            params: { userId1: getUserId(), userId2: userId }
+        });
+        return response.data.messages || [];
+    },
+
+    /**
+     * Send a new message
+     */
+    sendMessage: async (data: SendMessageRequest): Promise<Message> => {
+        const userId = getUserId();
+        const response = await apiClient.post('/api/v1/messages/send', {
+            senderId: userId,
+            receiverId: data.receiverId,
+            messageText: data.content
+        });
+        return response.data;
+    },
+
+    /**
+     * Mark messages as read
+     */
+    markAsRead: async (messageId: number): Promise<void> => {
+        await apiClient.put(`/api/v1/messages/mark-read/${messageId}`);
+    },
+
+    /**
+     * Get unread message count
+     */
+    getUnreadCount: async (): Promise<number> => {
+        const userId = getUserId();
+        const response = await apiClient.get(`/api/v1/messages/unread-count/${userId}`);
+        return response.data;
+    },
+};
+

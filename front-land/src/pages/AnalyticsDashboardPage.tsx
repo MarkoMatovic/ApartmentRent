@@ -48,7 +48,7 @@ const AnalyticsDashboardPage: React.FC = () => {
         },
     });
 
-    const { data: topApartments, isLoading: apartmentsLoading, error: apartmentsError } = useQuery({
+    const { data: topApartments, isLoading: apartmentsLoading } = useQuery({
         queryKey: ['top-apartments', dateRange.from, dateRange.to],
         queryFn: async () => {
             console.log('🏠 Fetching top apartments...');

@@ -23,6 +23,12 @@ import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import SupportPage from './pages/SupportPage';
 import PricingPage from './pages/PricingPage';
 import UserRoommateAnalyticsPage from './pages/UserRoommateAnalyticsPage';
+import TenantApplicationsPage from './pages/TenantApplicationsPage';
+import LandlordApplicationsPage from './pages/LandlordApplicationsPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import MyAppointmentsPage from './pages/MyAppointmentsPage';
+import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
+import MessagesPage from './pages/MessagesPage';
 
 function App() {
   return (
@@ -42,7 +48,8 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-                <Route path="/messages" element={<ChatPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/roommates" element={<RoommateListPage />} />
                 <Route path="/roommates/:id" element={<RoommateDetailPage />} />
                 <Route path="/roommates/create" element={<CreateRoommatePage />} />
@@ -52,6 +59,11 @@ function App() {
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/analytics/roommate" element={<UserRoommateAnalyticsPage />} />
+                <Route path="/applications/sent" element={<TenantApplicationsPage />} />
+                <Route path="/applications/received" element={<LandlordApplicationsPage />} />
+                <Route path="/appointments/my" element={<MyAppointmentsPage />} />
+                <Route path="/appointments/manage" element={<LandlordAppointmentsPage />} />
+                <Route path="/payment-success" element={<PaymentSuccessPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

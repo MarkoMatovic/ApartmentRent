@@ -1,0 +1,10 @@
+{
+    "messages": "Poruke",
+    "typeMessage": "Unesite poruku...",
+    "noConversations": "Još nemate konverzacija",
+    "selectConversation": "Izaberite konverzaciju da započnete razmenu poruka",
+    "errorLoadingMessages": "Greška pri učitavanju poruka",
+    "sendMessage": "Pošalji poruku",
+    "messageSent": "Poruka poslata",
+    "conversationWith": "Razgovor sa"
+}

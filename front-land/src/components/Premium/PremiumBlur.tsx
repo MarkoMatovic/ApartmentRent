@@ -7,11 +7,10 @@ import { useAuth } from '../../shared/context/AuthContext';
 
 interface PremiumBlurProps {
   children: React.ReactNode;
-  feature: 'personalAnalytics' | 'landlordAnalytics';
   requiredFeature: string;
 }
 
-const PremiumBlur: React.FC<PremiumBlurProps> = ({ children, feature, requiredFeature }) => {
+const PremiumBlur: React.FC<PremiumBlurProps> = ({ children, requiredFeature }) => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation(['common', 'premium']);

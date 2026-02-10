@@ -31,12 +31,17 @@ import {
   Email as EmailIcon,
   Chat as ChatIcon,
   Person as PersonIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
+import ApplicationModal from '../components/Applications/ApplicationModal';
+import AppointmentModal from '../components/Appointments/AppointmentModal';
 
 const ApartmentDetailPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [openApplyModal, setOpenApplyModal] = React.useState(false);
+  const [openAppointmentModal, setOpenAppointmentModal] = React.useState(false);
 
   const { data: apartment, isLoading } = useQuery({
     queryKey: ['apartment', id],
@@ -319,6 +324,45 @@ const ApartmentDetailPage: React.FC = () => {
               >
                 {t('apartments:sendMessage', { defaultValue: 'Send Message' })}
               </Button>
+
+              {/* Schedule Viewing Button */}
+              <Button
+                fullWidth
+                variant="outlined"
+                color="primary"
+                size="large"
+                startIcon={<CalendarIcon />}
+                sx={{ mt: 1 }}
+                onClick={() => setOpenAppointmentModal(true)}
+              >
+                {t('apartments:scheduleViewing', { defaultValue: 'Schedule Viewing' })}
+              </Button>
+
+              {/* Apply Button */}
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                size="large"
+                sx={{ mt: 1 }}
+                onClick={() => setOpenApplyModal(true)}
+              >
+                Apply for Apartment
+              </Button>
+
+              <ApplicationModal
+                open={openApplyModal}
+                onClose={() => setOpenApplyModal(false)}
+                apartmentId={Number(id)}
+                apartmentTitle={apartment.title}
+              />
+
+              <AppointmentModal
+                open={openAppointmentModal}
+                onClose={() => setOpenAppointmentModal(false)}
+                apartmentId={Number(id)}
+                apartmentTitle={apartment.title}
+              />
 
               {/* Looking for roommate notice */}
               {apartment.isLookingForRoommate && (

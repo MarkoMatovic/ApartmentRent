@@ -142,9 +142,21 @@ namespace Lander.Migrations.Listings
 
                     b.HasIndex("ApartmentType");
 
+                    b.HasIndex("City");
+
+                    b.HasIndex("CreatedDate");
+
                     b.HasIndex("IsImmediatelyAvailable");
 
                     b.HasIndex("LandlordId");
+
+                    b.HasIndex("ListingType");
+
+                    b.HasIndex("NumberOfRooms");
+
+                    b.HasIndex("Price");
+
+                    b.HasIndex("Rent");
 
                     b.HasIndex("Latitude", "Longitude");
 

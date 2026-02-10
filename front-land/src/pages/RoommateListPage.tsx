@@ -113,6 +113,15 @@ const RoommateListPage: React.FC = () => {
 
             <TextField
               fullWidth
+              label="Profession"
+              value={filters.profession || ''}
+              onChange={(e) => handleFilterChange('profession', e.target.value || undefined)}
+              margin="normal"
+              size="small"
+            />
+
+            <TextField
+              fullWidth
               label={`${t('roommates:minBudget')} (€)`}
               type="number"
               value={filters.minBudget || ''}
@@ -170,6 +179,27 @@ const RoommateListPage: React.FC = () => {
                 <MenuItem value="mixed">{t('roommates:mixed')}</MenuItem>
               </Select>
             </FormControl>
+
+            <TextField
+              fullWidth
+              label="Available From"
+              type="date"
+              value={filters.availableFrom || ''}
+              onChange={(e) => handleFilterChange('availableFrom', e.target.value || undefined)}
+              margin="normal"
+              size="small"
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <TextField
+              fullWidth
+              label="Stay Duration (Months)"
+              type="number"
+              value={filters.stayDuration || ''}
+              onChange={(e) => handleFilterChange('stayDuration', e.target.value ? parseInt(e.target.value) : undefined)}
+              margin="normal"
+              size="small"
+            />
           </Paper>
         </Grid>
 
@@ -232,8 +262,8 @@ const RoommateListPage: React.FC = () => {
             </Grid>
           )}
         </Grid>
-      </Grid>
-    </Container>
+      </Grid >
+    </Container >
   );
 };
 

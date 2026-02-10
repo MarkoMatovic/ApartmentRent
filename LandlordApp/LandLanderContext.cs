@@ -466,6 +466,14 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.HasIndex(e => new { e.Latitude, e.Longitude });
             entity.HasIndex(e => e.ApartmentType);
             entity.HasIndex(e => e.IsImmediatelyAvailable);
+            
+            // Phase 1: Performance Optimization Indexes
+            entity.HasIndex(e => e.City);
+            entity.HasIndex(e => e.Rent);
+            entity.HasIndex(e => e.Price);
+            entity.HasIndex(e => e.NumberOfRooms);
+            entity.HasIndex(e => e.ListingType);
+            entity.HasIndex(e => e.CreatedDate);
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
@@ -620,6 +628,7 @@ public class UsersContext : DbContext, IUnitofWork
     public DbSet<User> Users { get; set; }
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<Role> Roles { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -736,6 +745,30 @@ public class UsersContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.RoleName).HasMaxLength(100);
         });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionId })
+                .HasName("PK__RolePerm__RolePermission");
+
+            entity.ToTable("RolePermissions", "UsersRoles");
+
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Role)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(d => d.RoleId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__RolePerm__RoleId");
+
+            entity.HasOne(d => d.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(d => d.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__RolePerm__PermId");
+        });
     }
 }
 
@@ -832,6 +865,12 @@ public class RoommatesContext : DbContext, IUnitofWork
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasIndex(e => e.UserId);
+
+            // Phase 1: Performance Optimization Indexes
+            entity.HasIndex(e => e.BudgetMin);
+            entity.HasIndex(e => e.BudgetMax);
+            entity.HasIndex(e => e.AvailableFrom);
+            entity.HasIndex(e => e.CreatedDate);
         });
     }
 }

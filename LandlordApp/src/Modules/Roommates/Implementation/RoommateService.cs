@@ -6,17 +6,20 @@ using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 namespace Lander.src.Modules.Roommates.Implementation;
 public class RoommateService : IRoommateService
 {
     private readonly RoommatesContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public RoommateService(RoommatesContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor)
+    private readonly IMemoryCache _cache;
+    public RoommateService(RoommatesContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
+        _cache = cache;
     }
     public async Task<IEnumerable<RoommateDto>> GetAllRoommatesAsync(
         string? location = null, 
@@ -25,6 +28,9 @@ public class RoommateService : IRoommateService
         bool? smokingAllowed = null, 
         bool? petFriendly = null, 
         string? lifestyle = null,
+        string? profession = null,
+        DateOnly? availableFrom = null,
+        int? stayDuration = null,
         int? apartmentId = null)
     {
         var query = _context.Roommates
@@ -53,6 +59,19 @@ public class RoommateService : IRoommateService
         if (!string.IsNullOrEmpty(lifestyle))
         {
             query = query.Where(r => r.Lifestyle == lifestyle);
+        }
+        if (!string.IsNullOrEmpty(profession))
+        {
+            query = query.Where(r => r.Profession != null && r.Profession.Contains(profession));
+        }
+        if (availableFrom.HasValue)
+        {
+            query = query.Where(r => r.AvailableFrom >= availableFrom.Value);
+        }
+        if (stayDuration.HasValue)
+        {
+            query = query.Where(r => (r.MinimumStayMonths == null || r.MinimumStayMonths <= stayDuration.Value) &&
+                                     (r.MaximumStayMonths == null || r.MaximumStayMonths >= stayDuration.Value));
         }
         if (apartmentId.HasValue)
         {
@@ -108,10 +127,20 @@ public class RoommateService : IRoommateService
         bool? smokingAllowed, 
         bool? petFriendly, 
         string? lifestyle,
+        string? profession,
+        DateOnly? availableFrom,
+        int? stayDuration,
         int? apartmentId,
         int page = 1,
         int pageSize = 20)
     {
+        var cacheKey = $"Roommates_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{page}_{pageSize}";
+
+        if (_cache.TryGetValue(cacheKey, out PagedResult<RoommateDto>? cachedResult) && cachedResult != null)
+        {
+            return cachedResult;
+        }
+
         var query = _context.Roommates
             .Where(r => r.IsActive)
             .AsNoTracking();
@@ -139,6 +168,19 @@ public class RoommateService : IRoommateService
         {
             query = query.Where(r => r.Lifestyle == lifestyle);
         }
+        if (!string.IsNullOrEmpty(profession))
+        {
+            query = query.Where(r => r.Profession != null && r.Profession.Contains(profession));
+        }
+        if (availableFrom.HasValue)
+        {
+            query = query.Where(r => r.AvailableFrom >= availableFrom.Value);
+        }
+        if (stayDuration.HasValue)
+        {
+            query = query.Where(r => (r.MinimumStayMonths == null || r.MinimumStayMonths <= stayDuration.Value) &&
+                                     (r.MaximumStayMonths == null || r.MaximumStayMonths >= stayDuration.Value));
+        }
         if (apartmentId.HasValue)
         {
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
@@ -155,7 +197,7 @@ public class RoommateService : IRoommateService
             .AsNoTracking()
             .ToListAsync();
         var userDict = users.ToDictionary(u => u.UserId);
-        var result = roommates.Select(r =>
+        var resultList = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
             return new RoommateDto
@@ -189,13 +231,22 @@ public class RoommateService : IRoommateService
                 IsActive = r.IsActive
             };
         }).ToList();
-        return new PagedResult<RoommateDto>
+
+        var result = new PagedResult<RoommateDto>
         {
-            Items = result,
+            Items = resultList,
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize
         };
+
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(2))
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+
+        _cache.Set(cacheKey, result, cacheEntryOptions);
+
+        return result;
     }
     public async Task<RoommateDto?> GetRoommateByIdAsync(int id)
     {
@@ -398,6 +449,25 @@ public class RoommateService : IRoommateService
     {
         var roommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.UserId == userId);
+        if (roommate == null) return false;
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            roommate.IsActive = false;
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+        return true;
+    }
+    public async Task<bool> DeleteRoommateByUserIdAsync(int userId)
+    {
+        var roommate = await _context.Roommates
+            .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
         if (roommate == null) return false;
         var transaction = await _context.BeginTransactionAsync();
         try
