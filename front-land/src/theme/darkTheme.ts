@@ -36,36 +36,47 @@ export const darkTheme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
     h1: {
-      fontWeight: 700,
+      fontWeight: 600,
       fontSize: '2.5rem',
-      letterSpacing: '-0.02em',
+      letterSpacing: '-0.01em',
+      lineHeight: 1.3,
     },
     h2: {
       fontWeight: 600,
       fontSize: '2rem',
-      letterSpacing: '-0.01em',
+      letterSpacing: '-0.005em',
+      lineHeight: 1.4,
     },
     h3: {
-      fontWeight: 600,
+      fontWeight: 500,
       fontSize: '1.5rem',
+      letterSpacing: '0em',
+      lineHeight: 1.5,
     },
     h4: {
-      fontWeight: 600,
+      fontWeight: 500,
       fontSize: '1.25rem',
+      letterSpacing: '0em',
     },
     h5: {
-      fontWeight: 600,
+      fontWeight: 500,
       fontSize: '1.1rem',
     },
     h6: {
-      fontWeight: 600,
+      fontWeight: 500,
       fontSize: '1rem',
     },
     button: {
-      fontWeight: 600,
+      fontWeight: 500,
       letterSpacing: '0.02em',
+      textTransform: 'none',
+    },
+    body1: {
+      fontWeight: 400,
+      letterSpacing: '0.01em',
+      lineHeight: 1.6,
     },
   },
   shape: {

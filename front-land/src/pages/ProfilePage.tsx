@@ -14,8 +14,11 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import SaveIcon from '@mui/icons-material/Save';
@@ -33,6 +36,32 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsUpdating(true);
+    setError('');
+
+    try {
+      if (!user?.userGuid) {
+        setError('User GUID not found');
+        return;
+      }
+
+      await authApi.deleteUser({ userGuid: user.userGuid });
+      setSuccess('Account deleted. You will be logged out.');
+      setTimeout(() => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }, 2000);
+    } catch (error: any) {
+      setError(error.response?.data || 'Failed to delete account');
+    } finally {
+      setIsUpdating(false);
+      setDeleteDialogOpen(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -42,6 +71,13 @@ const ProfilePage: React.FC = () => {
     dateOfBirth: user?.dateOfBirth || '',
     profilePicture: user?.profilePicture || ''
   });
+
+  const [privacySettings, setPrivacySettings] = useState({
+    analyticsConsent: user?.analyticsConsent ?? true,
+    chatHistoryConsent: user?.chatHistoryConsent ?? true,
+    profileVisibility: user?.profileVisibility ?? true
+  });
+  const [privacyUpdating, setPrivacyUpdating] = useState(false);
 
   const [imagePreview, setImagePreview] = useState(user?.profilePicture || '');
 
@@ -56,6 +92,11 @@ const ProfilePage: React.FC = () => {
         profilePicture: user.profilePicture || ''
       });
       setImagePreview(user.profilePicture || '');
+      setPrivacySettings({
+        analyticsConsent: user.analyticsConsent ?? true,
+        chatHistoryConsent: user.chatHistoryConsent ?? true,
+        profileVisibility: user.profileVisibility ?? true
+      });
     }
   }, [user]);
 
@@ -140,8 +181,48 @@ const ProfilePage: React.FC = () => {
     } catch (error: any) {
       setError(error.response?.data || 'Failed to deactivate account');
     } finally {
-      setIsUpdating(false);
       setDeactivateDialogOpen(false);
+    }
+  };
+
+
+  const handlePrivacyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setPrivacySettings(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleSavePrivacy = async () => {
+    if (!user?.userId) return;
+    setPrivacyUpdating(true);
+    try {
+      const updatedUser = await authApi.updatePrivacySettings(user.userId, privacySettings);
+      if (updateUser) {
+        updateUser(updatedUser);
+      }
+      setSuccess('Privacy settings updated successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to update privacy settings');
+    } finally {
+      setPrivacyUpdating(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    if (!user?.userId) return;
+    try {
+      const data = await authApi.exportUserData(user.userId);
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `landlord_data_${user.userId}_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      setSuccess('Data exported successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to export data');
     }
   };
 
@@ -306,14 +387,86 @@ const ProfilePage: React.FC = () => {
         </Grid>
 
 
+
+
+        <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Privacy & Data</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportData}
+            >
+              Export My Data
+            </Button>
+          </Box>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={privacySettings.analyticsConsent}
+                    onChange={handlePrivacyChange}
+                    name="analyticsConsent"
+                  />
+                }
+                label="Allow Analytics (Help us improve the app)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={privacySettings.chatHistoryConsent}
+                    onChange={handlePrivacyChange}
+                    name="chatHistoryConsent"
+                  />
+                }
+                label="Save Chat History (Keep messages for 30 days)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={privacySettings.profileVisibility}
+                    onChange={handlePrivacyChange}
+                    name="profileVisibility"
+                  />
+                }
+                label="Profile Visibility (Allow others to find you)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleSavePrivacy}
+                disabled={privacyUpdating}
+                startIcon={<SaveIcon />}
+              >
+                {privacyUpdating ? 'Saving...' : 'Save Privacy Settings'}
+              </Button>
+            </Grid>
+          </Grid>
+        </Box>
+
+
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="h6" gutterBottom color="error">Danger Zone</Typography>
           <Button
             variant="outlined"
             color="error"
             onClick={() => setDeactivateDialogOpen(true)}
+            sx={{ mr: 2 }}
           >
             Deactivate Account
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Delete Account (Permanent)
           </Button>
         </Box>
       </Paper>
@@ -329,6 +482,21 @@ const ProfilePage: React.FC = () => {
           <Button onClick={() => setDeactivateDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleDeactivateAccount} color="error" variant="contained" disabled={isUpdating}>
             {isUpdating ? <CircularProgress size={24} /> : 'Deactivate'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Account</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to PERMANENTLY delete your account? This action cannot be undone. All your data, including apartments and roommate profiles, will be erased.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDeleteAccount} color="error" variant="contained" disabled={isUpdating}>
+            {isUpdating ? <CircularProgress size={24} /> : 'DELETE FOREVER'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -41,6 +41,14 @@ const decodeToken = (token: string): User | null => {
 
     const payload = JSON.parse(jsonPayload);
 
+    // Extract permissions from claims (can be array or single value)
+    let permissions: string[] = [];
+    if (payload.permission) {
+      permissions = Array.isArray(payload.permission)
+        ? payload.permission
+        : [payload.permission];
+    }
+
     return {
       userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
       userGuid: payload.sub || payload.nameid || '',
@@ -51,6 +59,8 @@ const decodeToken = (token: string): User | null => {
       isActive: payload.isActive === 'true' || payload.isActive === true || payload.active === true,
       isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
+      roleName: payload.role || payload.roleName,
+      permissions: permissions as any,
       hasPersonalAnalytics: payload.hasPersonalAnalytics === 'true' || payload.hasPersonalAnalytics === true,
       hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
       subscriptionExpiresAt: payload.subscriptionExpiresAt || undefined,
@@ -108,7 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setToken(tokenResult);
       localStorage.setItem('authToken', tokenResult);
-      
+
       // Pošalji custom event da se osveži broj nepročitanih poruka
       window.dispatchEvent(new Event('authTokenChanged'));
 

@@ -18,6 +18,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Divider,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -27,6 +28,7 @@ import {
   Menu as MenuIcon,
   AccountCircle,
   Analytics as AnalyticsIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +39,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
@@ -81,7 +83,6 @@ const Header: React.FC = () => {
   const navItems = [
     { label: t('home'), path: '/' },
     { label: t('apartments'), path: '/apartments' },
-    // Prikazuj roommates i messages samo ako je korisnik ulogovan
     ...(isAuthenticated ? [
       { label: t('messages'), path: '/messages' },
       { label: t('roommates'), path: '/roommates' },
@@ -98,17 +99,17 @@ const Header: React.FC = () => {
         borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
         {/* Logo */}
         <Typography
           variant="h6"
           component="div"
           sx={{
             flexGrow: 0,
-            mr: 3,
+            mr: { xs: 'auto', md: 3 },
             cursor: 'pointer',
             fontWeight: 800,
-            fontSize: '1.5rem',
+            fontSize: { xs: '1.25rem', md: '1.5rem' },
             background: 'linear-gradient(45deg, #fff 30%, #f0f0f0 90%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -192,7 +193,7 @@ const Header: React.FC = () => {
           </Box>
         )}
 
-        {/* Search Bar */}
+        {/* Search Bar - Desktop only */}
         {!isMobile && (
           <TextField
             size="small"
@@ -227,14 +228,14 @@ const Header: React.FC = () => {
         )}
 
         {/* Right side icons */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           <LanguageSwitcher />
 
-          <IconButton color="inherit" onClick={toggleTheme}>
+          <IconButton color="inherit" onClick={toggleTheme} size={isMobile ? 'small' : 'medium'}>
             {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
           </IconButton>
 
-          <IconButton color="inherit" onClick={handleNotificationClick}>
+          <IconButton color="inherit" onClick={handleNotificationClick} size={isMobile ? 'small' : 'medium'}>
             <Badge badgeContent={unreadCount} color="error">
               <NotificationsIcon />
             </Badge>
@@ -242,12 +243,14 @@ const Header: React.FC = () => {
 
           {isAuthenticated ? (
             <>
-              <IconButton color="inherit" onClick={handleMenuOpen}>
-                <AccountCircle />
-                <Typography variant="body2" sx={{ ml: 1, display: { xs: 'none', sm: 'block' } }}>
-                  {user?.firstName} {user?.lastName}
-                </Typography>
-              </IconButton>
+              {!isMobile && (
+                <IconButton color="inherit" onClick={handleMenuOpen}>
+                  <AccountCircle />
+                  <Typography variant="body2" sx={{ ml: 1, display: { xs: 'none', sm: 'block' } }}>
+                    {user?.firstName} {user?.lastName}
+                  </Typography>
+                </IconButton>
+              )}
               <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
@@ -259,10 +262,31 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/my-apartments'); handleMenuClose(); }}>
                   {t('myApartments')}
                 </MenuItem>
+                <MenuItem onClick={() => { navigate('/appointments/my'); handleMenuClose(); }}>
+                  {t('myAppointments')}
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/appointments/manage'); handleMenuClose(); }}>
+                  {t('manageAppointments')}
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/applications/sent'); handleMenuClose(); }}>
+                  My Applications
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/applications/received'); handleMenuClose(); }}>
+                  Received Applications
+                </MenuItem>
                 <MenuItem onClick={() => { navigate('/analytics/roommate'); handleMenuClose(); }}>
                   <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                   {t('common:personalAnalytics')}
                 </MenuItem>
+                {!user?.roleName?.includes('Premium') && (
+                  <MenuItem
+                    onClick={() => { navigate('/pricing'); handleMenuClose(); }}
+                    sx={{ color: 'warning.main', fontWeight: 'bold' }}
+                  >
+                    <StarIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                    {t('premium:upgradeToPremium')}
+                  </MenuItem>
+                )}
                 {user?.userRoleId === 1 && (
                   <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
                     <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -273,7 +297,7 @@ const Header: React.FC = () => {
               </Menu>
             </>
           ) : (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
               <Button color="inherit" onClick={() => navigate('/login')}>
                 {t('login')}
               </Button>
@@ -288,8 +312,9 @@ const Header: React.FC = () => {
             </Box>
           )}
 
+          {/* Hamburger Menu - Mobile only */}
           {isMobile && (
-            <IconButton color="inherit" onClick={() => setMobileOpen(true)}>
+            <IconButton color="inherit" onClick={() => setMobileOpen(true)} edge="end">
               <MenuIcon />
             </IconButton>
           )}
@@ -298,16 +323,136 @@ const Header: React.FC = () => {
 
       {/* Mobile Drawer */}
       <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Box sx={{ width: 250, pt: 2 }}>
+        <Box sx={{ width: 280, pt: 2 }}>
+          {/* User Info or Login/Register */}
+          {isAuthenticated ? (
+            <Box sx={{ px: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <AccountCircle sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {user?.firstName} {user?.lastName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user?.email}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ px: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => { navigate('/login'); setMobileOpen(false); }}
+              >
+                {t('login')}
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => { navigate('/register'); setMobileOpen(false); }}
+              >
+                {t('register')}
+              </Button>
+            </Box>
+          )}
+
+          {/* Navigation Items */}
           <List>
-            {navItems.map((item) => (
-              <ListItem key={item.path} disablePadding>
-                <ListItemButton onClick={() => { navigate(item.path); setMobileOpen(false); }}>
-                  <ListItemText primary={item.label} />
-                </ListItemButton>
-              </ListItem>
-            ))}
+            {navItems.map((item) => {
+              const showBadge = item.path === '/messages' && unreadMessagesCount > 0;
+              return (
+                <ListItem key={item.path} disablePadding>
+                  <ListItemButton onClick={() => { navigate(item.path); setMobileOpen(false); }}>
+                    <ListItemText primary={item.label} />
+                    {showBadge && (
+                      <Badge badgeContent={unreadMessagesCount} color="error" sx={{ ml: 2 }} />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
           </List>
+
+          {/* User Menu Items (if authenticated) */}
+          {isAuthenticated && (
+            <>
+              <Divider />
+              <List>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/profile'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('profile')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/my-apartments'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('myApartments')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/appointments/my'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('myAppointments')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/appointments/manage'); setMobileOpen(false); }}>
+                    <ListItemText primary={t('manageAppointments')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/applications/sent'); setMobileOpen(false); }}>
+                    <ListItemText primary="My Applications" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/applications/received'); setMobileOpen(false); }}>
+                    <ListItemText primary="Received Applications" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/analytics/roommate'); setMobileOpen(false); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                      <ListItemText primary={t('common:personalAnalytics')} />
+                    </Box>
+                  </ListItemButton>
+                </ListItem>
+                {!user?.roleName?.includes('Premium') && (
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={() => { navigate('/pricing'); setMobileOpen(false); }}
+                      sx={{ bgcolor: 'warning.light' }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <StarIcon sx={{ mr: 1, fontSize: '1.2rem', color: 'warning.main' }} />
+                        <ListItemText
+                          primary={t('premium:upgradeToPremium')}
+                          sx={{ color: 'warning.main', fontWeight: 'bold' }}
+                        />
+                      </Box>
+                    </ListItemButton>
+                  </ListItem>
+                )}
+                {user?.userRoleId === 1 && (
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={() => { navigate('/admin/analytics'); setMobileOpen(false); }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                        <ListItemText primary={t('dashboard:analyticsDashboard')} />
+                      </Box>
+                    </ListItemButton>
+                  </ListItem>
+                )}
+                <Divider sx={{ my: 1 }} />
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { handleLogout(); setMobileOpen(false); }}>
+                    <ListItemText primary={t('logout')} sx={{ color: 'error.main' }} />
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            </>
+          )}
         </Box>
       </Drawer>
 
@@ -322,4 +467,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-

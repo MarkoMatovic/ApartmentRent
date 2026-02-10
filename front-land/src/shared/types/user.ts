@@ -1,3 +1,6 @@
+import { Permission } from './permission';
+import { RoleName } from './role';
+
 export interface User {
   userId: number;
   userGuid: string;
@@ -8,12 +11,23 @@ export interface User {
   profilePicture?: string;
   userRoleId?: number;
   userRole?: UserRole;
+  roleName?: RoleName;
+  permissions?: Permission[];
   dateOfBirth?: string;
   isActive: boolean;
   isLookingForRoommate?: boolean;
   hasPersonalAnalytics?: boolean;
   hasLandlordAnalytics?: boolean;
   subscriptionExpiresAt?: string;
+  analyticsConsent?: boolean;
+  chatHistoryConsent?: boolean;
+  profileVisibility?: boolean;
+}
+
+export interface PrivacySettings {
+  analyticsConsent: boolean;
+  chatHistoryConsent: boolean;
+  profileVisibility: boolean;
 }
 
 export interface UserRole {

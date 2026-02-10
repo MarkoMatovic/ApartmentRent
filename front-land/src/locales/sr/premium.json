@@ -1,5 +1,13 @@
 {
   "lockedTitle": "Premium Funkcija",
   "lockedMessage": "Ova funkcija je dostupna samo za premium korisnike. {{feature}}",
-  "upgradeButton": "Nadogradi na Premium"
+  "upgradeButton": "Nadogradi na Premium",
+  "upgradeToPremium": "Nadogradi na Premium",
+  "premiumSubtitle": "Dobijte pristup naprednoj analitici i uvidu za samo €1.99/mesečno",
+  "alreadyPremium": "Već imate Premium pristup! Uživajte u svojim beneficijama.",
+  "paymentSuccess": "Uplata uspešna!",
+  "paymentSuccessMessage": "Hvala što ste se pretplatili na Premium! Sada imate pristup naprednoj analitici i uvidu.",
+  "premiumFeaturesNote": "Molimo odjavite se i ponovo se prijavite da biste videli nove Premium funkcije.",
+  "viewProfile": "Pogledaj Profil",
+  "goHome": "Idi na Početnu"
 }

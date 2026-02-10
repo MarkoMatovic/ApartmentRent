@@ -13,6 +13,8 @@ public interface IApartmentService
     Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto);
     Task<bool> DeleteApartmentAsync(int apartmentId);
     Task<bool> ActivateApartmentAsync(int apartmentId);
+    Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId);
+    Task DeleteApartmentsByLandlordIdAsync(int landlordId);
     
     // .NET 10 Feature: Vector Search methods
     Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync();

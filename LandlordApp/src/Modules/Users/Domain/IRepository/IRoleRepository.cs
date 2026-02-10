@@ -4,6 +4,6 @@ namespace Lander.src.Modules.Users.Domain.IRepository
 {
     public interface IRoleRepository : IRepository<Role>
     {
-        Task<Role> GetRoleById(int RoleId);
+        Task<Role?> GetRoleById(int RoleId);
     }
 }

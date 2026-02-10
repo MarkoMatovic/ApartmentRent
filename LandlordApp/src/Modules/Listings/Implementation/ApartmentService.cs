@@ -6,23 +6,30 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
-using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
 using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
+using Microsoft.AspNetCore.SignalR;
+using Lander.src.Notifications.NotificationsHub;
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
     private readonly ListingsContext _context;
     private readonly UsersContext _usersContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IUserInterface _userInterface;
-    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor, IUserInterface userInterface)
+    private readonly IMemoryCache _cache;
+    private readonly IHubContext<NotificationHub> _notificationHubContext;
+    private readonly ILogger<ApartmentService> _logger;
+
+    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor, IMemoryCache cache, IHubContext<NotificationHub> notificationHubContext, ILogger<ApartmentService> logger)
     {
         _context = context;
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
-        _userInterface = userInterface;
+        _cache = cache;
+        _notificationHubContext = notificationHubContext;
+        _logger = logger;
     }
     public async Task<bool> ActivateApartmentAsync(int apartmentId)
     {
@@ -55,10 +62,26 @@ public class ApartmentService : IApartmentService
         int? landlordId = null;
         if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
         {
-            var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
+            var user = await _usersContext.Users
+                .Include(u => u.UserRole)
+                .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
+            
             if (user != null)
             {
                 landlordId = user.UserId;
+                
+                // Auto-upgrade: If user is Tenant, upgrade to TenantLandlord when creating first apartment
+                if (user.UserRole?.RoleName == "Tenant")
+                {
+                    var tenantLandlordRole = await _usersContext.Roles
+                        .FirstOrDefaultAsync(r => r.RoleName == "TenantLandlord");
+                    
+                    if (tenantLandlordRole != null)
+                    {
+                        user.UserRoleId = tenantLandlordRole.RoleId;
+                        await _usersContext.SaveEntitiesAsync();
+                    }
+                }
             }
         }
         var apartment = new Apartment
@@ -129,6 +152,16 @@ public class ApartmentService : IApartmentService
             _context.RollBackTransaction();
             throw;
         }
+
+        // Broadcast new listing notification
+        if (apartment.IsActive)
+        {
+             await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", 
+                "New Apartment Listed!", 
+                $"A new apartment '{apartment.Title}' is now available in {apartment.City}.", 
+                "success");
+        }
+
         return new ApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
@@ -223,6 +256,13 @@ public class ApartmentService : IApartmentService
     }
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
+        var cacheKey = $"Apartments_{filters.GetHashCode()}_{filters.Page}_{filters.PageSize}_{filters.SortBy}_{filters.SortOrder}_{filters.City}_{filters.MinRent}_{filters.MaxRent}_{filters.ApartmentType}_{filters.NumberOfRooms}";
+        
+        if (_cache.TryGetValue(cacheKey, out PagedResult<ApartmentDto>? cachedResult) && cachedResult != null)
+        {
+            return cachedResult;
+        }
+
         var query = _context.Apartments
             // Named query filter automatically applies: !a.IsDeleted && a.IsActive
             .AsNoTracking();
@@ -274,7 +314,15 @@ public class ApartmentService : IApartmentService
         {
             query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
         }
+        if (filters.AvailableFrom.HasValue)
+        {
+            query = query.Where(a => a.AvailableFrom >= filters.AvailableFrom.Value);
+        }
         var totalCount = await query.CountAsync();
+        
+        _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}, Skip={Skip}", 
+            filters.Page, filters.PageSize, totalCount, (filters.Page - 1) * filters.PageSize);
+            
         var sortBy = filters.SortBy?.ToLower() ?? "date";
         var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
         
@@ -331,13 +379,22 @@ public class ApartmentService : IApartmentService
                     IsPrimary = img.IsPrimary
                 }).ToList()
         }).ToList();
-        return new PagedResult<ApartmentDto>
+        
+        var result = new PagedResult<ApartmentDto>
         {
             Items = items,
             TotalCount = totalCount,
             Page = filters.Page,
             PageSize = filters.PageSize
         };
+
+        var cacheEntryOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(2)) // Keep in cache for 2 mins if accessed
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)); // Remove after 5 mins regardless
+
+        _cache.Set(cacheKey, result, cacheEntryOptions);
+
+        return result;
     }
     public async Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync()
     {
@@ -346,7 +403,7 @@ public class ApartmentService : IApartmentService
         int? landlordId = null;
         if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
         {
-            var user = await _userInterface.GetUserByGuidAsync(parsedGuid);
+            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
             if (user != null)
             {
                 landlordId = user.UserId;
@@ -476,6 +533,72 @@ public class ApartmentService : IApartmentService
                 IsPrimary = img.IsPrimary
             }).ToList()
         };
+    }
+
+    public async Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId)
+    {
+        var apartments = await _context.Apartments
+            .Include(a => a.ApartmentImages)
+            .AsNoTracking()
+            .Where(a => a.LandlordId == landlordId && !a.IsDeleted)
+            .OrderByDescending(a => a.CreatedDate)
+            .ToListAsync();
+
+        return apartments.Select(a => new ApartmentDto
+        {
+            ApartmentId = a.ApartmentId,
+            Title = a.Title,
+            Rent = a.Rent,
+            Price = a.Price,
+            Address = a.Address,
+            City = a.City ?? string.Empty,
+            Latitude = a.Latitude,
+            Longitude = a.Longitude,
+            SizeSquareMeters = a.SizeSquareMeters,
+            ApartmentType = a.ApartmentType,
+            ListingType = a.ListingType,
+            IsFurnished = a.IsFurnished,
+            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+            IsLookingForRoommate = a.IsLookingForRoommate,
+            ApartmentImages = a.ApartmentImages
+                .Where(img => !img.IsDeleted)
+                .OrderBy(img => img.DisplayOrder)
+                .Select(img => new ApartmentImageDto
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList()
+        }).ToList();
+    }
+
+    public async Task DeleteApartmentsByLandlordIdAsync(int landlordId)
+    {
+        var apartments = await _context.Apartments
+            .Where(a => a.LandlordId == landlordId && !a.IsDeleted)
+            .ToListAsync();
+
+        if (!apartments.Any()) return;
+
+        foreach (var apartment in apartments)
+        {
+            apartment.IsDeleted = true;
+            apartment.IsActive = false;
+            apartment.ModifiedDate = DateTime.UtcNow;
+        }
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
     }
     public async Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto)
     {

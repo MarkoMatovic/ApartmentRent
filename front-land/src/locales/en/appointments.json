@@ -1,0 +1,29 @@
+{
+    "scheduleViewing": "Schedule Viewing",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "availableSlots": "Available Time Slots",
+    "noSlotsAvailable": "No slots available for this date",
+    "appointmentNotes": "Notes (optional)",
+    "appointmentNotesPlaceholder": "Any special requests or questions...",
+    "confirmAppointment": "Confirm Appointment",
+    "myAppointments": "My Appointments",
+    "landlordAppointments": "Appointment Requests",
+    "appointmentDetails": "Appointment Details",
+    "appointmentWith": "Appointment with",
+    "scheduledFor": "Scheduled for",
+    "cancelAppointment": "Cancel Appointment",
+    "confirmAppointmentAction": "Confirm",
+    "rejectAppointment": "Reject",
+    "status": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "rejected": "Rejected"
+    },
+    "noAppointments": "No appointments yet",
+    "appointmentCancelled": "Appointment cancelled successfully",
+    "appointmentConfirmed": "Appointment confirmed successfully",
+    "appointmentRejected": "Appointment rejected"
+}

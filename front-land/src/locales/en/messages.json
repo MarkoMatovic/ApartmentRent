@@ -1,0 +1,10 @@
+{
+    "messages": "Messages",
+    "typeMessage": "Type a message...",
+    "noConversations": "No conversations yet",
+    "selectConversation": "Select a conversation to start messaging",
+    "errorLoadingMessages": "Failed to load messages",
+    "sendMessage": "Send message",
+    "messageSent": "Message sent",
+    "conversationWith": "Conversation with"
+}
