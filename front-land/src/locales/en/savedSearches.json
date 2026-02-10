@@ -1,0 +1,27 @@
+{
+    "title": "Saved Searches",
+    "mySearches": "My Searches",
+    "createNew": "New Search",
+    "searchName": "Search Name",
+    "searchNamePlaceholder": "E.g. Apartment in Belgrade Center",
+    "saveSearch": "Save Search",
+    "deleteSearch": "Delete Search",
+    "editSearch": "Edit Search",
+    "noSearches": "No saved searches",
+    "noSearchesDescription": "Save your favorite searches for quick access",
+    "searchSaved": "Search saved",
+    "searchDeleted": "Search deleted",
+    "searchUpdated": "Search updated",
+    "confirmDelete": "Are you sure you want to delete this search?",
+    "filters": {
+        "city": "City",
+        "minRent": "Min Rent",
+        "maxRent": "Max Rent",
+        "rooms": "Rooms",
+        "apartmentType": "Apartment Type",
+        "furnished": "Furnished",
+        "petFriendly": "Pet Friendly",
+        "parking": "Parking",
+        "balcony": "Balcony"
+    }
+}

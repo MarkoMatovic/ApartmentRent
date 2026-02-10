@@ -1,0 +1,1 @@
+export { SavedSearchesPage } from './SavedSearchesPage';

@@ -1,0 +1,25 @@
+{
+    "title": "Obaveštenja",
+    "markAllRead": "Označi sve kao pročitano",
+    "deleteAll": "Obriši sve",
+    "noNotifications": "Nema obaveštenja",
+    "noNotificationsDescription": "Vaša obaveštenja će se pojaviti ovde",
+    "markAsRead": "Označi kao pročitano",
+    "delete": "Obriši",
+    "types": {
+        "info": "Info",
+        "success": "Uspeh",
+        "warning": "Upozorenje",
+        "error": "Greška"
+    },
+    "messages": {
+        "newMessage": "Nova poruka",
+        "appointmentConfirmed": "Zakazivanje potvrđeno",
+        "appointmentCancelled": "Zakazivanje otkazano",
+        "newApplication": "Nova prijava",
+        "applicationAccepted": "Prijava prihvaćena",
+        "applicationRejected": "Prijava odbijena",
+        "newReview": "Nova recenzija",
+        "paymentReceived": "Plaćanje primljeno"
+    }
+}

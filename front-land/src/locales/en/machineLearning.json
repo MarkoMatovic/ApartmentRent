@@ -1,0 +1,45 @@
+{
+    "pricePredictor": {
+        "title": "Price Prediction",
+        "subtitle": "Estimate market value of apartment",
+        "city": "City",
+        "rooms": "Number of Rooms",
+        "size": "Size (m²)",
+        "apartmentType": "Apartment Type",
+        "furnished": "Furnished",
+        "balcony": "Balcony",
+        "parking": "Parking",
+        "elevator": "Elevator",
+        "predict": "Predict Price",
+        "predictedPrice": "Predicted Price",
+        "confidence": "Confidence",
+        "modelNotTrained": "Model not trained yet",
+        "error": "Error predicting price"
+    },
+    "roommateMatching": {
+        "title": "Find Roommate",
+        "subtitle": "Smart matching based on compatibility",
+        "findMatches": "Find Compatible Roommates",
+        "matchScore": "Match Score",
+        "topMatches": "Top Matches",
+        "noMatches": "No matches found",
+        "compatibility": {
+            "lifestyle": "Lifestyle",
+            "cleanliness": "Cleanliness",
+            "social": "Social",
+            "budget": "Budget"
+        }
+    },
+    "admin": {
+        "title": "ML Administration",
+        "trainModel": "Train Model",
+        "modelMetrics": "Model Metrics",
+        "rSquared": "R² Score",
+        "mae": "Mean Absolute Error",
+        "rmse": "Root Mean Squared Error",
+        "trainedDate": "Trained Date",
+        "sampleCount": "Sample Count",
+        "modelTrained": "Model trained successfully",
+        "trainingError": "Error training model"
+    }
+}

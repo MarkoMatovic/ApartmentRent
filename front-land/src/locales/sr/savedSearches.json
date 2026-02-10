@@ -1,0 +1,27 @@
+{
+    "title": "Sačuvane pretrage",
+    "mySearches": "Moje pretrage",
+    "createNew": "Nova pretraga",
+    "searchName": "Naziv pretrage",
+    "searchNamePlaceholder": "Npr. Stan u centru Beograda",
+    "saveSearch": "Sačuvaj pretragu",
+    "deleteSearch": "Obriši pretragu",
+    "editSearch": "Izmeni pretragu",
+    "noSearches": "Nemate sačuvanih pretraga",
+    "noSearchesDescription": "Sačuvajte svoje omiljene pretrage za brži pristup",
+    "searchSaved": "Pretraga je sačuvana",
+    "searchDeleted": "Pretraga je obrisana",
+    "searchUpdated": "Pretraga je ažurirana",
+    "confirmDelete": "Da li ste sigurni da želite da obrišete ovu pretragu?",
+    "filters": {
+        "city": "Grad",
+        "minRent": "Minimalna cena",
+        "maxRent": "Maksimalna cena",
+        "rooms": "Broj soba",
+        "apartmentType": "Tip stana",
+        "furnished": "Namešten",
+        "petFriendly": "Dozvoljeni kućni ljubimci",
+        "parking": "Parking",
+        "balcony": "Terasa"
+    }
+}
