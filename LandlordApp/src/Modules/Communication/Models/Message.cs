@@ -8,6 +8,13 @@ public partial class Message
     public string MessageText { get; set; } = null!;
     public DateTime? SentAt { get; set; }
     public bool? IsRead { get; set; }
+    
+    // File upload properties
+    public string? FileUrl { get; set; }
+    public string? FileName { get; set; }
+    public long? FileSize { get; set; }
+    public string? FileType { get; set; }
+    
     public Guid? CreatedByGuid { get; set; }
     public DateTime? CreatedDate { get; set; }
     public Guid? ModifiedByGuid { get; set; }

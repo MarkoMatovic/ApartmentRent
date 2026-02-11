@@ -29,6 +29,7 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import MyAppointmentsPage from './pages/MyAppointmentsPage';
 import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
 import MessagesPage from './pages/MessagesPage';
+import ReportsPage from './pages/ReportsPage';
 import { SavedSearchesPage } from './pages/SavedSearches';
 import { SearchRequestsPage } from './pages/SearchRequests';
 import { PricePredictorPage } from './pages/PricePredictor';
@@ -59,6 +60,7 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-apartments" element={<MyApartmentsPage />} />
                 <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
+                <Route path="/admin/reports" element={<ReportsPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/analytics/roommate" element={<UserRoommateAnalyticsPage />} />

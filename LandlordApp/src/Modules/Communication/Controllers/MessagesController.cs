@@ -5,6 +5,7 @@ using Lander.src.Modules.Communication.Intefaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace Lander.src.Modules.Communication.Controllers;
+
 [Route(ApiActionsV1.Messages)]
 [ApiController]
 [Authorize]
@@ -19,9 +20,9 @@ public class MessagesController : ControllerBase
     }
     [HttpGet(ApiActionsV1.GetConversation, Name = nameof(ApiActionsV1.GetConversation))]
     public async Task<ActionResult<ConversationMessagesDto>> GetConversation(
-        [FromQuery] int userId1, 
-        [FromQuery] int userId2, 
-        [FromQuery] int page = 1, 
+        [FromQuery] int userId1,
+        [FromQuery] int userId2,
+        [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
         var conversation = await _messageService.GetConversationAsync(userId1, userId2, page, pageSize);
@@ -59,5 +60,73 @@ public class MessagesController : ControllerBase
     {
         var count = await _messageService.GetUnreadCountAsync(userId);
         return Ok(count);
+    }
+
+    
+   [HttpPost("archive")]
+    public async Task<IActionResult> ArchiveConversation([FromBody] ChatActionDto dto)
+    {
+        await _messageService.ArchiveConversationAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpPost("unarchive")]
+    public async Task<IActionResult> UnarchiveConversation([FromBody] ChatActionDto dto)
+    {
+        await _messageService.UnarchiveConversationAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpPost("mute")]
+    public async Task<IActionResult> MuteConversation([FromBody] ChatActionDto dto)
+    {
+        await _messageService.MuteConversationAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpPost("unmute")]
+    public async Task<IActionResult> UnmuteConversation([FromBody] ChatActionDto dto)
+    {
+        await _messageService.UnmuteConversationAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpPost("block")]
+    public async Task<IActionResult> BlockUser([FromBody] ChatActionDto dto)
+    {
+        await _messageService.BlockUserAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpPost("unblock")]
+    public async Task<IActionResult> UnblockUser([FromBody] ChatActionDto dto)
+    {
+        await _messageService.UnblockUserAsync(dto.UserId, dto.OtherUserId);
+        return Ok();
+    }
+
+    [HttpDelete("delete-conversation")]
+    public async Task<IActionResult> DeleteConversation([FromQuery] int userId, [FromQuery] int otherUserId)
+    {
+        await _messageService.DeleteConversationAsync(userId, otherUserId);
+        return Ok();
+    }
+
+
+    // Search
+    [HttpGet("search")]
+    public async Task<ActionResult<List<MessageDto>>> SearchMessages([FromQuery] int userId, [FromQuery] string query)
+    {
+        var messages = await _messageService.SearchMessagesAsync(userId, query);
+        return Ok(messages);
+    }
+
+    // Report Abuse
+    [HttpPost("report")]
+    public async Task<IActionResult> ReportAbuse([FromBody] ReportAbuseRequestDto dto)
+    {
+        var reportDto = new ReportMessageDto { ReportedUserId = dto.ReportedUserId, MessageId = dto.MessageId, Reason = dto.Reason };
+        await _messageService.ReportAbuseAsync(dto.UserId, reportDto);
+        return Ok();
     }
 }
