@@ -245,6 +245,8 @@ public class CommunicationsContext : DbContext, IUnitofWork
     private IDbContextTransaction? _currentTransaction;
     public DbSet<Message> Messages { get; set; }
     public DbSet<EmailLog> EmailLogs { get; set; }
+    public DbSet<ConversationSettings> ConversationSettings { get; set; }
+    public DbSet<ReportedMessage> ReportedMessages { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -319,15 +321,15 @@ public class CommunicationsContext : DbContext, IUnitofWork
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
 
-            entity.HasOne(d => d.Receiver).WithMany(p => p.MessageReceivers)
-                .HasForeignKey(d => d.ReceiverId)
-                .HasConstraintName("FK__Messages__Receiv__6383C8BA")
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(e => e.FileUrl).HasMaxLength(500);
+            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.Property(e => e.FileSize);
+            entity.Property(e => e.FileType).HasMaxLength(50);
 
-            entity.HasOne(d => d.Sender).WithMany(p => p.MessageSenders)
-                .HasForeignKey(d => d.SenderId)
-                .HasConstraintName("FK__Messages__Sender__628FA481")
-                .OnDelete(DeleteBehavior.Restrict);
+            // Note: Sender and Receiver navigation properties are ignored to avoid cross-schema FK constraints
+            // User entities are in UsersRoles schema, not Communication schema
+            entity.Ignore(e => e.Sender);
+            entity.Ignore(e => e.Receiver);
         });
 
         modelBuilder.Entity<EmailLog>(entity =>
@@ -348,6 +350,53 @@ public class CommunicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<ConversationSettings>(entity =>
+        {
+            entity.HasKey(e => e.SettingId).HasName("PK__ConversationSettings__SettingId");
+            entity.ToTable("ConversationSettings", "Communication");
+
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.OtherUserId).IsRequired();
+            entity.Property(e => e.IsArchived).HasDefaultValue(false);
+            entity.Property(e => e.IsMuted).HasDefaultValue(false);
+            entity.Property(e => e.IsBlocked).HasDefaultValue(false);
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+
+            // Unique constraint: one setting per user-otherUser pair
+            entity.HasIndex(e => new { e.UserId, e.OtherUserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ReportedMessage>(entity =>
+        {
+            entity.HasKey(e => e.ReportId).HasName("PK__ReportedMessages__ReportId");
+            entity.ToTable("ReportedMessages", "Communication");
+
+            entity.Property(e => e.MessageId).IsRequired();
+            entity.Property(e => e.ReportedByUserId).IsRequired();
+            entity.Property(e => e.ReportedUserId).IsRequired();
+            entity.Property(e => e.Reason).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedDate)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ReviewedDate).HasColumnType("datetime");
+            entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
+            entity.Property(e => e.AdminNotes).HasColumnType("text");
+
+            entity.HasOne(d => d.Message).WithMany()
+                .HasForeignKey(d => d.MessageId)
+                .HasConstraintName("FK__ReportedMessages__Message")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.MessageId);
+            entity.HasIndex(e => e.ReportedByUserId);
+            entity.HasIndex(e => e.ReportedUserId);
+            entity.HasIndex(e => e.Status);
         });
     }
 }

@@ -83,5 +83,65 @@ export const messagesApi = {
         const response = await apiClient.get(`/api/v1/messages/unread-count/${userId}`);
         return response.data;
     },
+
+    // Conversation Settings
+    archiveConversation: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/archive?userId=${userId}`, { otherUserId });
+    },
+
+    unarchiveConversation: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/unarchive`, { userId, otherUserId });
+    },
+
+    muteConversation: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/mute`, { userId, otherUserId });
+    },
+
+    unmuteConversation: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/unmute`, { userId, otherUserId });
+    },
+
+    blockUser: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/block`, { userId, otherUserId });
+    },
+
+    unblockUser: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/unblock`, { userId, otherUserId });
+    },
+
+    deleteConversation: async (otherUserId: number): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.delete(`/api/v1/messages/delete-conversation?userId=${userId}&otherUserId=${otherUserId}`);
+    },
+
+    // File Upload
+    uploadFile: async (file: File): Promise<{ fileUrl: string }> => {
+        const userId = getUserId();
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post(`/api/v1/messages/upload?userId=${userId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+
+    // Search
+    searchMessages: async (query: string): Promise<Message[]> => {
+        const userId = getUserId();
+        const response = await apiClient.get(`/api/v1/messages/search?userId=${userId}&query=${encodeURIComponent(query)}`);
+        return response.data;
+    },
+
+    // Report Abuse
+    reportAbuse: async (messageId: number, reportedUserId: number, reason: string): Promise<void> => {
+        const userId = getUserId();
+        await apiClient.post(`/api/v1/messages/report`, { userId, reportedUserId, messageId, reason });
+    },
 };
 

@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using Lander.src.Modules.Communication.Dtos.Dto;
+using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Intefaces;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Hosting;
 namespace Lander.src.Modules.Communication.Implementation;
 public class MessageService : IMessageService
 {
@@ -15,6 +17,7 @@ public class MessageService : IMessageService
     private readonly IEmailService _emailService;
     private readonly IHubContext<ChatHub> _chatHubContext;
     private readonly IHubContext<NotificationHub> _notificationHubContext;
+    private readonly IWebHostEnvironment _webHostEnvironment;
 
     public MessageService(
         CommunicationsContext context, 
@@ -22,7 +25,8 @@ public class MessageService : IMessageService
         IHttpContextAccessor httpContextAccessor,
         IEmailService emailService,
         IHubContext<ChatHub> chatHubContext,
-        IHubContext<NotificationHub> notificationHubContext)
+        IHubContext<NotificationHub> notificationHubContext,
+        IWebHostEnvironment webHostEnvironment)
     {
         _context = context;
         _usersContext = usersContext;
@@ -30,6 +34,7 @@ public class MessageService : IMessageService
         _emailService = emailService;
         _chatHubContext = chatHubContext;
         _notificationHubContext = notificationHubContext;
+        _webHostEnvironment = webHostEnvironment;
     }
     public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText)
     {
@@ -149,32 +154,58 @@ public class MessageService : IMessageService
                 UnreadCount = g.Count(m => m.ReceiverId == userId && m.IsRead == false)
             })
             .ToListAsync();
-        var otherUserIds = conversations.Select(c => c.OtherUserId).Where(id => id.HasValue).Select(id => id!.Value).ToList();
+
+        var result = new List<ConversationDto>();
+        var otherUserIds = conversations.Select(c => c.OtherUserId).ToList();
         var users = await _usersContext.Users
             .Where(u => otherUserIds.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId);
-        var result = new List<ConversationDto>();
+
+        // Load conversation settings for all conversations
+        var settings = await _context.ConversationSettings
+            .Where(s => s.UserId == userId && otherUserIds.Contains(s.OtherUserId))
+            .ToDictionaryAsync(s => s.OtherUserId);
+
         foreach (var conv in conversations)
         {
-            if (conv.OtherUserId == null) continue;
-            var otherUser = users.GetValueOrDefault(conv.OtherUserId.Value);
-            result.Add(new ConversationDto
+            if (users.TryGetValue(conv.OtherUserId ?? 0, out var otherUser))
             {
-                OtherUserId = conv.OtherUserId.Value,
-                OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown",
-                OtherUserProfilePicture = otherUser?.ProfilePicture,
-                LastMessage = conv.LastMessage != null ? new MessageDto
+                var conversationDto = new ConversationDto
                 {
-                    MessageId = conv.LastMessage.MessageId,
-                    SenderId = conv.LastMessage.SenderId ?? 0,
-                    ReceiverId = conv.LastMessage.ReceiverId ?? 0,
-                    MessageText = conv.LastMessage.MessageText,
-                    SentAt = conv.LastMessage.SentAt ?? DateTime.UtcNow,
-                    IsRead = conv.LastMessage.IsRead ?? false
-                } : null,
-                UnreadCount = conv.UnreadCount
-            });
+                    OtherUserId = conv.OtherUserId ?? 0,
+                    OtherUserName = $"{otherUser.FirstName} {otherUser.LastName}",
+                    OtherUserProfilePicture = otherUser.ProfilePicture,
+                    UnreadCount = conv.UnreadCount,
+                    IsArchived = false,
+                    IsMuted = false,
+                    IsBlocked = false
+                };
+
+                // Apply settings if they exist
+                if (settings.TryGetValue(conv.OtherUserId ?? 0, out var setting))
+                {
+                    conversationDto.IsArchived = setting.IsArchived;
+                    conversationDto.IsMuted = setting.IsMuted;
+                    conversationDto.IsBlocked = setting.IsBlocked;
+                }
+
+                if (conv.LastMessage != null)
+                {
+                    conversationDto.LastMessage = new MessageDto
+                    {
+                        MessageId = conv.LastMessage.MessageId,
+                        SenderId = conv.LastMessage.SenderId ?? 0,
+                        ReceiverId = conv.LastMessage.ReceiverId ?? 0,
+                        MessageText = conv.LastMessage.MessageText,
+                        SentAt = conv.LastMessage.SentAt ?? DateTime.UtcNow,
+                        IsRead = conv.LastMessage.IsRead ?? false
+                    };
+                }
+
+                result.Add(conversationDto);
+            }
         }
+
         return result.OrderByDescending(c => c.LastMessage?.SentAt).ToList();
     }
     public async Task MarkAsReadAsync(int messageId)
@@ -225,4 +256,240 @@ public class MessageService : IMessageService
             ReceiverProfilePicture = receiver?.ProfilePicture
         };
     }
+
+    #region Conversation Settings
+
+    private async Task<ConversationSettings> GetOrCreateSettingsAsync(int userId, int otherUserId)
+    {
+        var settings = await _context.ConversationSettings
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.OtherUserId == otherUserId);
+
+        if (settings == null)
+        {
+            var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            settings = new ConversationSettings
+            {
+                UserId = userId,
+                OtherUserId = otherUserId,
+                IsArchived = false,
+                IsMuted = false,
+                IsBlocked = false,
+                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                CreatedDate = DateTime.UtcNow
+            };
+            _context.ConversationSettings.Add(settings);
+            await _context.SaveEntitiesAsync();
+        }
+
+        return settings;
+    }
+
+    public async Task ArchiveConversationAsync(int userId, int otherUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
+        settings.IsArchived = true;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task UnarchiveConversationAsync(int userId, int otherUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
+        settings.IsArchived = false;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task MuteConversationAsync(int userId, int otherUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
+        settings.IsMuted = true;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task UnmuteConversationAsync(int userId, int otherUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
+        settings.IsMuted = false;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task BlockUserAsync(int userId, int blockedUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, blockedUserId);
+        settings.IsBlocked = true;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task UnblockUserAsync(int userId, int blockedUserId)
+    {
+        var settings = await GetOrCreateSettingsAsync(userId, blockedUserId);
+        settings.IsBlocked = false;
+        settings.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+    }
+
+    public async Task<bool> IsUserBlockedAsync(int userId, int otherUserId)
+    {
+        var settings = await _context.ConversationSettings
+            .FirstOrDefaultAsync(s => s.UserId == userId && s.OtherUserId == otherUserId);
+        return settings?.IsBlocked ?? false;
+    }
+
+    #endregion
+
+    #region Conversation Management
+
+    public async Task DeleteConversationAsync(int userId, int otherUserId)
+    {
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            // Delete all messages between these users
+            var messages = await _context.Messages
+                .Where(m => (m.SenderId == userId && m.ReceiverId == otherUserId) ||
+                           (m.SenderId == otherUserId && m.ReceiverId == userId))
+                .ToListAsync();
+
+            _context.Messages.RemoveRange(messages);
+
+            // Delete conversation settings
+            var settings = await _context.ConversationSettings
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.OtherUserId == otherUserId);
+            if (settings != null)
+            {
+                _context.ConversationSettings.Remove(settings);
+            }
+
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region File Upload
+
+    public async Task<string> UploadFileAsync(IFormFile file, int userId)
+    {
+        // Validate file
+        if (file == null || file.Length == 0)
+            throw new ArgumentException("File is empty");
+
+        if (file.Length > 3 * 1024 * 1024) // 3MB
+            throw new ArgumentException("File size exceeds 3MB limit");
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(extension))
+            throw new ArgumentException("File type not allowed");
+
+        // Create upload directory if it doesn't exist
+        var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "chat-files");
+        Directory.CreateDirectory(uploadsFolder);
+
+        // Generate unique filename
+        var uniqueFileName = $"{userId}_{DateTime.UtcNow.Ticks}{extension}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        // Save file
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        // Return relative URL
+        return $"/uploads/chat-files/{uniqueFileName}";
+    }
+
+    #endregion
+
+    #region Search
+
+    public async Task<List<MessageDto>> SearchMessagesAsync(int userId, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return new List<MessageDto>();
+
+        var messages = await _context.Messages
+            .Where(m => (m.SenderId == userId || m.ReceiverId == userId) &&
+                       m.MessageText.Contains(query))
+            .OrderByDescending(m => m.SentAt)
+            .Take(50)
+            .Select(m => new MessageDto
+            {
+                MessageId = m.MessageId,
+                SenderId = m.SenderId ?? 0,
+                ReceiverId = m.ReceiverId ?? 0,
+                MessageText = m.MessageText,
+                SentAt = m.SentAt ?? DateTime.UtcNow,
+                IsRead = m.IsRead ?? false
+            })
+            .ToListAsync();
+
+        // Load user names
+        var userIds = messages.SelectMany(m => new[] { m.SenderId, m.ReceiverId }).Distinct().ToList();
+        var users = await _usersContext.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId);
+
+        foreach (var msg in messages)
+        {
+            if (users.TryGetValue(msg.SenderId, out var sender))
+            {
+                msg.SenderName = $"{sender.FirstName} {sender.LastName}";
+                msg.SenderProfilePicture = sender.ProfilePicture;
+            }
+            if (users.TryGetValue(msg.ReceiverId, out var receiver))
+            {
+                msg.ReceiverName = $"{receiver.FirstName} {receiver.LastName}";
+                msg.ReceiverProfilePicture = receiver.ProfilePicture;
+            }
+        }
+
+        return messages;
+    }
+
+    #endregion
+
+    #region Report Abuse
+
+    public async Task ReportAbuseAsync(int reportedByUserId, ReportMessageDto reportDto)
+    {
+        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        
+        var report = new ReportedMessage
+        {
+            MessageId = reportDto.MessageId,
+            ReportedByUserId = reportedByUserId,
+            ReportedUserId = reportDto.ReportedUserId,
+            Reason = reportDto.Reason,
+            Status = "Pending",
+            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        var transaction = await _context.BeginTransactionAsync();
+        try
+        {
+            _context.ReportedMessages.Add(report);
+            await _context.SaveEntitiesAsync();
+            await _context.CommitTransactionAsync(transaction);
+        }
+        catch
+        {
+            _context.RollBackTransaction();
+            throw;
+        }
+    }
+
+    #endregion
 }
