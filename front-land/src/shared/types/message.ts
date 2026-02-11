@@ -9,6 +9,11 @@ export interface Message {
     messageText: string; // Changed from 'content' to match backend
     sentAt: string;
     isRead: boolean;
+    // File upload properties
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
 }
 
 export interface Conversation {
@@ -24,9 +29,40 @@ export interface Conversation {
         isRead: boolean;
     };
     unreadCount: number;
+    // Conversation settings
+    isArchived: boolean;
+    isMuted: boolean;
+    isBlocked: boolean;
 }
 
 export interface SendMessageRequest {
     receiverId: number;
     content: string;
+}
+
+export interface ReportMessageRequest {
+    messageId: number;
+    reportedUserId: number;
+    reason: string;
+}
+
+export interface ChatActionRequest {
+    otherUserId: number;
+}
+
+export interface ReportedMessage {
+    reportId: number;
+    messageId: number;
+    messageText: string;
+    reportedByUserId: number;
+    reportedByUserName: string;
+    reportedUserId: number;
+    reportedUserName: string;
+    reason: string;
+    status: string;
+    createdDate: string;
+    reviewedByAdminId?: number;
+    reviewedByAdminName?: string;
+    reviewedDate?: string;
+    adminNotes?: string;
 }
