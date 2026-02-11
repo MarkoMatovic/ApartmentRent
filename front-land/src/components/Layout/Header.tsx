@@ -29,6 +29,7 @@ import {
   AccountCircle,
   Analytics as AnalyticsIcon,
   Star as StarIcon,
+  Report as ReportIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +40,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
@@ -297,10 +298,16 @@ const Header: React.FC = () => {
                   </MenuItem>
                 )}
                 {user?.userRoleId === 1 && (
-                  <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
-                    <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                    {t('dashboard:analyticsDashboard')}
-                  </MenuItem>
+                  <>
+                    <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
+                      <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                      {t('dashboard:analyticsDashboard')}
+                    </MenuItem>
+                    <MenuItem onClick={() => { navigate('/admin/reports'); handleMenuClose(); }}>
+                      <ReportIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                      {t('chat:abuseReports')}
+                    </MenuItem>
+                  </>
                 )}
                 <MenuItem onClick={handleLogout}>{t('logout')}</MenuItem>
               </Menu>
@@ -459,14 +466,24 @@ const Header: React.FC = () => {
                   </ListItem>
                 )}
                 {user?.userRoleId === 1 && (
-                  <ListItem disablePadding>
-                    <ListItemButton onClick={() => { navigate('/admin/analytics'); setMobileOpen(false); }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                        <ListItemText primary={t('dashboard:analyticsDashboard')} />
-                      </Box>
-                    </ListItemButton>
-                  </ListItem>
+                  <>
+                    <ListItem disablePadding>
+                      <ListItemButton onClick={() => { navigate('/admin/analytics'); setMobileOpen(false); }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                          <ListItemText primary={t('dashboard:analyticsDashboard')} />
+                        </Box>
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemButton onClick={() => { navigate('/admin/reports'); setMobileOpen(false); }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <ReportIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                          <ListItemText primary={t('chat:abuseReports')} />
+                        </Box>
+                      </ListItemButton>
+                    </ListItem>
+                  </>
                 )}
                 <Divider sx={{ my: 1 }} />
                 <ListItem disablePadding>

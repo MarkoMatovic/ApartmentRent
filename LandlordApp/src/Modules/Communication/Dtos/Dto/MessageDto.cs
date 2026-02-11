@@ -11,6 +11,12 @@ public class MessageDto
     public string? ReceiverName { get; set; }
     public string? SenderProfilePicture { get; set; }
     public string? ReceiverProfilePicture { get; set; }
+    
+    // File upload properties
+    public string? FileUrl { get; set; }
+    public string? FileName { get; set; }
+    public long? FileSize { get; set; }
+    public string? FileType { get; set; }
 }
 public class ConversationDto
 {
@@ -19,6 +25,11 @@ public class ConversationDto
     public string? OtherUserProfilePicture { get; set; }
     public MessageDto? LastMessage { get; set; }
     public int UnreadCount { get; set; }
+    
+    // Conversation settings
+    public bool IsArchived { get; set; }
+    public bool IsMuted { get; set; }
+    public bool IsBlocked { get; set; }
 }
 public class ConversationMessagesDto
 {

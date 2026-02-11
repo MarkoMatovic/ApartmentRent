@@ -43,39 +43,52 @@ public class SearchRequestService : ISearchRequestService
         {
             query = query.Where(sr => sr.BudgetMin == null || sr.BudgetMin <= maxBudget.Value);
         }
-        var result = await (from sr in query
-                           join u in _usersContext.Users on sr.UserId equals u.UserId
-                           orderby sr.CreatedDate descending
-                           select new SearchRequestDto
-                           {
-                               SearchRequestId = sr.SearchRequestId,
-                               UserId = sr.UserId,
-                               FirstName = u.FirstName,
-                               LastName = u.LastName,
-                               ProfilePicture = u.ProfilePicture,
-                               RequestType = sr.RequestType,
-                               Title = sr.Title,
-                               Description = sr.Description,
-                               City = sr.City,
-                               PostalCode = sr.PostalCode,
-                               PreferredLocation = sr.PreferredLocation,
-                               BudgetMin = sr.BudgetMin,
-                               BudgetMax = sr.BudgetMax,
-                               NumberOfRooms = sr.NumberOfRooms,
-                               SizeSquareMeters = sr.SizeSquareMeters,
-                               IsFurnished = sr.IsFurnished,
-                               HasParking = sr.HasParking,
-                               HasBalcony = sr.HasBalcony,
-                               PetFriendly = sr.PetFriendly,
-                               SmokingAllowed = sr.SmokingAllowed,
-                               AvailableFrom = sr.AvailableFrom,
-                               AvailableUntil = sr.AvailableUntil,
-                               LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
-                               LookingForPetFriendly = sr.LookingForPetFriendly,
-                               PreferredLifestyle = sr.PreferredLifestyle,
-                               IsActive = sr.IsActive,
-                               CreatedDate = sr.CreatedDate
-                           }).ToListAsync();
+       
+        var searchRequests = await query.OrderByDescending(sr => sr.CreatedDate).ToListAsync();
+        
+       
+        var userIds = searchRequests.Select(sr => sr.UserId).Distinct().ToList();
+        var users = await _usersContext.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .AsNoTracking()
+            .ToListAsync();
+        
+        
+        var result = searchRequests.Select(sr =>
+        {
+            var user = users.FirstOrDefault(u => u.UserId == sr.UserId);
+            return new SearchRequestDto
+            {
+                SearchRequestId = sr.SearchRequestId,
+                UserId = sr.UserId,
+                FirstName = user?.FirstName ?? string.Empty,
+                LastName = user?.LastName ?? string.Empty,
+                ProfilePicture = user?.ProfilePicture,
+                RequestType = sr.RequestType,
+                Title = sr.Title,
+                Description = sr.Description,
+                City = sr.City,
+                PostalCode = sr.PostalCode,
+                PreferredLocation = sr.PreferredLocation,
+                BudgetMin = sr.BudgetMin,
+                BudgetMax = sr.BudgetMax,
+                NumberOfRooms = sr.NumberOfRooms,
+                SizeSquareMeters = sr.SizeSquareMeters,
+                IsFurnished = sr.IsFurnished,
+                HasParking = sr.HasParking,
+                HasBalcony = sr.HasBalcony,
+                PetFriendly = sr.PetFriendly,
+                SmokingAllowed = sr.SmokingAllowed,
+                AvailableFrom = sr.AvailableFrom,
+                AvailableUntil = sr.AvailableUntil,
+                LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
+                LookingForPetFriendly = sr.LookingForPetFriendly,
+                PreferredLifestyle = sr.PreferredLifestyle,
+                IsActive = sr.IsActive,
+                CreatedDate = sr.CreatedDate
+            };
+        }).ToList();
+        
         return result;
     }
     public async Task<PagedResult<SearchRequestDto>> GetAllSearchRequestsAsync(
@@ -106,42 +119,55 @@ public class SearchRequestService : ISearchRequestService
             query = query.Where(sr => sr.BudgetMin == null || sr.BudgetMin <= maxBudget.Value);
         }
         var totalCount = await query.CountAsync();
-        var result = await (from sr in query
-                           join u in _usersContext.Users on sr.UserId equals u.UserId
-                           orderby sr.CreatedDate descending
-                           select new SearchRequestDto
-                           {
-                               SearchRequestId = sr.SearchRequestId,
-                               UserId = sr.UserId,
-                               FirstName = u.FirstName,
-                               LastName = u.LastName,
-                               ProfilePicture = u.ProfilePicture,
-                               RequestType = sr.RequestType,
-                               Title = sr.Title,
-                               Description = sr.Description,
-                               City = sr.City,
-                               PostalCode = sr.PostalCode,
-                               PreferredLocation = sr.PreferredLocation,
-                               BudgetMin = sr.BudgetMin,
-                               BudgetMax = sr.BudgetMax,
-                               NumberOfRooms = sr.NumberOfRooms,
-                               SizeSquareMeters = sr.SizeSquareMeters,
-                               IsFurnished = sr.IsFurnished,
-                               HasParking = sr.HasParking,
-                               HasBalcony = sr.HasBalcony,
-                               PetFriendly = sr.PetFriendly,
-                               SmokingAllowed = sr.SmokingAllowed,
-                               AvailableFrom = sr.AvailableFrom,
-                               AvailableUntil = sr.AvailableUntil,
-                               LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
-                               LookingForPetFriendly = sr.LookingForPetFriendly,
-                               PreferredLifestyle = sr.PreferredLifestyle,
-                               IsActive = sr.IsActive,
-                               CreatedDate = sr.CreatedDate
-                           })
-                           .Skip((page - 1) * pageSize)
-                           .Take(pageSize)
-                           .ToListAsync();
+        
+       
+        var searchRequests = await query
+            .OrderByDescending(sr => sr.CreatedDate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        
+        var userIds = searchRequests.Select(sr => sr.UserId).Distinct().ToList();
+        var users = await _usersContext.Users
+            .Where(u => userIds.Contains(u.UserId))
+            .AsNoTracking()
+            .ToListAsync();
+        
+        var result = searchRequests.Select(sr =>
+        {
+            var user = users.FirstOrDefault(u => u.UserId == sr.UserId);
+            return new SearchRequestDto
+            {
+                SearchRequestId = sr.SearchRequestId,
+                UserId = sr.UserId,
+                FirstName = user?.FirstName ?? string.Empty,
+                LastName = user?.LastName ?? string.Empty,
+                ProfilePicture = user?.ProfilePicture,
+                RequestType = sr.RequestType,
+                Title = sr.Title,
+                Description = sr.Description,
+                City = sr.City,
+                PostalCode = sr.PostalCode,
+                PreferredLocation = sr.PreferredLocation,
+                BudgetMin = sr.BudgetMin,
+                BudgetMax = sr.BudgetMax,
+                NumberOfRooms = sr.NumberOfRooms,
+                SizeSquareMeters = sr.SizeSquareMeters,
+                IsFurnished = sr.IsFurnished,
+                HasParking = sr.HasParking,
+                HasBalcony = sr.HasBalcony,
+                PetFriendly = sr.PetFriendly,
+                SmokingAllowed = sr.SmokingAllowed,
+                AvailableFrom = sr.AvailableFrom,
+                AvailableUntil = sr.AvailableUntil,
+                LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
+                LookingForPetFriendly = sr.LookingForPetFriendly,
+                PreferredLifestyle = sr.PreferredLifestyle,
+                IsActive = sr.IsActive,
+                CreatedDate = sr.CreatedDate
+            };
+        }).ToList();
+        
         return new PagedResult<SearchRequestDto>
         {
             Items = result,
@@ -193,40 +219,49 @@ public class SearchRequestService : ISearchRequestService
     }
     public async Task<IEnumerable<SearchRequestDto>> GetSearchRequestsByUserIdAsync(int userId)
     {
-        var result = await (from sr in _context.SearchRequests
-                           where sr.UserId == userId && sr.IsActive
-                           join u in _usersContext.Users on sr.UserId equals u.UserId
-                           orderby sr.CreatedDate descending
-                           select new SearchRequestDto
-                           {
-                               SearchRequestId = sr.SearchRequestId,
-                               UserId = sr.UserId,
-                               FirstName = u.FirstName,
-                               LastName = u.LastName,
-                               ProfilePicture = u.ProfilePicture,
-                               RequestType = sr.RequestType,
-                               Title = sr.Title,
-                               Description = sr.Description,
-                               City = sr.City,
-                               PostalCode = sr.PostalCode,
-                               PreferredLocation = sr.PreferredLocation,
-                               BudgetMin = sr.BudgetMin,
-                               BudgetMax = sr.BudgetMax,
-                               NumberOfRooms = sr.NumberOfRooms,
-                               SizeSquareMeters = sr.SizeSquareMeters,
-                               IsFurnished = sr.IsFurnished,
-                               HasParking = sr.HasParking,
-                               HasBalcony = sr.HasBalcony,
-                               PetFriendly = sr.PetFriendly,
-                               SmokingAllowed = sr.SmokingAllowed,
-                               AvailableFrom = sr.AvailableFrom,
-                               AvailableUntil = sr.AvailableUntil,
-                               LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
-                               LookingForPetFriendly = sr.LookingForPetFriendly,
-                               PreferredLifestyle = sr.PreferredLifestyle,
-                               IsActive = sr.IsActive,
-                               CreatedDate = sr.CreatedDate
-                           }).AsNoTracking().ToListAsync();
+       
+        var searchRequests = await _context.SearchRequests
+            .Where(sr => sr.UserId == userId && sr.IsActive)
+            .OrderByDescending(sr => sr.CreatedDate)
+            .AsNoTracking()
+            .ToListAsync();
+        
+        var user = await _usersContext.Users
+            .Where(u => u.UserId == userId)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+        
+        var result = searchRequests.Select(sr => new SearchRequestDto
+        {
+            SearchRequestId = sr.SearchRequestId,
+            UserId = sr.UserId,
+            FirstName = user?.FirstName ?? string.Empty,
+            LastName = user?.LastName ?? string.Empty,
+            ProfilePicture = user?.ProfilePicture,
+            RequestType = sr.RequestType,
+            Title = sr.Title,
+            Description = sr.Description,
+            City = sr.City,
+            PostalCode = sr.PostalCode,
+            PreferredLocation = sr.PreferredLocation,
+            BudgetMin = sr.BudgetMin,
+            BudgetMax = sr.BudgetMax,
+            NumberOfRooms = sr.NumberOfRooms,
+            SizeSquareMeters = sr.SizeSquareMeters,
+            IsFurnished = sr.IsFurnished,
+            HasParking = sr.HasParking,
+            HasBalcony = sr.HasBalcony,
+            PetFriendly = sr.PetFriendly,
+            SmokingAllowed = sr.SmokingAllowed,
+            AvailableFrom = sr.AvailableFrom,
+            AvailableUntil = sr.AvailableUntil,
+            LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
+            LookingForPetFriendly = sr.LookingForPetFriendly,
+            PreferredLifestyle = sr.PreferredLifestyle,
+            IsActive = sr.IsActive,
+            CreatedDate = sr.CreatedDate
+        }).ToList();
+        
         return result;
     }
     public async Task<SearchRequestDto> CreateSearchRequestAsync(int userId, SearchRequestInputDto input)
