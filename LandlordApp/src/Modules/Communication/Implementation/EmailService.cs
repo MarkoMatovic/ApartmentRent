@@ -122,6 +122,12 @@ public class EmailService : IEmailService
         var templateData = new { MatchCount = matchCount, SearchCriteria = searchCriteria };
         return await SendTemplatedEmailAsync(to, subject, "SavedSearchAlertEmail", templateData);
     }
+    public async Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason)
+    {
+        var subject = $"Update on saved listing: {apartmentTitle}";
+        var templateData = new { UserName = userName, ApartmentTitle = apartmentTitle, Reason = reason };
+        return await SendTemplatedEmailAsync(to, subject, "ListingUnavailableEmail", templateData);
+    }
     private async Task LogEmailAsync(int? userId, string recipientEmail, string subject, string htmlContent, 
         string? templateId, bool isDelivered, string? sendGridMessageId, string? errorMessage)
     {

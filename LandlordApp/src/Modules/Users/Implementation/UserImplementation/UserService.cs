@@ -18,6 +18,7 @@ namespace Lander.src.Modules.Users.Implementation.UserImplementation;
 public class UserService : IUserInterface
 {
     private readonly UsersContext _context;
+    private readonly ReviewsContext _reviewsContext;
     private readonly TokenProvider _tokenProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -25,7 +26,8 @@ public class UserService : IUserInterface
     private readonly IApartmentService _apartmentService;
     private readonly IRoommateService _roommateService;
     public UserService(
-        UsersContext context, 
+        UsersContext context,
+        ReviewsContext reviewsContext,
         TokenProvider tokenProvider, 
         IHttpContextAccessor httpContextAccessor,
         IEmailService emailService,
@@ -33,6 +35,7 @@ public class UserService : IUserInterface
         IRoommateService roommateService)
     {
         _context = context;
+        _reviewsContext = reviewsContext;
         _tokenProvider = tokenProvider;
         _httpContextAccessor = httpContextAccessor;
 
@@ -244,6 +247,23 @@ public class UserService : IUserInterface
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) return null;
+
+        // Calculate ratings from Reviews table
+        // User can be reviewed as both landlord and tenant
+        var reviewsAsLandlord = await _reviewsContext.Reviews
+            .Where(r => r.LandlordId == userId && r.Rating.HasValue)
+            .ToListAsync();
+        
+        var reviewsAsTenant = await _reviewsContext.Reviews
+            .Where(r => r.TenantId == userId && r.Rating.HasValue)
+            .ToListAsync();
+
+        var allReviews = reviewsAsLandlord.Concat(reviewsAsTenant).ToList();
+        var averageRating = allReviews.Any() 
+            ? (decimal?)allReviews.Average(r => r.Rating!.Value) 
+            : null;
+        var reviewCount = allReviews.Count;
+
         return new UserProfileDto
         {
             UserId = user.UserId,
@@ -261,7 +281,9 @@ public class UserService : IUserInterface
             ProfileVisibility = user.ProfileVisibility,
             UserRoleId = user.UserRoleId,
             RoleName = user.UserRole?.RoleName,
-            CreatedDate = user.CreatedDate
+            CreatedDate = user.CreatedDate,
+            AverageRating = averageRating,
+            ReviewCount = reviewCount
         };
     }
     public async Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto)

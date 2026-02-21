@@ -269,6 +269,9 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/appointments/manage'); handleMenuClose(); }}>
                   {t('manageAppointments')}
                 </MenuItem>
+                <MenuItem onClick={() => { navigate('/appointments/availability'); handleMenuClose(); }}>
+                  My Availability
+                </MenuItem>
                 <MenuItem onClick={() => { navigate('/applications/sent'); handleMenuClose(); }}>
                   My Applications
                 </MenuItem>
@@ -414,6 +417,11 @@ const Header: React.FC = () => {
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/appointments/manage'); setMobileOpen(false); }}>
                     <ListItemText primary={t('manageAppointments')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/appointments/availability'); setMobileOpen(false); }}>
+                    <ListItemText primary="My Availability" />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>

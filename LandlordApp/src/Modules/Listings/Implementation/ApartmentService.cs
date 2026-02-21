@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using System.Text.Json;
 using Lander.src.Common;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
@@ -12,20 +13,33 @@ using Microsoft.Extensions.Caching.Memory;
 using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
 using Microsoft.AspNetCore.SignalR;
 using Lander.src.Notifications.NotificationsHub;
+using Lander.src.Modules.Communication.Intefaces;
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
     private readonly ListingsContext _context;
     private readonly UsersContext _usersContext;
+    private readonly SavedSearchesContext _savedSearchesContext;
+    private readonly IEmailService _emailService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IMemoryCache _cache;
     private readonly IHubContext<NotificationHub> _notificationHubContext;
     private readonly ILogger<ApartmentService> _logger;
 
-    public ApartmentService(ListingsContext context, UsersContext usersContext, IHttpContextAccessor httpContextAccessor, IMemoryCache cache, IHubContext<NotificationHub> notificationHubContext, ILogger<ApartmentService> logger)
+    public ApartmentService(
+        ListingsContext context,
+        UsersContext usersContext,
+        SavedSearchesContext savedSearchesContext,
+        IEmailService emailService,
+        IHttpContextAccessor httpContextAccessor,
+        IMemoryCache cache,
+        IHubContext<NotificationHub> notificationHubContext,
+        ILogger<ApartmentService> logger)
     {
         _context = context;
         _usersContext = usersContext;
+        _savedSearchesContext = savedSearchesContext;
+        _emailService = emailService;
         _httpContextAccessor = httpContextAccessor;
         _cache = cache;
         _notificationHubContext = notificationHubContext;
@@ -186,6 +200,48 @@ public class ApartmentService : IApartmentService
         var apartment = await _context.Apartments
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null) return false;
+
+        // Notify saved search users BEFORE deactivating
+        try
+        {
+            // Find all active saved searches that reference this apartment ID in their filters
+            var allSavedSearches = await _savedSearchesContext.SavedSearches
+                .Where(ss => ss.IsActive && ss.EmailNotificationsEnabled)
+                .ToListAsync();
+
+            var affectedUserIds = allSavedSearches
+                .Where(ss => ss.FiltersJson != null &&
+                             ss.FiltersJson.Contains($"\"apartmentId\":{apartmentId}",
+                                 StringComparison.OrdinalIgnoreCase))
+                .Select(ss => ss.UserId)
+                .Distinct()
+                .ToList();
+
+            if (affectedUserIds.Any())
+            {
+                var usersToNotify = await _usersContext.Users
+                    .Where(u => affectedUserIds.Contains(u.UserId) && u.IsActive)
+                    .ToListAsync();
+
+                foreach (var user in usersToNotify)
+                {
+                    _ = _emailService.SendListingUnavailableEmailAsync(
+                        user.Email,
+                        user.FirstName,
+                        apartment.Title,
+                        "This listing has been removed by the landlord.");
+                }
+
+                _logger.LogInformation("Sent listing unavailable notifications to {Count} user(s) for apartment {ApartmentId}",
+                    usersToNotify.Count, apartmentId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error notifying saved search users for deleted apartment {ApartmentId}", apartmentId);
+            // Do not block deletion on notification failure
+        }
+
         apartment.IsDeleted = true;
         apartment.IsActive = false;
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid)? parsedGuid : null;

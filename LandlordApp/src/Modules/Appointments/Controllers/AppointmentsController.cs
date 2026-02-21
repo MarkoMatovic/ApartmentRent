@@ -179,5 +179,43 @@ namespace Lander.src.Modules.Appointments.Controllers
                 return StatusCode(500, new { message = "An error occurred while retrieving the appointment" });
             }
         }
+
+        [HttpGet("availability")]
+        public async Task<ActionResult<List<LandlordAvailabilityDto>>> GetMyAvailability()
+        {
+            try
+            {
+                var availability = await _appointmentService.GetMyAvailabilityAsync();
+                return Ok(availability);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting landlord availability");
+                return StatusCode(500, new { message = "An error occurred while retrieving availability" });
+            }
+        }
+
+        [HttpPut("availability")]
+        public async Task<ActionResult<List<LandlordAvailabilityDto>>> SetMyAvailability([FromBody] SetAvailabilityDto dto)
+        {
+            try
+            {
+                var availability = await _appointmentService.SetMyAvailabilityAsync(dto);
+                return Ok(availability);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error setting landlord availability");
+                return StatusCode(500, new { message = "An error occurred while saving availability" });
+            }
+        }
     }
 }

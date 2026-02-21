@@ -10,4 +10,5 @@ public interface IEmailService
     Task<bool> SendNewMessageEmailAsync(string to, string senderName, string messagePreview);
     Task<bool> SendAppointmentConfirmationEmailAsync(string to, string userName, DateTime appointmentDate, string apartmentTitle);
     Task<bool> SendSavedSearchAlertEmailAsync(string to, int matchCount, string searchCriteria);
+    Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason);
 }

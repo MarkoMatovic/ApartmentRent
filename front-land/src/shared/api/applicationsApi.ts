@@ -34,5 +34,13 @@ export const applicationsApi = {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
+    },
+
+    checkApprovalStatus: async (apartmentId: number): Promise<{ hasApprovedApplication: boolean; applicationStatus?: string; applicationId?: number }> => {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get(`${API_URL}/check-approval/${apartmentId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
     }
 };
