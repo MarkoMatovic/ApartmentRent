@@ -57,12 +57,27 @@ public class UserService : IUserInterface
         {
             return null;
         }
+
+        if (!user.IsActive)
+        {
+            // Optional: Log attempt or return specific message if DTO allowed it.
+            // For now, returning null to signify "login not possible" or "invalid credentials".
+            return null;
+        }
         var token = await _tokenProvider.CreateAsync(user);
         return token;
     }
     public async Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
+        
+        // Duplicate email check
+        var existingUser = await _context.Users.AnyAsync(u => u.Email == userRegistrationInputDto.Email);
+        if (existingUser)
+        {
+            throw new Exception("User with this email already exists.");
+        }
+
         var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
         var transaction = await _context.BeginTransactionAsync();
         try

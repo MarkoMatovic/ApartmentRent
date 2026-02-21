@@ -52,9 +52,24 @@ public class ApartmentService : IApartmentService
         var apartment = await _context.Apartments
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId);
         if (apartment == null) return false;
+
+        // Ownership check
+        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        {
+            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
+            if (user == null || apartment.LandlordId != user.UserId)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to activate this apartment.");
+            }
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("Authentication required.");
+        }
+
         apartment.IsDeleted = false;
         apartment.IsActive = true;
-        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid) ? parsedGuid : null;
+        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuidMod) ? parsedGuidMod : null;
         apartment.ModifiedDate = DateTime.UtcNow;
         var transaction = await _context.BeginTransactionAsync();
         try
@@ -201,6 +216,20 @@ public class ApartmentService : IApartmentService
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null) return false;
 
+        // Ownership check
+        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        {
+            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
+            if (user == null || apartment.LandlordId != user.UserId)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to delete this apartment.");
+            }
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("Authentication required.");
+        }
+
         // Notify saved search users BEFORE deactivating
         try
         {
@@ -244,7 +273,7 @@ public class ApartmentService : IApartmentService
 
         apartment.IsDeleted = true;
         apartment.IsActive = false;
-        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuid)? parsedGuid : null;
+        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid tempGuid)? tempGuid : null;
         apartment.ModifiedDate = DateTime.UtcNow;
         var transaction = await _context.BeginTransactionAsync();
         try
@@ -666,6 +695,20 @@ public class ApartmentService : IApartmentService
         if (apartment == null)
         {
             throw new Exception("Apartment not found or has been deleted");
+        }
+
+        // Ownership check
+        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        {
+            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
+            if (user == null || apartment.LandlordId != user.UserId)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to update this apartment.");
+            }
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("Authentication required.");
         }
         if (updateDto.Title != null) apartment.Title = updateDto.Title;
         if (updateDto.Description != null) apartment.Description = updateDto.Description;

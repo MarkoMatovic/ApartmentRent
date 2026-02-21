@@ -19,6 +19,7 @@ namespace LandlordApp.Tests.Services;
 public class UserServiceTests : IDisposable
 {
     private readonly UsersContext _context;
+    private readonly ReviewsContext _reviewsContext;
     private readonly TokenProvider _tokenProvider;
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly Mock<IEmailService> _mockEmailService;
@@ -34,7 +35,13 @@ public class UserServiceTests : IDisposable
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
+        var reviewsOptions = new DbContextOptionsBuilder<ReviewsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
         _context = new UsersContext(options);
+        _reviewsContext = new ReviewsContext(reviewsOptions);
 
         // Setup mock configuration for TokenProvider
         var mockConfiguration = new Mock<IConfiguration>();
@@ -54,6 +61,7 @@ public class UserServiceTests : IDisposable
         // Create service instance
         _userService = new UserService(
             _context,
+            _reviewsContext,
             _tokenProvider,
             _mockHttpContextAccessor.Object,
             _mockEmailService.Object,
@@ -82,7 +90,9 @@ public class UserServiceTests : IDisposable
     public void Dispose()
     {
         _context.Database.EnsureDeleted();
+        _reviewsContext.Database.EnsureDeleted();
         _context.Dispose();
+        _reviewsContext.Dispose();
     }
 
     #region RegisterUserAsync Tests
@@ -170,6 +180,26 @@ public class UserServiceTests : IDisposable
         user.Password.Should().NotBeNullOrEmpty();
     }
 
+    [Fact]
+    public async Task RegisterUserAsync_DuplicateEmail_ShouldThrowException()
+    {
+        // Arrange
+        var input = new UserRegistrationInputDto
+        {
+            FirstName = "Marko",
+            LastName = "Matovic",
+            Email = "duplicate@test.com",
+            Password = "Password123!"
+        };
+        await _userService.RegisterUserAsync(input);
+
+        // Act
+        var act = async () => await _userService.RegisterUserAsync(input);
+
+        // Assert
+        await act.Should().ThrowAsync<Exception>().WithMessage("User with this email already exists.");
+    }
+
     #endregion
 
     #region LoginUserAsync Tests
@@ -253,6 +283,41 @@ public class UserServiceTests : IDisposable
         {
             Email = "wrongpass@test.com",
             Password = "WrongPassword"
+        };
+
+        // Act
+        var result = await _userService.LoginUserAsync(loginDto);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LoginUserAsync_InactiveUser_ShouldReturnNull()
+    {
+        // Arrange
+        var password = "TestPassword123";
+        var hashedPassword = HashPasswordForTest(password);
+
+        var user = new User
+        {
+            FirstName = "Inactive",
+            LastName = "User",
+            Email = "inactive_login@test.com",
+            Password = hashedPassword,
+            IsActive = false, // Deactivated
+            UserRoleId = 1,
+            UserGuid = Guid.NewGuid(),
+            CreatedDate = DateTime.UtcNow
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var loginDto = new LoginUserInputDto
+        {
+            Email = "inactive_login@test.com",
+            Password = password
         };
 
         // Act
@@ -412,6 +477,104 @@ public class UserServiceTests : IDisposable
             return Convert.ToBase64String(hashedBytes);
         }
     }
+
+    private void SetupUserContext(int userId, Guid userGuid)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim("userId", userId.ToString()),
+            new Claim("sub", userGuid.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userGuid.ToString())
+        };
+
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        var httpContext = new DefaultHttpContext
+        {
+            User = claimsPrincipal
+        };
+
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+    }
+    
+    #region ChangePassword Tests
+
+    [Fact]
+    public async Task ChangePasswordAsync_ValidOldPassword_ShouldUpdatePassword()
+    {
+        // Arrange
+        var userGuid = Guid.NewGuid();
+        var oldPassword = "OldPassword123";
+        var newPassword = "NewPassword123";
+        
+        var user = new User
+        {
+            FirstName = "Change",
+            LastName = "Pass",
+            Email = "change@test.com",
+            Password = HashPasswordForTest(oldPassword),
+            IsActive = true,
+            UserRoleId = 1,
+            UserGuid = userGuid,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        
+        SetupUserContext(user.UserId, userGuid);
+
+        var changeDto = new ChangePasswordInputDto
+        {
+            OldPassword = oldPassword,
+            NewPassword = newPassword
+        };
+
+        // Act
+        await _userService.ChangePasswordAsync(changeDto);
+
+        // Assert
+        var updatedUser = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == userGuid);
+        updatedUser!.Password.Should().Be(HashPasswordForTest(newPassword));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WrongOldPassword_ShouldThrowException()
+    {
+        // Arrange
+        var userGuid = Guid.NewGuid();
+        var user = new User
+        {
+            FirstName = "Wrong",
+            LastName = "Old",
+            Email = "wrongold@test.com",
+            Password = HashPasswordForTest("CorrectOld"),
+            IsActive = true,
+            UserRoleId = 1,
+            UserGuid = userGuid,
+            CreatedDate = DateTime.UtcNow
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        
+        SetupUserContext(user.UserId, userGuid);
+
+        var changeDto = new ChangePasswordInputDto
+        {
+            OldPassword = "WrongOld",
+            NewPassword = "NewPassword"
+        };
+
+        // Act
+        var act = async () => await _userService.ChangePasswordAsync(changeDto);
+
+        // Assert
+        await act.Should().ThrowAsync<Exception>().WithMessage("Incorrect old password.");
+    }
+
+    #endregion
 
     #endregion
 }
