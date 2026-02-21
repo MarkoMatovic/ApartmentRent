@@ -14,11 +14,16 @@ public class ApartmentApplicationsController : ControllerBase
 {
     private readonly IApartmentApplicationService _applicationService;
     private readonly IUserInterface _userService;
+    private readonly Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService _approvalService;
 
-    public ApartmentApplicationsController(IApartmentApplicationService applicationService, IUserInterface userService)
+    public ApartmentApplicationsController(
+        IApartmentApplicationService applicationService, 
+        IUserInterface userService,
+        Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService approvalService)
     {
         _applicationService = applicationService;
         _userService = userService;
+        _approvalService = approvalService;
     }
 
     [HttpPost]
@@ -87,5 +92,26 @@ public class ApartmentApplicationsController : ControllerBase
         {
             return Forbid();
         }
+    }
+
+    [HttpGet("check-approval/{apartmentId}")]
+    [Authorize]
+    public async Task<IActionResult> CheckApprovalStatus(int apartmentId)
+    {
+        var userGuid = User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userGuid)) return Unauthorized();
+
+        var user = await _userService.GetUserByGuidAsync(Guid.Parse(userGuid));
+        if (user == null) return Unauthorized();
+
+        var hasApprovedApplication = await _approvalService.HasApprovedApplicationAsync(user.UserId, apartmentId);
+        var application = await _approvalService.GetApplicationAsync(user.UserId, apartmentId);
+
+        return Ok(new 
+        { 
+            hasApprovedApplication, 
+            applicationStatus = application?.Status,
+            applicationId = application?.ApplicationId
+        });
     }
 }

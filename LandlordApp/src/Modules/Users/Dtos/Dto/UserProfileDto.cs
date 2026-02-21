@@ -17,4 +17,8 @@ public class UserProfileDto
     public int? UserRoleId { get; set; }
     public string? RoleName { get; set; }
     public DateTime? CreatedDate { get; set; }
+    
+    // Rating information
+    public decimal? AverageRating { get; set; }
+    public int ReviewCount { get; set; }
 }

@@ -22,6 +22,8 @@ export interface User {
   analyticsConsent?: boolean;
   chatHistoryConsent?: boolean;
   profileVisibility?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface PrivacySettings {

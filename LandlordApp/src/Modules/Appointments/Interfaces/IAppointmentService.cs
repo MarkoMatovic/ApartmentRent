@@ -12,5 +12,7 @@ namespace Lander.src.Modules.Appointments.Interfaces
         Task<AppointmentDto> UpdateAppointmentStatusAsync(int appointmentId, UpdateAppointmentStatusDto dto);
         Task<bool> CancelAppointmentAsync(int appointmentId);
         Task<AppointmentDto?> GetAppointmentByIdAsync(int appointmentId);
+        Task<List<LandlordAvailabilityDto>> GetMyAvailabilityAsync();
+        Task<List<LandlordAvailabilityDto>> SetMyAvailabilityAsync(SetAvailabilityDto dto);
     }
 }

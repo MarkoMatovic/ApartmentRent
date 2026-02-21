@@ -154,6 +154,7 @@ builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoomma
 builder.Services.AddSingleton<NotificationStreamService>();
 
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
+builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
 // .NET 10 Feature: Payment Integration (Stripe)
 builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IStripeService, Lander.src.Modules.Payments.Implementation.StripeService>();
@@ -197,6 +198,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("LandlordPolicy", policy => policy.RequireRole("Landlord"));
     options.AddPolicy("TenantPolicy", policy => policy.RequireRole("Tenant"));
+    options.AddPolicy("RoommatePolicy", policy => policy.RequireRole("Roommate"));
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
     options.AddPolicy("BrokerPolicy", policy => policy.RequireRole("Broker"));
     options.AddPolicy("GuestPolicy", policy => policy.RequireRole("Guest"));

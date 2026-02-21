@@ -42,3 +42,22 @@ export interface UpdateAppointmentStatusDto {
     status: AppointmentStatus;
     landlordNotes?: string;
 }
+
+export interface LandlordAvailabilityDto {
+    availabilityId: number;
+    landlordId: number;
+    dayOfWeek: number; // 0=Sunday … 6=Saturday
+    startTime: string; // "HH:mm:ss"
+    endTime: string;
+    isActive: boolean;
+}
+
+export interface AvailabilitySlotInput {
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+}
+
+export interface SetAvailabilityDto {
+    slots: AvailabilitySlotInput[];
+}
