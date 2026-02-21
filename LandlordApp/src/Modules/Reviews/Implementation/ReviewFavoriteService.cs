@@ -46,6 +46,11 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     }
     public override async Task<ReviewResponse> CreateReview(CreateReviewRequest request, ServerCallContext context)
     {
+        if (request.Rating < 1 || request.Rating > 5)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Rating must be between 1 and 5"));
+        }
+
         var review = new Review
         {
             TenantId = request.UserId,
@@ -198,6 +203,15 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 Message = "Review not found"
             };
         }
+
+        if (review.CreatedByGuid.ToString() != request.RequestUserGuid)
+        {
+            return new DeleteResponse
+            {
+                Success = false,
+                Message = "Unauthorized: You do not own this review"
+            };
+        }
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -225,6 +239,15 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             {
                 Success = false,
                 Message = "Favorite not found"
+            };
+        }
+
+        if (favorite.CreatedByGuid.ToString() != request.RequestUserGuid)
+        {
+            return new DeleteResponse
+            {
+                Success = false,
+                Message = "Unauthorized: You do not own this favorite"
             };
         }
         var transaction = await _context.BeginTransactionAsync();

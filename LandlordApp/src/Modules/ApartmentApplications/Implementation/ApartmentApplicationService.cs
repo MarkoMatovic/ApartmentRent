@@ -37,6 +37,11 @@ public class ApartmentApplicationService : IApartmentApplicationService
 
         if (existing != null) return null; // Already applied
 
+        // Check if apartment exists
+        var apartment = await _apartmentService.GetApartmentByIdAsync(apartmentId);
+        if (apartment == null)
+            throw new ArgumentException("Apartment not found");
+
         var application = new ApartmentApplication
         {
             UserId = userId,
@@ -53,7 +58,6 @@ public class ApartmentApplicationService : IApartmentApplicationService
         // Notify Landlord (Ideally we need LandlordId here, but ApartmentApplication model might not have it directly on the entity without join)
         // For Phase 3 MVP, we will rely on the Controller to fetch extra details if needed for specific notifications,
         // or we fetch the apartment to get the landlord ID.
-        var apartment = await _apartmentService.GetApartmentByIdAsync(apartmentId);
         if (apartment != null && apartment.LandlordId.HasValue)
         {
              await _notificationHub.Clients.Group(apartment.LandlordId.Value.ToString()).SendAsync("ReceiveNotification", 
