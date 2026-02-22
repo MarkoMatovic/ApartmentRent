@@ -138,7 +138,7 @@ const ApartmentListPage: React.FC = () => {
             onClick={() => setFilterDrawerOpen(true)}
             sx={{ minHeight: '44px' }}
           >
-            Filters
+            {t('apartments:filters')}
           </Button>
         )}
       </Box>
@@ -200,7 +200,7 @@ const ApartmentListPage: React.FC = () => {
                 onChange={(e) => handleFilterChange('numberOfRooms', e.target.value)}
                 label={t('apartments:rooms')}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="">{t('apartments:all')}</MenuItem>
                 <MenuItem value="1">1</MenuItem>
                 <MenuItem value="2">2</MenuItem>
                 <MenuItem value="3">3</MenuItem>
@@ -210,7 +210,7 @@ const ApartmentListPage: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Available From"
+              label={t('apartments:availableFrom')}
               type="date"
               value={filters.availableFrom}
               onChange={(e) => handleFilterChange('availableFrom', e.target.value)}
@@ -221,10 +221,10 @@ const ApartmentListPage: React.FC = () => {
 
             <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {[
-                { key: 'isImmediatelyAvailable', label: 'Immed. Available', type: 'boolean' },
-                { key: 'isFurnished', label: 'Furnished', type: 'select' },
-                { key: 'isPetFriendly', label: 'Pet Friendly', type: 'select' },
-                { key: 'hasParking', label: 'Parking', type: 'select' },
+                { key: 'isImmediatelyAvailable', label: t('apartments:immediatelyAvailable'), type: 'boolean' },
+                { key: 'isFurnished', label: t('apartments:furnished'), type: 'select' },
+                { key: 'isPetFriendly', label: t('apartments:petFriendly'), type: 'select' },
+                { key: 'hasParking', label: t('apartments:parking'), type: 'select' },
               ].map((filter) => {
                 if (filter.type === 'boolean') {
                   return (
@@ -399,7 +399,7 @@ const ApartmentListPage: React.FC = () => {
                 onChange={(e) => handleFilterChange('numberOfRooms', e.target.value)}
                 label={t('apartments:rooms')}
               >
-                <MenuItem value="">All</MenuItem>
+                <MenuItem value="">{t('apartments:all')}</MenuItem>
                 <MenuItem value="1">1</MenuItem>
                 <MenuItem value="2">2</MenuItem>
                 <MenuItem value="3">3</MenuItem>
@@ -414,7 +414,7 @@ const ApartmentListPage: React.FC = () => {
                 onClick={() => handleFilterChange('isImmediatelyAvailable', !filters.isImmediatelyAvailable)}
                 sx={{ borderRadius: 4, minHeight: '40px' }}
               >
-                Immed. Available
+                {t('apartments:immediatelyAvailable')}
               </Button>
               <Button
                 variant={filters.isFurnished === 'true' ? "contained" : "outlined"}
@@ -422,7 +422,7 @@ const ApartmentListPage: React.FC = () => {
                 onClick={() => handleFilterChange('isFurnished', filters.isFurnished === 'true' ? '' : 'true')}
                 sx={{ borderRadius: 4, minHeight: '40px' }}
               >
-                Furnished
+                {t('apartments:furnished')}
               </Button>
               <Button
                 variant={filters.isPetFriendly === 'true' ? "contained" : "outlined"}
@@ -430,7 +430,7 @@ const ApartmentListPage: React.FC = () => {
                 onClick={() => handleFilterChange('isPetFriendly', filters.isPetFriendly === 'true' ? '' : 'true')}
                 sx={{ borderRadius: 4, minHeight: '40px' }}
               >
-                Pet Friendly
+                {t('apartments:petFriendly')}
               </Button>
               <Button
                 variant={filters.hasParking === 'true' ? "contained" : "outlined"}
@@ -438,7 +438,7 @@ const ApartmentListPage: React.FC = () => {
                 onClick={() => handleFilterChange('hasParking', filters.hasParking === 'true' ? '' : 'true')}
                 sx={{ borderRadius: 4, minHeight: '40px' }}
               >
-                Parking
+                {t('apartments:parking')}
               </Button>
             </Box>
           </Box>
@@ -468,14 +468,14 @@ const ApartmentListPage: React.FC = () => {
                 setFilterDrawerOpen(false);
               }}
             >
-              Clear All
+              {t('common:clearAll', { defaultValue: 'Clear All' })}
             </Button>
             <Button
               fullWidth
               variant="contained"
               onClick={() => setFilterDrawerOpen(false)}
             >
-              Apply
+              {t('common:apply')}
             </Button>
           </Box>
         </Drawer>

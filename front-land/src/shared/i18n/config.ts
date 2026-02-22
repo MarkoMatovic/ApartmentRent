@@ -19,6 +19,7 @@ import srSavedSearches from '../../locales/sr/savedSearches.json';
 import srSearchRequests from '../../locales/sr/searchRequests.json';
 import srMachineLearning from '../../locales/sr/machineLearning.json';
 import srNotifications from '../../locales/sr/notifications.json';
+import srAppointments from '../../locales/sr/appointments.json';
 
 import enCommon from '../../locales/en/common.json';
 import enApartments from '../../locales/en/apartments.json';
@@ -37,6 +38,7 @@ import enSavedSearches from '../../locales/en/savedSearches.json';
 import enSearchRequests from '../../locales/en/searchRequests.json';
 import enMachineLearning from '../../locales/en/machineLearning.json';
 import enNotifications from '../../locales/en/notifications.json';
+import enAppointments from '../../locales/en/appointments.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruApartments from '../../locales/ru/apartments.json';
@@ -51,6 +53,11 @@ import ruRoommateAnalytics from '../../locales/ru/roommateAnalytics.json';
 import ruAnalytics from '../../locales/ru/analytics.json';
 import ruPremium from '../../locales/ru/premium.json';
 import ruMessages from '../../locales/ru/messages.json';
+import ruSavedSearches from '../../locales/ru/savedSearches.json';
+import ruSearchRequests from '../../locales/ru/searchRequests.json';
+import ruMachineLearning from '../../locales/ru/machineLearning.json';
+import ruNotifications from '../../locales/ru/notifications.json';
+import ruAppointments from '../../locales/ru/appointments.json';
 
 import deCommon from '../../locales/de/common.json';
 import deApartments from '../../locales/de/apartments.json';
@@ -65,6 +72,11 @@ import deRoommateAnalytics from '../../locales/de/roommateAnalytics.json';
 import deAnalytics from '../../locales/de/analytics.json';
 import dePremium from '../../locales/de/premium.json';
 import deMessages from '../../locales/de/messages.json';
+import deSavedSearches from '../../locales/de/savedSearches.json';
+import deSearchRequests from '../../locales/de/searchRequests.json';
+import deMachineLearning from '../../locales/de/machineLearning.json';
+import deNotifications from '../../locales/de/notifications.json';
+import deAppointments from '../../locales/de/appointments.json';
 
 i18n
   .use(LanguageDetector)
@@ -89,6 +101,7 @@ i18n
         searchRequests: srSearchRequests,
         machineLearning: srMachineLearning,
         notifications: srNotifications,
+        appointments: srAppointments,
       },
       en: {
         common: enCommon,
@@ -108,6 +121,7 @@ i18n
         searchRequests: enSearchRequests,
         machineLearning: enMachineLearning,
         notifications: enNotifications,
+        appointments: enAppointments,
       },
       ru: {
         common: ruCommon,
@@ -123,6 +137,11 @@ i18n
         analytics: ruAnalytics,
         premium: ruPremium,
         messages: ruMessages,
+        savedSearches: ruSavedSearches,
+        searchRequests: ruSearchRequests,
+        machineLearning: ruMachineLearning,
+        notifications: ruNotifications,
+        appointments: ruAppointments,
       },
       de: {
         common: deCommon,
@@ -138,6 +157,11 @@ i18n
         analytics: deAnalytics,
         premium: dePremium,
         messages: deMessages,
+        savedSearches: deSavedSearches,
+        searchRequests: deSearchRequests,
+        machineLearning: deMachineLearning,
+        notifications: deNotifications,
+        appointments: deAppointments,
       },
     },
     fallbackLng: 'sr',

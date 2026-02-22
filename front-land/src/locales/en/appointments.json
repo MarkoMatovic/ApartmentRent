@@ -25,5 +25,29 @@
     "noAppointments": "No appointments yet",
     "appointmentCancelled": "Appointment cancelled successfully",
     "appointmentConfirmed": "Appointment confirmed successfully",
-    "appointmentRejected": "Appointment rejected"
+    "appointmentRejected": "Appointment rejected",
+    "availability": {
+        "title": "My Viewing Availability",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "saved": "Availability saved successfully!",
+        "saveFailed": "Failed to save availability.",
+        "info": "Set the time windows when tenants can book viewings. If no availability is set, the default 9 AM – 5 PM schedule is used.",
+        "slots": "Availability Slots",
+        "addSlot": "Add Slot",
+        "noSlots": "No slots added yet. Click \"Add Slot\" to define your available times.",
+        "day": "Day",
+        "from": "From",
+        "to": "To",
+        "weeklyPreview": "Weekly Preview"
+    },
+    "days": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+    }
 }

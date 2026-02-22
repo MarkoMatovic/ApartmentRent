@@ -3,8 +3,10 @@ import { Container, Typography, Paper, Table, TableBody, TableCell, TableContain
 import { ApartmentApplication } from '../shared/types/application';
 import { applicationsApi } from '../shared/api/applicationsApi';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const TenantApplicationsPage: React.FC = () => {
+    const { t } = useTranslation('common');
     const [applications, setApplications] = useState<ApartmentApplication[]>([]);
     const navigate = useNavigate();
 
@@ -31,16 +33,16 @@ const TenantApplicationsPage: React.FC = () => {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom>My Applications</Typography>
+            <Typography variant="h4" gutterBottom>{t('myApplications')}</Typography>
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Apartment</TableCell>
-                            <TableCell>Location</TableCell>
-                            <TableCell>Price</TableCell>
-                            <TableCell>Date Applied</TableCell>
-                            <TableCell>Status</TableCell>
+                            <TableCell>{t('apartment')}</TableCell>
+                            <TableCell>{t('location')}</TableCell>
+                            <TableCell>{t('price')}</TableCell>
+                            <TableCell>{t('date')}</TableCell>
+                            <TableCell>{t('status')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -57,7 +59,7 @@ const TenantApplicationsPage: React.FC = () => {
                         ))}
                         {applications.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} align="center">No applications found.</TableCell>
+                                <TableCell colSpan={5} align="center">{t('noApplicationsFound')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>

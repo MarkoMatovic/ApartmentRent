@@ -1,0 +1,27 @@
+{
+    "title": "Сохраненные поиски",
+    "mySearches": "Мои поиски",
+    "createNew": "Новый поиск",
+    "searchName": "Название поиска",
+    "searchNamePlaceholder": "Например, Квартира в центре Белграда",
+    "saveSearch": "Сохранить поиск",
+    "deleteSearch": "Удалить поиск",
+    "editSearch": "Изменить поиск",
+    "noSearches": "Нет сохраненных поисков",
+    "noSearchesDescription": "Сохраняйте избранные поиски для быстрого доступа",
+    "searchSaved": "Поиск сохранен",
+    "searchDeleted": "Поиск удален",
+    "searchUpdated": "Поиск обновлен",
+    "confirmDelete": "Вы уверены, что хотите удалить этот поиск?",
+    "filters": {
+        "city": "Город",
+        "minRent": "Мин. аренда",
+        "maxRent": "Макс. аренда",
+        "rooms": "Комнаты",
+        "apartmentType": "Тип квартиры",
+        "furnished": "Меблирована",
+        "petFriendly": "Можно с животными",
+        "parking": "Парковка",
+        "balcony": "Балкон"
+    }
+}

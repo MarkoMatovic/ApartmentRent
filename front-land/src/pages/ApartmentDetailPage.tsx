@@ -82,7 +82,7 @@ const ApartmentDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography>Loading...</Typography>
+        <Typography>{t('common:loading')}</Typography>
       </Container>
     );
   }
@@ -90,7 +90,7 @@ const ApartmentDetailPage: React.FC = () => {
   if (!apartment) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography>Apartment not found</Typography>
+        <Typography>{t('apartments:notFound')}</Typography>
       </Container>
     );
   }
@@ -108,7 +108,7 @@ const ApartmentDetailPage: React.FC = () => {
         <Box display="flex" alignItems="center" gap={1} mb={2}>
           <PersonIcon fontSize="small" color="action" />
           <Typography variant="body2" color="text.secondary">
-            Listed by: {apartment.landlordName}
+            {t('apartments:listedBy', { name: apartment.landlordName })}
           </Typography>
           {apartment.landlordId && (
             <Button
@@ -117,7 +117,7 @@ const ApartmentDetailPage: React.FC = () => {
               onClick={() => setOpenProfileModal(true)}
               sx={{ ml: 1 }}
             >
-              View Profile
+              {t('apartments:viewProfile')}
             </Button>
           )}
         </Box>
@@ -163,7 +163,7 @@ const ApartmentDetailPage: React.FC = () => {
               {t('apartments:description')}
             </Typography>
             <Typography variant="body1" paragraph>
-              {apartment.description || 'No description available.'}
+              {apartment.description || t('apartments:descriptionUnavailable')}
             </Typography>
           </Paper>
 
@@ -390,7 +390,7 @@ const ApartmentDetailPage: React.FC = () => {
                 sx={{ mt: 1 }}
                 onClick={() => setOpenApplyModal(true)}
               >
-                Apply for Apartment
+                {t('apartments:applyForApartment')}
               </Button>
 
               <ApplicationModal

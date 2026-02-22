@@ -13,6 +13,7 @@
   "markAsRead": "Отметить как прочитанное",
   "delete": "Удалить",
   "today": "Сегодня",
-  "yesterday": "Вчера"
+  "yesterday": "Вчера",
+  "checkMessages": "Проверить сообщения",
+  "abuseReports": "Жалобы на нарушения"
 }
-

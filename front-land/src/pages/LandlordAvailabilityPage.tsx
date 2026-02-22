@@ -19,17 +19,18 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, AccessTime as ClockIcon, Save as SaveIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { appointmentsApi } from '../shared/api/appointments';
 import type { LandlordAvailabilityDto, AvailabilitySlotInput } from '../shared/types/appointment';
 
 const DAYS_OF_WEEK = [
-    { value: 0, label: 'Sunday' },
-    { value: 1, label: 'Monday' },
-    { value: 2, label: 'Tuesday' },
-    { value: 3, label: 'Wednesday' },
-    { value: 4, label: 'Thursday' },
-    { value: 5, label: 'Friday' },
-    { value: 6, label: 'Saturday' },
+    { value: 0 },
+    { value: 1 },
+    { value: 2 },
+    { value: 3 },
+    { value: 4 },
+    { value: 5 },
+    { value: 6 },
 ];
 
 const TIME_OPTIONS: string[] = [];
@@ -50,6 +51,7 @@ function formatTime(t: string): string {
 }
 
 const LandlordAvailabilityPage: React.FC = () => {
+    const { t } = useTranslation('appointments');
     const queryClient = useQueryClient();
     const [slots, setSlots] = useState<AvailabilitySlotInput[]>([]);
     const [loaded, setLoaded] = useState(false);
@@ -82,10 +84,10 @@ const LandlordAvailabilityPage: React.FC = () => {
         mutationFn: () => appointmentsApi.setMyAvailability({ slots }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['my-availability'] });
-            setSnackbar({ open: true, message: 'Availability saved successfully!', severity: 'success' });
+            setSnackbar({ open: true, message: t('availability.saved'), severity: 'success' });
         },
         onError: () => {
-            setSnackbar({ open: true, message: 'Failed to save availability.', severity: 'error' });
+            setSnackbar({ open: true, message: t('availability.saveFailed'), severity: 'error' });
         },
     });
 
@@ -109,6 +111,7 @@ const LandlordAvailabilityPage: React.FC = () => {
     // Group slots by day for display only
     const groupedByDay = DAYS_OF_WEEK.map((day) => ({
         ...day,
+        label: t(`days.${day.value}`),
         slots: slots
             .map((s, i) => ({ slot: s, index: i }))
             .filter(({ slot }) => slot.dayOfWeek === day.value),
@@ -128,7 +131,7 @@ const LandlordAvailabilityPage: React.FC = () => {
                 <Box display="flex" alignItems="center" gap={1}>
                     <ClockIcon color="primary" />
                     <Typography variant="h5" fontWeight={600}>
-                        My Viewing Availability
+                        {t('availability.title')}
                     </Typography>
                 </Box>
                 <Button
@@ -137,12 +140,12 @@ const LandlordAvailabilityPage: React.FC = () => {
                     onClick={() => saveMutation.mutate()}
                     disabled={saveMutation.isPending}
                 >
-                    {saveMutation.isPending ? 'Saving…' : 'Save Changes'}
+                    {saveMutation.isPending ? t('availability.saving') : t('availability.saveChanges')}
                 </Button>
             </Box>
 
             <Alert severity="info" sx={{ mb: 3 }}>
-                Set the time windows when tenants can book viewings. If no availability is set, the default 9 AM – 5 PM schedule is used.
+                {t('availability.info')}
             </Alert>
 
             {/* Slots editor */}
@@ -150,15 +153,15 @@ const LandlordAvailabilityPage: React.FC = () => {
                 <CardContent>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Availability Slots
+                            {t('availability.slots')}
                         </Typography>
                         <Button startIcon={<AddIcon />} onClick={addSlot} size="small" variant="outlined">
-                            Add Slot
+                            {t('availability.addSlot')}
                         </Button>
                     </Box>
                     {slots.length === 0 && (
                         <Typography color="text.secondary" textAlign="center" py={3}>
-                            No slots added yet. Click "Add Slot" to define your available times.
+                            {t('availability.noSlots')}
                         </Typography>
                     )}
                     {slots.map((slot, index) => (
@@ -175,44 +178,44 @@ const LandlordAvailabilityPage: React.FC = () => {
                             }}
                         >
                             <FormControl size="small" sx={{ minWidth: 130 }}>
-                                <InputLabel>Day</InputLabel>
+                                <InputLabel>{t('availability.day')}</InputLabel>
                                 <Select
                                     value={slot.dayOfWeek}
-                                    label="Day"
+                                    label={t('availability.day')}
                                     onChange={(e) => updateSlot(index, 'dayOfWeek', Number(e.target.value))}
                                 >
                                     {DAYS_OF_WEEK.map((d) => (
                                         <MenuItem key={d.value} value={d.value}>
-                                            {d.label}
+                                            {t(`days.${d.value}`)}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                             <FormControl size="small" sx={{ minWidth: 110 }}>
-                                <InputLabel>From</InputLabel>
+                                <InputLabel>{t('availability.from')}</InputLabel>
                                 <Select
                                     value={slot.startTime}
-                                    label="From"
+                                    label={t('availability.from')}
                                     onChange={(e) => updateSlot(index, 'startTime', e.target.value)}
                                 >
-                                    {TIME_OPTIONS.map((t) => (
-                                        <MenuItem key={t} value={t}>
-                                            {formatTime(t)}
+                                    {TIME_OPTIONS.map((tOp) => (
+                                        <MenuItem key={tOp} value={tOp}>
+                                            {formatTime(tOp)}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                             <Typography color="text.secondary">–</Typography>
                             <FormControl size="small" sx={{ minWidth: 110 }}>
-                                <InputLabel>To</InputLabel>
+                                <InputLabel>{t('availability.to')}</InputLabel>
                                 <Select
                                     value={slot.endTime}
-                                    label="To"
+                                    label={t('availability.to')}
                                     onChange={(e) => updateSlot(index, 'endTime', e.target.value)}
                                 >
-                                    {TIME_OPTIONS.filter((t) => t > slot.startTime).map((t) => (
-                                        <MenuItem key={t} value={t}>
-                                            {formatTime(t)}
+                                    {TIME_OPTIONS.filter((tOp) => tOp > slot.startTime).map((tOp) => (
+                                        <MenuItem key={tOp} value={tOp}>
+                                            {formatTime(tOp)}
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -230,7 +233,7 @@ const LandlordAvailabilityPage: React.FC = () => {
                 <Card variant="outlined">
                     <CardContent>
                         <Typography variant="subtitle1" fontWeight={600} mb={2}>
-                            Weekly Preview
+                            {t('availability.weeklyPreview')}
                         </Typography>
                         <Grid container spacing={1}>
                             {groupedByDay
@@ -248,9 +251,9 @@ const LandlordAvailabilityPage: React.FC = () => {
                                             <Typography variant="body2" fontWeight={600} mb={0.5}>
                                                 {day.label}
                                             </Typography>
-                                            {day.slots.map(({ slot, index }) => (
+                                            {day.slots.map(({ slot, index: sIdx }) => (
                                                 <Chip
-                                                    key={index}
+                                                    key={sIdx}
                                                     label={`${formatTime(slot.startTime)} – ${formatTime(slot.endTime)}`}
                                                     size="small"
                                                     color="primary"
