@@ -198,7 +198,7 @@ const Header: React.FC = () => {
         {!isMobile && (
           <TextField
             size="small"
-            placeholder="Q Search apartments"
+            placeholder={t('searchApartments')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -270,13 +270,13 @@ const Header: React.FC = () => {
                   {t('manageAppointments')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/appointments/availability'); handleMenuClose(); }}>
-                  My Availability
+                  {t('myAvailability')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/applications/sent'); handleMenuClose(); }}>
-                  My Applications
+                  {t('myApplications')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/applications/received'); handleMenuClose(); }}>
-                  Received Applications
+                  {t('receivedApplications')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/analytics/roommate'); handleMenuClose(); }}>
                   <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -421,17 +421,17 @@ const Header: React.FC = () => {
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/appointments/availability'); setMobileOpen(false); }}>
-                    <ListItemText primary="My Availability" />
+                    <ListItemText primary={t('myAvailability')} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/applications/sent'); setMobileOpen(false); }}>
-                    <ListItemText primary="My Applications" />
+                    <ListItemText primary={t('myApplications')} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/applications/received'); setMobileOpen(false); }}>
-                    <ListItemText primary="Received Applications" />
+                    <ListItemText primary={t('receivedApplications')} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>

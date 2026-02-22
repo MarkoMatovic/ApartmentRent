@@ -25,5 +25,29 @@
     "noAppointments": "Još nema termina",
     "appointmentCancelled": "Termin uspešno otkazan",
     "appointmentConfirmed": "Termin uspešno potvrđen",
-    "appointmentRejected": "Termin odbijen"
+    "appointmentRejected": "Termin odbijen",
+    "availability": {
+        "title": "Moja dostupnost za preglede",
+        "saving": "Snimanje...",
+        "saveChanges": "Sačuvaj izmene",
+        "saved": "Dostupnost uspešno sačuvana!",
+        "saveFailed": "Neuspešno čuvanje dostupnosti.",
+        "info": "Podesite vremenske periode kada stanari mogu rezervisati preglede. Ako dostupnost nije podešena, koristi se podrazumevani raspored od 9 do 17 časova.",
+        "slots": "Termini dostupnosti",
+        "addSlot": "Dodaj termin",
+        "noSlots": "Još uvek nema dodatih termina. Kliknite na \"Dodaj termin\" da definišete svoje vreme.",
+        "day": "Dan",
+        "from": "Od",
+        "to": "Do",
+        "weeklyPreview": "Nedeljni pregled"
+    },
+    "days": {
+        "0": "Nedelja",
+        "1": "Ponedeljak",
+        "2": "Utorak",
+        "3": "Sreda",
+        "4": "Četvrtak",
+        "5": "Petak",
+        "6": "Subota"
+    }
 }

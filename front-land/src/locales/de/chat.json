@@ -13,6 +13,7 @@
   "markAsRead": "Als gelesen markieren",
   "delete": "Löschen",
   "today": "Heute",
-  "yesterday": "Gestern"
+  "yesterday": "Gestern",
+  "checkMessages": "Nachrichten prüfen",
+  "abuseReports": "Missbrauchsmeldungen"
 }
-

@@ -1,0 +1,27 @@
+{
+    "title": "Gespeicherte Suchen",
+    "mySearches": "Meine Suchen",
+    "createNew": "Neue Suche",
+    "searchName": "Name der Suche",
+    "searchNamePlaceholder": "Z.B. Wohnung im Belgrader Zentrum",
+    "saveSearch": "Suche speichern",
+    "deleteSearch": "Suche löschen",
+    "editSearch": "Suche bearbeiten",
+    "noSearches": "Keine gespeicherten Suchen",
+    "noSearchesDescription": "Speichern Sie Ihre Lieblingssuchen für schnellen Zugriff",
+    "searchSaved": "Suche gespeichert",
+    "searchDeleted": "Suche gelöscht",
+    "searchUpdated": "Suche aktualisiert",
+    "confirmDelete": "Sind Sie sicher, dass Sie diese Suche löschen möchten?",
+    "filters": {
+        "city": "Stadt",
+        "minRent": "Min. Miete",
+        "maxRent": "Max. Miete",
+        "rooms": "Zimmer",
+        "apartmentType": "Wohnungstyp",
+        "furnished": "Möbliert",
+        "petFriendly": "Haustierfreundlich",
+        "parking": "Parkplatz",
+        "balcony": "Balkon"
+    }
+}

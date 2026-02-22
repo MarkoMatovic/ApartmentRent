@@ -4,7 +4,10 @@ import { ApartmentApplication } from '../shared/types/application';
 import { applicationsApi } from '../shared/api/applicationsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
 
+import { useTranslation } from 'react-i18next';
+
 const LandlordApplicationsPage: React.FC = () => {
+    const { t } = useTranslation('common');
     const [applications, setApplications] = useState<ApartmentApplication[]>([]);
     const { addNotification } = useNotifications();
 
@@ -25,14 +28,14 @@ const LandlordApplicationsPage: React.FC = () => {
         try {
             await applicationsApi.updateStatus(id, { status });
             addNotification({
-                title: 'Status Updated',
+                title: t('success'),
                 message: `Application ${status}`,
                 type: 'success'
             });
             loadApplications();
         } catch (error) {
             addNotification({
-                title: 'Error',
+                title: t('error'),
                 message: 'Failed to update status',
                 type: 'error'
             });
@@ -49,16 +52,16 @@ const LandlordApplicationsPage: React.FC = () => {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom>Received Applications</Typography>
+            <Typography variant="h4" gutterBottom>{t('receivedApplications')}</Typography>
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Apartment</TableCell>
-                            <TableCell>Applicant</TableCell>
-                            <TableCell>Date</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Actions</TableCell>
+                            <TableCell>{t('apartment')}</TableCell>
+                            <TableCell>{t('applicant')}</TableCell>
+                            <TableCell>{t('date')}</TableCell>
+                            <TableCell>{t('status')}</TableCell>
+                            <TableCell>{t('actions')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -82,7 +85,7 @@ const LandlordApplicationsPage: React.FC = () => {
                                                 size="small"
                                                 onClick={() => handleStatusUpdate(app.applicationId, 'Approved')}
                                             >
-                                                Approve
+                                                {t('approve')}
                                             </Button>
                                             <Button
                                                 variant="outlined"
@@ -90,7 +93,7 @@ const LandlordApplicationsPage: React.FC = () => {
                                                 size="small"
                                                 onClick={() => handleStatusUpdate(app.applicationId, 'Rejected')}
                                             >
-                                                Reject
+                                                {t('reject')}
                                             </Button>
                                         </Stack>
                                     )}
@@ -99,7 +102,7 @@ const LandlordApplicationsPage: React.FC = () => {
                         ))}
                         {applications.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={5} align="center">No applications received.</TableCell>
+                                <TableCell colSpan={5} align="center">{t('noApplicationsReceived')}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>

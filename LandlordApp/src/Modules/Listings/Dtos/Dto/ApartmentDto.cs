@@ -17,6 +17,8 @@ public class ApartmentDto
     public bool? IsImmediatelyAvailable { get; set; }
     public bool IsLookingForRoommate { get; set; }
     public List<ApartmentImageDto>? ApartmentImages { get; set; }
+    public decimal? AverageRating { get; set; }
+    public int ReviewCount { get; set; }
     
     // .NET 10 Feature: Vector Search support
     public string? DescriptionEmbedding { get; set; }
@@ -57,5 +59,7 @@ public class GetApartmentDto
     public int? LandlordId { get; set; }
     public string? LandlordName { get; set; }
     public string? LandlordEmail { get; set; }
+    public decimal? AverageRating { get; set; }
+    public int ReviewCount { get; set; }
     public List<ApartmentImageDto>? ApartmentImages { get; set; }
 }
