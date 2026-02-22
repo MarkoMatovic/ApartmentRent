@@ -1,0 +1,25 @@
+{
+    "title": "Уведомления",
+    "markAllRead": "Отметить все как прочитанные",
+    "deleteAll": "Удалить все",
+    "noNotifications": "Нет уведомлений",
+    "noNotificationsDescription": "Ваши уведомления появятся здесь",
+    "markAsRead": "Отметить как прочитанное",
+    "delete": "Удалить",
+    "types": {
+        "info": "Инфо",
+        "success": "Успех",
+        "warning": "Предупреждение",
+        "error": "Ошибка"
+    },
+    "messages": {
+        "newMessage": "Новое сообщение",
+        "appointmentConfirmed": "Встреча подтверждена",
+        "appointmentCancelled": "Встреча отменена",
+        "newApplication": "Новая заявка",
+        "applicationAccepted": "Заявка принята",
+        "applicationRejected": "Заявка отклонена",
+        "newReview": "Новый отзыв",
+        "paymentReceived": "Оплата получена"
+    }
+}

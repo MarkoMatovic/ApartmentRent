@@ -1,0 +1,53 @@
+{
+    "scheduleViewing": "Besichtigung planen",
+    "selectDate": "Datum auswählen",
+    "selectTime": "Zeit auswählen",
+    "availableSlots": "Verfügbare Zeitfenster",
+    "noSlotsAvailable": "Keine Zeitfenster für dieses Datum verfügbar",
+    "appointmentNotes": "Notizen (optional)",
+    "appointmentNotesPlaceholder": "Spezielle Wünsche oder Fragen...",
+    "confirmAppointment": "Termin bestätigen",
+    "myAppointments": "Meine Termine",
+    "landlordAppointments": "Terminanfragen",
+    "appointmentDetails": "Termindetails",
+    "appointmentWith": "Termin mit",
+    "scheduledFor": "Geplant für",
+    "cancelAppointment": "Termin absagen",
+    "confirmAppointmentAction": "Bestätigen",
+    "rejectAppointment": "Ablehnen",
+    "status": {
+        "pending": "Ausstehend",
+        "confirmed": "Bestätigt",
+        "cancelled": "Abgesagt",
+        "completed": "Abgeschlossen",
+        "rejected": "Abgelehnt"
+    },
+    "noAppointments": "Noch keine Termine",
+    "appointmentCancelled": "Termin erfolgreich abgesagt",
+    "appointmentConfirmed": "Termin erfolgreich bestätigt",
+    "appointmentRejected": "Termin abgelehnt",
+    "availability": {
+        "title": "Meine Besichtigungsverfügbarkeit",
+        "saving": "Speichern...",
+        "saveChanges": "Änderungen speichern",
+        "saved": "Verfügbarkeit erfolgreich gespeichert!",
+        "saveFailed": "Fehler beim Speichern der Verfügbarkeit.",
+        "info": "Legen Sie die Zeitfenster fest, in denen Mieter Besichtigungen buchen können. Wenn keine Verfügbarkeit festgelegt ist, wird der Standardplan von 9:00 bis 17:00 Uhr verwendet.",
+        "slots": "Verfügbarkeitsfenster",
+        "addSlot": "Fenster hinzufügen",
+        "noSlots": "Noch keine Zeitfenster hinzugefügt. Klicken Sie auf \"Fenster hinzufügen\", um Ihre verfügbaren Zeiten zu definieren.",
+        "day": "Tag",
+        "from": "Von",
+        "to": "Bis",
+        "weeklyPreview": "Wochenvorschau"
+    },
+    "days": {
+        "0": "Sonntag",
+        "1": "Montag",
+        "2": "Dienstag",
+        "3": "Mittwoch",
+        "4": "Donnerstag",
+        "5": "Freitag",
+        "6": "Samstag"
+    }
+}

@@ -253,7 +253,7 @@ const CreateApartmentPage: React.FC = () => {
             }, 2000);
         },
         onError: (err: any) => {
-            let errorMessage = 'Failed to create apartment listing';
+            let errorMessage = t('apartments:createFailed', { defaultValue: 'Failed to create apartment listing' });
 
             if (err.response?.data?.message) {
                 errorMessage = err.response.data.message;
@@ -334,7 +334,7 @@ const CreateApartmentPage: React.FC = () => {
             setFormData({ ...formData, imageUrls: newImageUrls });
             setSelectedFiles([]);
         } catch (err: any) {
-            let errorMessage = 'Failed to upload images';
+            let errorMessage = t('apartments:uploadFailed', { defaultValue: 'Failed to upload images' });
 
             if (err.response?.data) {
                 errorMessage = typeof err.response.data === 'string'
@@ -370,12 +370,12 @@ const CreateApartmentPage: React.FC = () => {
                 setFormData({ ...formData, imageUrls: newImageUrls });
                 setSelectedFiles([]);
                 setUploading(false);
-                
+
                 // Now submit with updated imageUrls
                 createMutation.mutate({ ...formData, imageUrls: newImageUrls });
                 return;
             } catch (err: any) {
-                let errorMessage = 'Failed to upload images';
+                let errorMessage = t('apartments:uploadFailed', { defaultValue: 'Failed to upload images' });
                 if (err.response?.data) {
                     errorMessage = typeof err.response.data === 'string'
                         ? err.response.data
@@ -553,8 +553,8 @@ const CreateApartmentPage: React.FC = () => {
                                                 <SortableContext
                                                     items={selectedFiles.map((_, index) => `file-${index}`)}
                                                 >
-                                            <Grid container spacing={1}>
-                                                {selectedFiles.map((file, index) => (
+                                                    <Grid container spacing={1}>
+                                                        {selectedFiles.map((file, index) => (
                                                             <SortableFileItem
                                                                 key={`file-${index}`}
                                                                 file={file}
@@ -624,8 +624,8 @@ const CreateApartmentPage: React.FC = () => {
                                             <SortableContext
                                                 items={formData.imageUrls.map((_, index) => `image-${index}`)}
                                             >
-                                        <Grid container spacing={2}>
-                                            {formData.imageUrls.map((url, index) => (
+                                                <Grid container spacing={2}>
+                                                    {formData.imageUrls.map((url, index) => (
                                                         <SortableImageItem
                                                             key={`image-${index}`}
                                                             url={url}

@@ -1,0 +1,45 @@
+{
+    "pricePredictor": {
+        "title": "Preisvorhersage",
+        "subtitle": "Marktwert der Wohnung schätzen",
+        "city": "Stadt",
+        "rooms": "Anzahl der Zimmer",
+        "size": "Größe (m²)",
+        "apartmentType": "Wohnungstyp",
+        "furnished": "Möbliert",
+        "balcony": "Balkon",
+        "parking": "Parkplatz",
+        "elevator": "Aufzug",
+        "predict": "Preis vorhersagen",
+        "predictedPrice": "Vorhergesagter Preis",
+        "confidence": "Vertrauen",
+        "modelNotTrained": "Modell noch nicht trainiert",
+        "error": "Fehler bei der Preisvorhersage"
+    },
+    "roommateMatching": {
+        "title": "Mitbewohner finden",
+        "subtitle": "Smart Matching basierend auf Kompatibilität",
+        "findMatches": "Kompatible Mitbewohner finden",
+        "matchScore": "Match-Score",
+        "topMatches": "Top-Treffer",
+        "noMatches": "Keine Treffer gefunden",
+        "compatibility": {
+            "lifestyle": "Lebensstil",
+            "cleanliness": "Sauberkeit",
+            "social": "Soziales",
+            "budget": "Budget"
+        }
+    },
+    "admin": {
+        "title": "ML-Administration",
+        "trainModel": "Modell trainieren",
+        "modelMetrics": "Modell-Metriken",
+        "rSquared": "R²-Score",
+        "mae": "Mittlerer absoluter Fehler (MAE)",
+        "rmse": "Wurzel aus dem mittleren quadratischen Fehler (RMSE)",
+        "trainedDate": "Trainingsdatum",
+        "sampleCount": "Anzahl der Proben",
+        "modelTrained": "Modell erfolgreich trainiert",
+        "trainingError": "Fehler beim Trainieren des Modells"
+    }
+}
