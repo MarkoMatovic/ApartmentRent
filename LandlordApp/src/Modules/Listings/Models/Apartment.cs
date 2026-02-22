@@ -25,14 +25,25 @@ public partial class Apartment
     // Features moved to top-level properties for LINQ translation
     
    
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsFurnished { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool HasBalcony { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool HasElevator { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool HasParking { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool HasInternet { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool HasAirCondition { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsPetFriendly { get; set; } = false;
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsSmokingAllowed { get; set; } = false;
+    
+    // .NET 10 Feature: JSON Features column
+    public string Features { get; set; } = "{}";
     
     public decimal? DepositAmount { get; set; }
     public int? MinimumStayMonths { get; set; }

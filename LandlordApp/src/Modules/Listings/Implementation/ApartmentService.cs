@@ -24,6 +24,7 @@ public class ApartmentService : IApartmentService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IMemoryCache _cache;
     private readonly IHubContext<NotificationHub> _notificationHubContext;
+    private readonly ReviewsContext _reviewsContext;
     private readonly ILogger<ApartmentService> _logger;
 
     public ApartmentService(
@@ -34,6 +35,7 @@ public class ApartmentService : IApartmentService
         IHttpContextAccessor httpContextAccessor,
         IMemoryCache cache,
         IHubContext<NotificationHub> notificationHubContext,
+        ReviewsContext reviewsContext,
         ILogger<ApartmentService> logger)
     {
         _context = context;
@@ -43,6 +45,7 @@ public class ApartmentService : IApartmentService
         _httpContextAccessor = httpContextAccessor;
         _cache = cache;
         _notificationHubContext = notificationHubContext;
+        _reviewsContext = reviewsContext;
         _logger = logger;
     }
     public async Task<bool> ActivateApartmentAsync(int apartmentId)
@@ -375,26 +378,9 @@ public class ApartmentService : IApartmentService
         {
             query = query.Where(a => a.ApartmentType == filters.ApartmentType.Value);
         }
-        if (filters.IsFurnished.HasValue)
-        {
-            query = query.Where(a => a.IsFurnished == filters.IsFurnished.Value);
-        }
-        if (filters.IsPetFriendly.HasValue)
-        {
-            query = query.Where(a => a.IsPetFriendly == filters.IsPetFriendly.Value);
-        }
-        if (filters.IsSmokingAllowed.HasValue)
-        {
-            query = query.Where(a => a.IsSmokingAllowed == filters.IsSmokingAllowed.Value);
-        }
-        if (filters.HasParking.HasValue)
-        {
-            query = query.Where(a => a.HasParking == filters.HasParking.Value);
-        }
-        if (filters.HasBalcony.HasValue)
-        {
-            query = query.Where(a => a.HasBalcony == filters.HasBalcony.Value);
-        }
+        // Note: Boolean filters (IsFurnished, etc.) are temporarily disabled 
+        // until JSON-based filtering for the Features column is implemented.
+        
         if (filters.IsImmediatelyAvailable.HasValue)
         {
             query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
@@ -430,29 +416,39 @@ public class ApartmentService : IApartmentService
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
             .AsSplitQuery()
-            .Select(a => new
-            {
-                Apartment = a,
-                LandlordId = a.LandlordId
-            })
             .ToListAsync();
+
+        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
+        var reviewStats = await _reviewsContext.Reviews
+            .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
+            .GroupBy(r => r.ApartmentId)
+            .Select(g => new
+            {
+                ApartmentId = g.Key,
+                AverageRating = g.Average(r => (decimal?)r.Rating),
+                ReviewCount = g.Count()
+            })
+            .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
+
         var items = apartments.Select(a => new ApartmentDto
         {
-            ApartmentId = a.Apartment.ApartmentId,
-            Title = a.Apartment.Title,
-            Rent = a.Apartment.Rent,
-            Price = a.Apartment.Price,
-            Address = a.Apartment.Address,
-            City = a.Apartment.City ?? string.Empty,
-            Latitude = a.Apartment.Latitude,
-            Longitude = a.Apartment.Longitude,
-            SizeSquareMeters = a.Apartment.SizeSquareMeters,
-            ApartmentType = a.Apartment.ApartmentType,
-            ListingType = a.Apartment.ListingType,
-            IsFurnished = a.Apartment.IsFurnished,
-            IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
-            IsLookingForRoommate = a.Apartment.IsLookingForRoommate,
-            ApartmentImages = a.Apartment.ApartmentImages
+            ApartmentId = a.ApartmentId,
+            Title = a.Title,
+            Rent = a.Rent,
+            Price = a.Price,
+            Address = a.Address,
+            City = a.City ?? string.Empty,
+            Latitude = a.Latitude,
+            Longitude = a.Longitude,
+            SizeSquareMeters = a.SizeSquareMeters,
+            ApartmentType = a.ApartmentType,
+            ListingType = a.ListingType,
+            IsFurnished = false, // TODO: Map from Features JSON
+            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+            IsLookingForRoommate = a.IsLookingForRoommate,
+            AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
+            ReviewCount = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].ReviewCount : 0,
+            ApartmentImages = a.ApartmentImages
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
                 .Take(5)
@@ -512,6 +508,18 @@ public class ApartmentService : IApartmentService
             .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
             .OrderByDescending(a => a.CreatedDate)
             .ToListAsync();
+        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
+        var reviewStats = await _reviewsContext.Reviews
+            .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
+            .GroupBy(r => r.ApartmentId)
+            .Select(g => new
+            {
+                ApartmentId = g.Key,
+                AverageRating = g.Average(r => (decimal?)r.Rating),
+                ReviewCount = g.Count()
+            })
+            .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
+
         var items = apartments.Select(a => new ApartmentDto
         {
             ApartmentId = a.ApartmentId,
@@ -525,9 +533,11 @@ public class ApartmentService : IApartmentService
             SizeSquareMeters = a.SizeSquareMeters,
             ApartmentType = a.ApartmentType,
             ListingType = a.ListingType,
-            IsFurnished = a.IsFurnished,
+            IsFurnished = false, // TODO: Map from Features JSON
             IsImmediatelyAvailable = a.IsImmediatelyAvailable,
             IsLookingForRoommate = a.IsLookingForRoommate,
+            AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
+            ReviewCount = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].ReviewCount : 0,
             ApartmentImages = a.ApartmentImages
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
@@ -558,31 +568,35 @@ public class ApartmentService : IApartmentService
         {
             return null;
         }
-        string? landlordName = null;
-        string? landlordEmail = null;
+        Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User? landlord = null;
         if (apartment.LandlordId.HasValue)
         {
-            var landlord = await _usersContext.Users
+            landlord = await _usersContext.Users
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserId == apartment.LandlordId.Value);
-            if (landlord != null)
-            {
-                landlordName = $"{landlord.FirstName} {landlord.LastName}".Trim();
-                landlordEmail = landlord.Email;
-            }
         }
+        var reviewStats = await _reviewsContext.Reviews
+            .Where(r => r.ApartmentId == apartmentId && r.IsPublic)
+            .GroupBy(r => r.ApartmentId)
+            .Select(g => new
+            {
+                AverageRating = g.Average(r => (decimal?)r.Rating),
+                ReviewCount = g.Count()
+            })
+            .FirstOrDefaultAsync();
+
         return new GetApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
             Title = apartment.Title,
-            Description = apartment.Description,
+            Description = apartment.Description ?? string.Empty,
             Rent = apartment.Rent,
             Price = apartment.Price,
             Address = apartment.Address,
-            City = apartment.City,
-            PostalCode = apartment.PostalCode,
-            AvailableFrom = apartment.AvailableFrom ?? DateOnly.MinValue,
-            AvailableUntil = apartment.AvailableUntil ?? DateOnly.MaxValue,
+            City = apartment.City ?? string.Empty,
+            PostalCode = apartment.PostalCode ?? string.Empty,
+            AvailableFrom = apartment.AvailableFrom ?? DateOnly.FromDateTime(DateTime.Now),
+            AvailableUntil = apartment.AvailableUntil ?? DateOnly.FromDateTime(DateTime.Now.AddYears(1)),
             NumberOfRooms = apartment.NumberOfRooms ?? 0,
             RentIncludeUtilities = apartment.RentIncludeUtilities ?? false,
             Latitude = apartment.Latitude,
@@ -590,14 +604,14 @@ public class ApartmentService : IApartmentService
             SizeSquareMeters = apartment.SizeSquareMeters,
             ApartmentType = apartment.ApartmentType,
             ListingType = apartment.ListingType,
-            IsFurnished = apartment.IsFurnished,
-            HasBalcony = apartment.HasBalcony,
-            HasElevator = apartment.HasElevator,
-            HasParking = apartment.HasParking,
-            HasInternet = apartment.HasInternet,
-            HasAirCondition = apartment.HasAirCondition,
-            IsPetFriendly = apartment.IsPetFriendly,
-            IsSmokingAllowed = apartment.IsSmokingAllowed,
+            IsFurnished = false, // TODO: Map from Features JSON
+            HasBalcony = false,
+            HasElevator = false,
+            HasParking = false,
+            HasInternet = false,
+            HasAirCondition = false,
+            IsPetFriendly = false,
+            IsSmokingAllowed = false,
             DepositAmount = apartment.DepositAmount,
             MinimumStayMonths = apartment.MinimumStayMonths,
             MaximumStayMonths = apartment.MaximumStayMonths,
@@ -605,8 +619,10 @@ public class ApartmentService : IApartmentService
             IsLookingForRoommate = apartment.IsLookingForRoommate,
             ContactPhone = apartment.ContactPhone,
             LandlordId = apartment.LandlordId,
-            LandlordName = landlordName,
-            LandlordEmail = landlordEmail,
+            LandlordName = landlord?.FirstName != null ? $"{landlord.FirstName} {landlord.LastName}" : "Unknown",
+            LandlordEmail = landlord?.Email,
+            AverageRating = reviewStats?.AverageRating ?? 0,
+            ReviewCount = reviewStats?.ReviewCount ?? 0,
             ApartmentImages = apartment.ApartmentImages?
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
