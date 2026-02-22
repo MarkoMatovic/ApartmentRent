@@ -83,7 +83,7 @@ const EditApartmentPage: React.FC = () => {
             }, 2000);
         },
         onError: (err: any) => {
-            let errorMessage = 'Failed to update apartment listing';
+            let errorMessage = t('apartments:updateFailed', { defaultValue: 'Failed to update apartment listing' });
 
             if (err.response?.data?.message) {
                 errorMessage = err.response.data.message;

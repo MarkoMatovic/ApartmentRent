@@ -1,5 +1,5 @@
 {
-  "analyticsDashboard": "Панель аналитики",
+  "analyticsDashboard": "Аналитическая панель",
   "last30Days": "Последние 30 дней",
   "totalEvents": "Всего событий",
   "apartmentViews": "Просмотры квартир",
@@ -18,5 +18,6 @@
   "details": "Детали",
   "noApartmentViews": "Просмотров квартир пока нет",
   "noRoommateViews": "Просмотров соседей пока нет",
-  "noSearches": "Поисков пока нет"
+  "noSearches": "Поисков пока нет",
+  "personalAnalytics": "Личная аналитика"
 }

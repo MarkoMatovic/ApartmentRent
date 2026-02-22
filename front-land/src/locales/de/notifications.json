@@ -1,0 +1,25 @@
+{
+    "title": "Benachrichtigungen",
+    "markAllRead": "Alle als gelesen markieren",
+    "deleteAll": "Alle löschen",
+    "noNotifications": "Keine Benachrichtigungen",
+    "noNotificationsDescription": "Ihre Benachrichtigungen werden hier angezeigt",
+    "markAsRead": "Als gelesen markieren",
+    "delete": "Löschen",
+    "types": {
+        "info": "Info",
+        "success": "Erfolg",
+        "warning": "Warnung",
+        "error": "Fehler"
+    },
+    "messages": {
+        "newMessage": "Neue Nachricht",
+        "appointmentConfirmed": "Termin bestätigt",
+        "appointmentCancelled": "Termin abgesagt",
+        "newApplication": "Neue Bewerbung",
+        "applicationAccepted": "Bewerbung akzeptiert",
+        "applicationRejected": "Bewerbung abgelehnt",
+        "newReview": "Neue Bewertung",
+        "paymentReceived": "Zahlung erhalten"
+    }
+}

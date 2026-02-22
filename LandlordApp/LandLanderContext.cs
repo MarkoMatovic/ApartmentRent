@@ -500,14 +500,9 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.ApartmentType)
                 .HasConversion<int>();
             
-            entity.Property(e => e.IsFurnished).HasDefaultValue(false);
-            entity.Property(e => e.HasBalcony).HasDefaultValue(false);
-            entity.Property(e => e.HasElevator).HasDefaultValue(false);
-            entity.Property(e => e.HasParking).HasDefaultValue(false);
-            entity.Property(e => e.HasInternet).HasDefaultValue(false);
-            entity.Property(e => e.HasAirCondition).HasDefaultValue(false);
-            entity.Property(e => e.IsPetFriendly).HasDefaultValue(false);
-            entity.Property(e => e.IsSmokingAllowed).HasDefaultValue(false);
+            entity.Property(e => e.Features)
+                .IsRequired()
+                .HasDefaultValue("{}");
             
             entity.Property(e => e.DepositAmount).HasColumnType("decimal(10,2)");
             entity.Property(e => e.MinimumStayMonths);

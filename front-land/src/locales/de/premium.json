@@ -1,5 +1,13 @@
 {
   "lockedTitle": "Premium-Funktion",
   "lockedMessage": "Diese Funktion ist nur für Premium-Benutzer verfügbar. {{feature}}",
-  "upgradeButton": "Auf Premium upgraden"
+  "upgradeButton": "Auf Premium upgraden",
+  "upgradeToPremium": "Auf Premium upgraden",
+  "premiumSubtitle": "Erhalten Sie Zugriff auf erweiterte Analysen und Einblicke für nur €1,99/Monat",
+  "alreadyPremium": "Sie haben bereits Premium-Zugang! Genießen Sie Ihre Vorteile.",
+  "paymentSuccess": "Zahlung erfolgreich!",
+  "paymentSuccessMessage": "Vielen Dank für Ihr Premium-Abonnement! Sie haben jetzt Zugriff auf erweiterte Analysen und Einblicke.",
+  "premiumFeaturesNote": "Bitte melden Sie sich ab und wieder an, um Ihre neuen Premium-Funktionen zu sehen.",
+  "viewProfile": "Profil ansehen",
+  "goHome": "Zur Startseite"
 }
