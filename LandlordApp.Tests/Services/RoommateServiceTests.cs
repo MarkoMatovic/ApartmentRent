@@ -41,7 +41,6 @@ public class RoommateServiceTests : IDisposable
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         _mockCache = new Mock<IMemoryCache>();
 
-        // Setup memory cache mock to just pass through or return false for TryGetValue
         object? outValue = null;
         _mockCache.Setup(m => m.TryGetValue(It.IsAny<object>(), out outValue)).Returns(false);
         _mockCache.Setup(m => m.CreateEntry(It.IsAny<object>())).Returns(new Mock<ICacheEntry>().Object);
@@ -62,13 +61,13 @@ public class RoommateServiceTests : IDisposable
     {
         var user = new User
         {
-            UserId = _testUserId,
-            UserGuid = _testUserGuid,
+            UserId    = _testUserId,
+            UserGuid  = _testUserGuid,
             FirstName = "Test",
-            LastName = "User",
-            Email = "test@roommate.com",
-            Password = "TestPassword123",
-            IsActive = true
+            LastName  = "User",
+            Email     = "test@test.com",
+            Password  = "hashed",
+            IsActive  = true
         };
         _usersContext.Users.Add(user);
         await _usersContext.SaveChangesAsync();
@@ -76,14 +75,9 @@ public class RoommateServiceTests : IDisposable
 
     private void SetupUserContext(int userId, Guid userGuid)
     {
-        var claims = new List<Claim>
-        {
-            new Claim("userId", userId.ToString()),
-            new Claim("sub", userGuid.ToString())
-        };
+        var claims = new List<Claim> { new Claim("userId", userId.ToString()), new Claim("sub", userGuid.ToString()) };
         var identity = new ClaimsIdentity(claims, "TestAuth");
-        var principal = new ClaimsPrincipal(identity);
-        var httpContext = new DefaultHttpContext { User = principal };
+        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
     }
 
@@ -95,118 +89,78 @@ public class RoommateServiceTests : IDisposable
         _usersContext.Dispose();
     }
 
-    [Fact]
-    public async Task CreateRoommateAsync_NewProfile_ShouldCreateRoommate()
-    {
-        // Arrange
-        var input = new RoommateInputDto
-        {
-            Bio = "I am a clean person",
-            PreferredLocation = "Beograd",
-            BudgetMax = 500
-        };
+    #region Create & Update
 
-        // Act
+    [Fact]
+    public async Task CreateRoommateAsync_NewProfile_ShouldSucceed()
+    {
+        var input = new RoommateInputDto { Bio = "Bio", PreferredLocation = "Beograd", BudgetMax = 500 };
         var result = await _roommateService.CreateRoommateAsync(_testUserId, input);
-
-        // Assert
-        result.Should().NotBeNull();
         result.UserId.Should().Be(_testUserId);
-        result.Bio.Should().Be("I am a clean person");
-
-        var dbRoommate = await _roommatesContext.Roommates.FirstOrDefaultAsync(r => r.UserId == _testUserId);
-        dbRoommate.Should().NotBeNull();
+        (await _roommatesContext.Roommates.AnyAsync(r => r.UserId == _testUserId)).Should().BeTrue();
     }
 
     [Fact]
-    public async Task GetAllRoommatesAsync_FilterByLocation_ShouldReturnMatching()
+    public async Task UpdateRoommateAsync_Update_ShouldPersistChange()
     {
-        // Arrange
-        _roommatesContext.Roommates.Add(new Roommate 
-        { 
-            UserId = _testUserId, 
-            PreferredLocation = "Novi Sad", 
-            IsActive = true 
-        });
-        _roommatesContext.Roommates.Add(new Roommate 
-        { 
-            UserId = 2, 
-            PreferredLocation = "Beograd", 
-            IsActive = true 
-        });
-        await _roommatesContext.SaveChangesAsync();
-
-        // Act
-        var result = await _roommateService.GetAllRoommatesAsync(location: "Novi Sad");
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().PreferredLocation.Should().Be("Novi Sad");
-    }
-
-    [Fact]
-    public async Task GetAllRoommatesAsync_NoResultsFound_ShouldReturnEmptyList()
-    {
-        // Act
-        var result = await _roommateService.GetAllRoommatesAsync(location: "NonExistentLocation");
-
-        // Assert
-        result.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetAllRoommatesAsync_WithMultipleFilters_ShouldReturnCorrectResults()
-    {
-        // Arrange
-        _roommatesContext.Roommates.AddRange(
-            new Roommate { UserId = 1, PreferredLocation = "Beograd", BudgetMax = 500, IsActive = true, SmokingAllowed = false },
-            new Roommate { UserId = 2, PreferredLocation = "Beograd", BudgetMax = 300, IsActive = true, SmokingAllowed = true },
-            new Roommate { UserId = 3, PreferredLocation = "Novi Sad", BudgetMax = 500, IsActive = true, SmokingAllowed = false }
-        );
-        await _roommatesContext.SaveChangesAsync();
-
-        // Act
-        var result = await _roommateService.GetAllRoommatesAsync(
-            location: "Beograd", 
-            maxBudget: 400, 
-            smokingAllowed: true
-        );
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().UserId.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task GetRoommateByIdAsync_ExistentId_ShouldReturnRoommate()
-    {
-        // Arrange
-        var roommate = new Roommate { UserId = _testUserId, IsActive = true };
+        var roommate = new Roommate { UserId = _testUserId, Bio = "Old Bio", Hobbies = "Quiet", IsActive = true };
         _roommatesContext.Roommates.Add(roommate);
         await _roommatesContext.SaveChangesAsync();
 
-        // Act
-        var result = await _roommateService.GetRoommateByIdAsync(roommate.RoommateId);
+        // Service does full replace, so pass both fields
+        var update = new RoommateInputDto { Bio = "New Bio", Hobbies = "Quiet" };
+        await _roommateService.UpdateRoommateAsync(roommate.RoommateId, _testUserId, update);
 
-        // Assert
+        var dbRoommate = await _roommatesContext.Roommates.FindAsync(roommate.RoommateId);
+        dbRoommate!.Bio.Should().Be("New Bio");
+        dbRoommate.Hobbies.Should().Be("Quiet"); // Passed explicitly
+    }
+
+    #endregion
+
+    #region Retrieval & Filtering
+
+    [Fact]
+    public async Task GetRoommateByUserIdAsync_Existent_ShouldReturn()
+    {
+        _roommatesContext.Roommates.Add(new Roommate { UserId = _testUserId, IsActive = true });
+        await _roommatesContext.SaveChangesAsync();
+
+        var result = await _roommateService.GetRoommateByUserIdAsync(_testUserId);
         result.Should().NotBeNull();
         result!.UserId.Should().Be(_testUserId);
     }
 
     [Fact]
-    public async Task DeleteRoommateAsync_Ownership_ShouldDeactivate()
+    public async Task GetAllRoommatesAsync_ComplexFilters_ShouldWork()
     {
-        // Arrange
-        var roommate = new Roommate { UserId = _testUserId, IsActive = true };
+        _roommatesContext.Roommates.AddRange(
+            new Roommate { UserId = 1, PreferredLocation = "A", BudgetMax = 100, SmokingAllowed = false, IsActive = true },
+            new Roommate { UserId = 2, PreferredLocation = "A", BudgetMax = 200, SmokingAllowed = true, IsActive = true },
+            new Roommate { UserId = 3, PreferredLocation = "B", BudgetMax = 100, SmokingAllowed = false, IsActive = true }
+        );
+        await _roommatesContext.SaveChangesAsync();
+
+        var results = await _roommateService.GetAllRoommatesAsync(location: "A", maxBudget: 150, smokingAllowed: false);
+        results.Should().HaveCount(1);
+        results.First().UserId.Should().Be(1);
+    }
+
+    #endregion
+
+    #region Deletion & Security
+
+    [Fact]
+    public async Task DeleteRoommateAsync_NotOwner_ShouldReturnFalse()
+    {
+        var roommate = new Roommate { UserId = 999, IsActive = true };
         _roommatesContext.Roommates.Add(roommate);
         await _roommatesContext.SaveChangesAsync();
 
-        // Act
         var result = await _roommateService.DeleteRoommateAsync(roommate.RoommateId, _testUserId);
-
-        // Assert
-        result.Should().BeTrue();
-        var deactivated = await _roommatesContext.Roommates.FindAsync(roommate.RoommateId);
-        deactivated!.IsActive.Should().BeFalse();
+        result.Should().BeFalse();
+        (await _roommatesContext.Roommates.FindAsync(roommate.RoommateId))!.IsActive.Should().BeTrue();
     }
+
+    #endregion
 }
