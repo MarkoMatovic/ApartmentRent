@@ -110,17 +110,17 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
         return new ReviewResponse
         {
             ReviewId = review.ReviewId,
-            UserId = (int)review.TenantId,
+            UserId = review.TenantId ?? 0,
             ApartmentId = review.ApartmentId ?? 0,
-            Rating = (int)review.Rating,
-            Comment = review.ReviewText,
+            Rating = review.Rating ?? 0,
+            Comment = review.ReviewText ?? string.Empty,
             IsAnonymous = review.IsAnonymous,
             IsPublic = review.IsPublic,
-            CreatedByGuid = review.CreatedByGuid.ToString(),
+            CreatedByGuid = review.CreatedByGuid.HasValue ? review.CreatedByGuid.Value.ToString() : string.Empty,
             CreatedDate = review.CreatedDate.HasValue
                 ? Timestamp.FromDateTime(review.CreatedDate.Value.ToUniversalTime())
                 : null,
-            ModifiedByGuid = review.ModifiedByGuid.ToString(),
+            ModifiedByGuid = review.ModifiedByGuid.HasValue ? review.ModifiedByGuid.Value.ToString() : string.Empty,
             ModifiedDate = review.ModifiedDate.HasValue
                 ? Timestamp.FromDateTime(review.ModifiedDate.Value.ToUniversalTime())
                 : null,
@@ -141,17 +141,17 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             .Select(r => new ReviewResponse
             {
                 ReviewId = r.ReviewId,
-                UserId = (int)r.TenantId,
-                ApartmentId = (int)r.ApartmentId,
-                Rating = (int)r.Rating,
-                Comment = r.ReviewText,
+                UserId = r.TenantId ?? 0,
+                ApartmentId = r.ApartmentId ?? 0,
+                Rating = r.Rating ?? 0,
+                Comment = r.ReviewText ?? string.Empty,
                 IsAnonymous = r.IsAnonymous,
                 IsPublic = r.IsPublic,
-                CreatedByGuid = r.CreatedByGuid.ToString(),
+                CreatedByGuid = r.CreatedByGuid.HasValue ? r.CreatedByGuid.Value.ToString() : string.Empty,
                 CreatedDate = r.CreatedDate.HasValue
                     ? Timestamp.FromDateTime(r.CreatedDate.Value.ToUniversalTime())
                     : null,
-                ModifiedByGuid = r.ModifiedByGuid.ToString(),
+                ModifiedByGuid = r.ModifiedByGuid.HasValue ? r.ModifiedByGuid.Value.ToString() : string.Empty,
                 ModifiedDate = r.ModifiedDate.HasValue
                     ? Timestamp.FromDateTime(r.ModifiedDate.Value.ToUniversalTime())
                     : null,
@@ -176,13 +176,13 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             .Select(f => new FavoriteResponse
             {
                 FavoriteId = f.FavoriteId,
-                UserId = (int)f.UserId,
-                ApartmentId = (int)f.ApartmentId,
-                CreatedByGuid = f.CreatedByGuid.ToString(),
+                UserId = f.UserId ?? 0,
+                ApartmentId = f.ApartmentId ?? 0,
+                CreatedByGuid = f.CreatedByGuid.HasValue ? f.CreatedByGuid.Value.ToString() : string.Empty,
                 CreatedDate = f.CreatedDate.HasValue
                     ? Timestamp.FromDateTime(f.CreatedDate.Value.ToUniversalTime())
                     : null,
-                ModifiedByGuid = f.ModifiedByGuid.ToString(),
+                ModifiedByGuid = f.ModifiedByGuid.HasValue ? f.ModifiedByGuid.Value.ToString() : string.Empty,
                 ModifiedDate = f.ModifiedDate.HasValue
                     ? Timestamp.FromDateTime(f.ModifiedDate.Value.ToUniversalTime())
                     : null
@@ -204,7 +204,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             };
         }
 
-        if (review.CreatedByGuid.ToString() != request.RequestUserGuid)
+        if (review.CreatedByGuid?.ToString() != request.RequestUserGuid)
         {
             return new DeleteResponse
             {
@@ -242,7 +242,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             };
         }
 
-        if (favorite.CreatedByGuid.ToString() != request.RequestUserGuid)
+        if (favorite.CreatedByGuid?.ToString() != request.RequestUserGuid)
         {
             return new DeleteResponse
             {
@@ -276,13 +276,13 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             .Select(f => new FavoriteResponse
             {
                 FavoriteId = f.FavoriteId,
-                UserId = (int)f.UserId,
-                ApartmentId = (int)f.ApartmentId,
-                CreatedByGuid = f.CreatedByGuid.ToString(),
+                UserId = f.UserId ?? 0,
+                ApartmentId = f.ApartmentId ?? 0,
+                CreatedByGuid = f.CreatedByGuid.HasValue ? f.CreatedByGuid.Value.ToString() : string.Empty,
                 CreatedDate = f.CreatedDate.HasValue
                     ? Timestamp.FromDateTime(f.CreatedDate.Value.ToUniversalTime())
                     : null,
-                ModifiedByGuid = f.ModifiedByGuid.ToString(),
+                ModifiedByGuid = f.ModifiedByGuid.HasValue ? f.ModifiedByGuid.Value.ToString() : string.Empty,
                 ModifiedDate = f.ModifiedDate.HasValue
                     ? Timestamp.FromDateTime(f.ModifiedDate.Value.ToUniversalTime())
                     : null

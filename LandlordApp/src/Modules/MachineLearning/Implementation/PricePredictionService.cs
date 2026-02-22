@@ -74,10 +74,12 @@ public class PricePredictionService : IPricePredictionService
         var prediction = predictionEngine.Predict(input);
         var metrics = await GetModelMetricsAsync();
         var confidenceScore = Math.Max(0, Math.Min(100, metrics.RSquared * 100));
+        var rawPrice = double.IsFinite(prediction.PredictedPrice) ? prediction.PredictedPrice : 0.0;
+        var rawConfidence = double.IsFinite(confidenceScore) ? confidenceScore : 0.0;
         return new PricePredictionResponseDto
         {
-            PredictedPrice = Math.Round((decimal)prediction.PredictedPrice, 2),
-            ConfidenceScore = (decimal)confidenceScore,
+            PredictedPrice = Math.Round((decimal)rawPrice, 2),
+            ConfidenceScore = (decimal)rawConfidence,
             Message = "Price prediction successful"
         };
     }
@@ -144,7 +146,11 @@ public class PricePredictionService : IPricePredictionService
             TrainingSampleCount = apartments.Count,
             LastTrainedDate = DateTime.UtcNow
         };
-        await File.WriteAllTextAsync(_metricsPath, System.Text.Json.JsonSerializer.Serialize(metricsDto));
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+        };
+        await File.WriteAllTextAsync(_metricsPath, System.Text.Json.JsonSerializer.Serialize(metricsDto, jsonOptions));
         return metricsDto;
     }
     public async Task<ModelMetricsDto> GetModelMetricsAsync()
@@ -152,7 +158,11 @@ public class PricePredictionService : IPricePredictionService
         if (File.Exists(_metricsPath))
         {
             var json = await File.ReadAllTextAsync(_metricsPath);
-            return System.Text.Json.JsonSerializer.Deserialize<ModelMetricsDto>(json) 
+            var jsonOpts = new System.Text.Json.JsonSerializerOptions
+            {
+                NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
+            return System.Text.Json.JsonSerializer.Deserialize<ModelMetricsDto>(json, jsonOpts) 
                 ?? new ModelMetricsDto();
         }
         return new ModelMetricsDto

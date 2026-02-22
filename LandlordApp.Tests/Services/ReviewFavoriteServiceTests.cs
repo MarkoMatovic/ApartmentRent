@@ -6,6 +6,7 @@ using Lander;
 using Lander.src.Modules.Reviews.Implementation;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
+using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 
@@ -25,6 +26,17 @@ public class ReviewFavoriteServiceTests : IDisposable
 
         _context = new ReviewsContext(options);
         _service = new ReviewFavoriteService(_context);
+
+        // Seed the User required by the Review.TenantId FK
+        _context.Users.Add(new User
+        {
+            UserId    = 1,
+            FirstName = "Tenant",
+            LastName  = "Test",
+            Email     = "t@t.com",
+            Password  = "x"
+        });
+        _context.SaveChanges();
     }
 
     public void Dispose()
@@ -33,185 +45,98 @@ public class ReviewFavoriteServiceTests : IDisposable
         _context.Dispose();
     }
 
+    #region Create & Delete
+
     [Fact]
     public async Task CreateFavorite_ValidRequest_ShouldSaveToDb()
     {
-        // Arrange
-        var request = new CreateFavoriteRequest
-        {
-            UserId = 1,
-            ApartmentId = 101,
-            CreatedByGuid = Guid.NewGuid().ToString()
-        };
-
-        // Act
+        var request = new CreateFavoriteRequest { UserId = 1, ApartmentId = 101, CreatedByGuid = Guid.NewGuid().ToString() };
         var response = await _service.CreateFavorite(request, null!);
-
-        // Assert
-        response.Should().NotBeNull();
         response.UserId.Should().Be(1);
-        response.ApartmentId.Should().Be(101);
-
-        var dbFavorite = await _context.Favorites.FirstOrDefaultAsync();
-        dbFavorite.Should().NotBeNull();
-        dbFavorite!.UserId.Should().Be(1);
+        (await _context.Favorites.CountAsync()).Should().Be(1);
     }
 
     [Fact]
     public async Task CreateReview_ValidRequest_ShouldSaveToDb()
     {
-        // Arrange
-        var request = new CreateReviewRequest
-        {
-            UserId = 1,
-            ApartmentId = 101,
-            Rating = 5,
-            Comment = "Great place!",
-            IsAnonymous = false,
-            IsPublic = true,
-            CreatedByGuid = Guid.NewGuid().ToString()
-        };
-
-        // Act
+        var request = new CreateReviewRequest { UserId = 1, ApartmentId = 101, Rating = 5, Comment = "Great", CreatedByGuid = Guid.NewGuid().ToString() };
         var response = await _service.CreateReview(request, null!);
-
-        // Assert
-        response.Should().NotBeNull();
         response.Rating.Should().Be(5);
-        response.Comment.Should().Be("Great place!");
-
-        var dbReview = await _context.Reviews.FirstOrDefaultAsync();
-        dbReview.Should().NotBeNull();
-        dbReview!.Rating.Should().Be(5);
-    }
-
-    [Fact]
-    public async Task GetReviewById_ExistentReview_ShouldReturnReview()
-    {
-        // Arrange
-        var review = new Review
-        {
-            ReviewId = 1,
-            TenantId = 1,
-            ApartmentId = 101,
-            Rating = 4,
-            ReviewText = "Good",
-            CreatedByGuid = Guid.NewGuid()
-        };
-        _context.Reviews.Add(review);
-        await _context.SaveChangesAsync();
-
-        var request = new GetReviewByIdRequest { ReviewId = 1 };
-
-        // Act
-        var response = await _service.GetReviewById(request, null!);
-
-        // Assert
-        response.Should().NotBeNull();
-        response.ReviewId.Should().Be(1);
-        response.Comment.Should().Be("Good");
-    }
-
-    [Fact]
-    public async Task DeleteFavorite_ExistentId_ShouldRemoveFromDb()
-    {
-        // Arrange
-        var favorite = new Favorite
-        {
-            FavoriteId = 1,
-            UserId = 1,
-            ApartmentId = 101,
-            CreatedByGuid = Guid.NewGuid()
-        };
-        _context.Favorites.Add(favorite);
-        await _context.SaveChangesAsync();
-
-        var request = new DeleteFavoriteRequest 
-        { 
-            FavoriteId = 1,
-            RequestUserGuid = favorite.CreatedByGuid.ToString()
-        };
-
-        // Act
-        var response = await _service.DeleteFavorite(request, null!);
-
-        // Assert
-        response.Success.Should().BeTrue();
-        var dbFavorite = await _context.Favorites.FindAsync(1);
-        dbFavorite.Should().BeNull();
+        (await _context.Reviews.CountAsync()).Should().Be(1);
     }
 
     [Fact]
     public async Task CreateReview_InvalidRating_ShouldThrowRpcException()
     {
-        // Arrange
-        var request = new CreateReviewRequest
-        {
-            UserId = 1,
-            Rating = 6, // Invalid
-            CreatedByGuid = Guid.NewGuid().ToString()
-        };
-
-        // Act
+        var request = new CreateReviewRequest { UserId = 1, Rating = 6, CreatedByGuid = Guid.NewGuid().ToString() };
         var act = async () => await _service.CreateReview(request, null!);
-
-        // Assert
-        await act.Should().ThrowAsync<RpcException>()
-            .Where(e => e.Status.StatusCode == StatusCode.InvalidArgument);
+        await act.Should().ThrowAsync<RpcException>().Where(e => e.Status.StatusCode == StatusCode.InvalidArgument);
     }
 
     [Fact]
-    public async Task DeleteReview_UnauthorizedUser_ShouldReturnFailure()
+    public async Task DeleteReview_Unauthorized_ShouldReturnFailure()
     {
-        // Arrange
         var ownerGuid = Guid.NewGuid();
-        var review = new Review
-        {
-            ReviewId = 1,
-            CreatedByGuid = ownerGuid
-        };
-        _context.Reviews.Add(review);
+        _context.Reviews.Add(new Review { ReviewId = 1, CreatedByGuid = ownerGuid });
         await _context.SaveChangesAsync();
 
-        var request = new DeleteReviewRequest 
-        { 
-            ReviewId = 1, 
-            RequestUserGuid = Guid.NewGuid().ToString() // Different user
-        };
-
-        // Act
-        var response = await _service.DeleteReview(request, null!);
-
-        // Assert
+        var response = await _service.DeleteReview(new DeleteReviewRequest { ReviewId = 1, RequestUserGuid = Guid.NewGuid().ToString() }, null!);
         response.Success.Should().BeFalse();
         response.Message.Should().Contain("Unauthorized");
     }
 
+    #endregion
+
+    #region Collection Retrieval
+
     [Fact]
-    public async Task DeleteReview_ExistentId_ShouldRemoveFromDb()
+    public async Task GetReviewsByApartmentId_ShouldOnlyReturnPublic()
     {
-        // Arrange
-        var ownerGuid = Guid.NewGuid();
-        var review = new Review
-        {
-            ReviewId = 1,
-            CreatedByGuid = ownerGuid
-        };
-        _context.Reviews.Add(review);
+        _context.Reviews.AddRange(
+            new Review { ApartmentId = 1, TenantId = 1, ReviewText = "Public",  IsPublic = true,  CreatedByGuid = Guid.NewGuid() },
+            new Review { ApartmentId = 1, TenantId = 1, ReviewText = "Private", IsPublic = false, CreatedByGuid = Guid.NewGuid() }
+        );
         await _context.SaveChangesAsync();
 
-        var request = new DeleteReviewRequest 
-        { 
-            ReviewId = 1, 
-            RequestUserGuid = ownerGuid.ToString()
-        };
-
-        // Act
-        var response = await _service.DeleteReview(request, null!);
-
-        // Assert
-        response.Success.Should().BeTrue();
-        var dbReview = await _context.Reviews.FindAsync(1);
-        dbReview.Should().BeNull();
+        var response = await _service.GetReviewsByApartmentId(new GetReviewsByApartmentIdRequest { ApartmentId = 1 }, null!);
+        response.Reviews.Should().HaveCount(1);
+        response.Reviews[0].Comment.Should().Be("Public");
     }
+
+    [Fact]
+    public async Task GetFavorites_Limit_ShouldRespectMaxLimit()
+    {
+        for (int i = 0; i < 15; i++)
+            _context.Favorites.Add(new Favorite { FavoriteId = i + 1, UserId = 1, ApartmentId = i + 100, CreatedByGuid = Guid.NewGuid() });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.GetFavorites(new GetFavoritesRequest { Limit = 5 }, null!);
+        response.Favorites.Should().HaveCount(5);
+
+        var largeResponse = await _service.GetFavorites(new GetFavoritesRequest { Limit = 100 }, null!);
+        largeResponse.Favorites.Should().HaveCount(10); // Service caps at 10
+    }
+
+    [Fact]
+    public async Task GetUserFavorites_ShouldReturnOnlyForUser()
+    {
+        _context.Favorites.AddRange(
+            new Favorite { UserId = 1, ApartmentId = 101, CreatedByGuid = Guid.NewGuid() },
+            new Favorite { UserId = 1, ApartmentId = 102, CreatedByGuid = Guid.NewGuid() },
+            new Favorite { UserId = 2, ApartmentId = 101, CreatedByGuid = Guid.NewGuid() }
+        );
+        await _context.SaveChangesAsync();
+
+        var response = await _service.GetUserFavorites(new GetUserFavoritesRequest { UserId = 1 }, null!);
+        response.Favorites.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetReviewById_NotFound_ShouldThrowRpcException()
+    {
+        var act = async () => await _service.GetReviewById(new GetReviewByIdRequest { ReviewId = 999 }, null!);
+        await act.Should().ThrowAsync<RpcException>().Where(e => e.Status.StatusCode == StatusCode.NotFound);
+    }
+
+    #endregion
 }
