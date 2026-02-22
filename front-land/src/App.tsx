@@ -28,6 +28,7 @@ import LandlordApplicationsPage from './pages/LandlordApplicationsPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import MyAppointmentsPage from './pages/MyAppointmentsPage';
 import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
+import LandlordAvailabilityPage from './pages/LandlordAvailabilityPage';
 import MessagesPage from './pages/MessagesPage';
 import ReportsPage from './pages/ReportsPage';
 import { SavedSearchesPage } from './pages/SavedSearches';
@@ -68,6 +69,7 @@ function App() {
                 <Route path="/applications/received" element={<LandlordApplicationsPage />} />
                 <Route path="/appointments/my" element={<MyAppointmentsPage />} />
                 <Route path="/appointments/manage" element={<LandlordAppointmentsPage />} />
+                <Route path="/appointments/availability" element={<LandlordAvailabilityPage />} />
                 <Route path="/payment-success" element={<PaymentSuccessPage />} />
                 <Route path="/saved-searches" element={<SavedSearchesPage />} />
                 <Route path="/search-requests" element={<SearchRequestsPage />} />

@@ -83,10 +83,12 @@ message GetFavoritesResponse {
 
 message DeleteReviewRequest {
   int32 review_id = 1;
+  string request_user_guid = 2;
 }
 
 message DeleteFavoriteRequest {
   int32 favorite_id = 1;
+  string request_user_guid = 2;
 }
 
 message DeleteResponse {

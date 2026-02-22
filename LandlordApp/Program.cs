@@ -146,6 +146,7 @@ builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
 builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
 builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoommateMatchingService, Lander.src.Modules.MachineLearning.Implementation.RoommateMatchingService>();
@@ -154,6 +155,7 @@ builder.Services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoomma
 builder.Services.AddSingleton<NotificationStreamService>();
 
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
+builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
 // .NET 10 Feature: Payment Integration (Stripe)
 builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IStripeService, Lander.src.Modules.Payments.Implementation.StripeService>();
@@ -197,6 +199,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("LandlordPolicy", policy => policy.RequireRole("Landlord"));
     options.AddPolicy("TenantPolicy", policy => policy.RequireRole("Tenant"));
+    options.AddPolicy("RoommatePolicy", policy => policy.RequireRole("Roommate"));
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
     options.AddPolicy("BrokerPolicy", policy => policy.RequireRole("Broker"));
     options.AddPolicy("GuestPolicy", policy => policy.RequireRole("Guest"));

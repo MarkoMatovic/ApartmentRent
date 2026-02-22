@@ -500,11 +500,14 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.Property(e => e.ApartmentType)
                 .HasConversion<int>();
             
-            // .NET 10 Feature: JSON column mapping for Features
-            entity.OwnsOne(e => e.Features, features =>
-            {
-                features.ToJson(); // Store as JSON column
-            });
+            entity.Property(e => e.IsFurnished).HasDefaultValue(false);
+            entity.Property(e => e.HasBalcony).HasDefaultValue(false);
+            entity.Property(e => e.HasElevator).HasDefaultValue(false);
+            entity.Property(e => e.HasParking).HasDefaultValue(false);
+            entity.Property(e => e.HasInternet).HasDefaultValue(false);
+            entity.Property(e => e.HasAirCondition).HasDefaultValue(false);
+            entity.Property(e => e.IsPetFriendly).HasDefaultValue(false);
+            entity.Property(e => e.IsSmokingAllowed).HasDefaultValue(false);
             
             entity.Property(e => e.DepositAmount).HasColumnType("decimal(10,2)");
             entity.Property(e => e.MinimumStayMonths);
