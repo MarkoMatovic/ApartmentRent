@@ -13,6 +13,7 @@ using Lander.src.Modules.Appointments.Dtos;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.ApartmentApplications.Interfaces;
 
 namespace LandlordApp.Tests.Services;
 
@@ -24,6 +25,7 @@ public class AppointmentServiceTests : IDisposable
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<ILogger<AppointmentService>> _mockLogger;
+    private readonly Mock<IApplicationApprovalService> _mockApprovalService;
     private readonly AppointmentService _appointmentService;
     
     private readonly int _testTenantId = 1;
@@ -58,6 +60,12 @@ public class AppointmentServiceTests : IDisposable
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         _mockEmailService = new Mock<IEmailService>();
         _mockLogger = new Mock<ILogger<AppointmentService>>();
+        _mockApprovalService = new Mock<IApplicationApprovalService>();
+
+        // Default: approval check passes (tenant has approved application)
+        _mockApprovalService
+            .Setup(x => x.HasApprovedApplicationAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(true);
 
         // Setup default user context (tenant)
         SetupUserContext(_testTenantId, _testTenantGuid);
@@ -69,7 +77,8 @@ public class AppointmentServiceTests : IDisposable
             _usersContext,
             _mockEmailService.Object,
             _mockHttpContextAccessor.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            _mockApprovalService.Object
         );
 
         // Seed test data
@@ -558,6 +567,334 @@ public class AppointmentServiceTests : IDisposable
 
     #endregion
 
+    #region GetMyAvailabilityAsync Tests
+
+    [Fact]
+    public async Task GetMyAvailabilityAsync_NoSlotsSet_ShouldReturnEmptyList()
+    {
+        // Arrange — landlord has no availability rows yet
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        // Act
+        var result = await _appointmentService.GetMyAvailabilityAsync();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetMyAvailabilityAsync_WithSlotsSet_ShouldReturnCorrectSlots()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        _appointmentsContext.LandlordAvailabilities.AddRange(
+            new LandlordAvailability
+            {
+                LandlordId = _testLandlordId,
+                DayOfWeek = DayOfWeek.Monday,
+                StartTime = new TimeSpan(9, 0, 0),
+                EndTime   = new TimeSpan(12, 0, 0),
+                IsActive  = true,
+                CreatedDate = DateTime.UtcNow
+            },
+            new LandlordAvailability
+            {
+                LandlordId = _testLandlordId,
+                DayOfWeek = DayOfWeek.Tuesday,
+                StartTime = new TimeSpan(14, 0, 0),
+                EndTime   = new TimeSpan(17, 0, 0),
+                IsActive  = true,
+                CreatedDate = DateTime.UtcNow
+            },
+            // A different landlord's slot – must NOT be returned
+            new LandlordAvailability
+            {
+                LandlordId = 999,
+                DayOfWeek = DayOfWeek.Wednesday,
+                StartTime = new TimeSpan(10, 0, 0),
+                EndTime   = new TimeSpan(16, 0, 0),
+                IsActive  = true,
+                CreatedDate = DateTime.UtcNow
+            }
+        );
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetMyAvailabilityAsync();
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().OnlyContain(r => r.LandlordId == _testLandlordId);
+        result.Should().ContainSingle(r => r.DayOfWeek == DayOfWeek.Monday);
+        result.Should().ContainSingle(r => r.DayOfWeek == DayOfWeek.Tuesday);
+    }
+
+    [Fact]
+    public async Task GetMyAvailabilityAsync_InactiveSlots_ShouldNotBeReturned()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        _appointmentsContext.LandlordAvailabilities.Add(new LandlordAvailability
+        {
+            LandlordId = _testLandlordId,
+            DayOfWeek  = DayOfWeek.Friday,
+            StartTime  = new TimeSpan(9, 0, 0),
+            EndTime    = new TimeSpan(17, 0, 0),
+            IsActive   = false, // inactive
+            CreatedDate = DateTime.UtcNow
+        });
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetMyAvailabilityAsync();
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region SetMyAvailabilityAsync Tests
+
+    [Fact]
+    public async Task SetMyAvailabilityAsync_NewSlots_ShouldPersistAll()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        var dto = new SetAvailabilityDto
+        {
+            Slots = new List<AvailabilitySlotInput>
+            {
+                new() { DayOfWeek = DayOfWeek.Monday,    StartTime = new TimeSpan(9, 0, 0),  EndTime = new TimeSpan(12, 0, 0) },
+                new() { DayOfWeek = DayOfWeek.Wednesday, StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(17, 0, 0) },
+            }
+        };
+
+        // Act
+        var result = await _appointmentService.SetMyAvailabilityAsync(dto);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Should().ContainSingle(r => r.DayOfWeek == DayOfWeek.Monday);
+        result.Should().ContainSingle(r => r.DayOfWeek == DayOfWeek.Wednesday);
+
+        var dbSlots = await _appointmentsContext.LandlordAvailabilities
+            .Where(la => la.LandlordId == _testLandlordId)
+            .ToListAsync();
+        dbSlots.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SetMyAvailabilityAsync_ReplacesExistingSlots()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        // Seed old slots
+        _appointmentsContext.LandlordAvailabilities.AddRange(
+            new LandlordAvailability
+            {
+                LandlordId = _testLandlordId, DayOfWeek = DayOfWeek.Monday,
+                StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0),
+                IsActive = true, CreatedDate = DateTime.UtcNow
+            },
+            new LandlordAvailability
+            {
+                LandlordId = _testLandlordId, DayOfWeek = DayOfWeek.Tuesday,
+                StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0),
+                IsActive = true, CreatedDate = DateTime.UtcNow
+            }
+        );
+        await _appointmentsContext.SaveChangesAsync();
+
+        var newDto = new SetAvailabilityDto
+        {
+            Slots = new List<AvailabilitySlotInput>
+            {
+                new() { DayOfWeek = DayOfWeek.Friday, StartTime = new TimeSpan(10, 0, 0), EndTime = new TimeSpan(14, 0, 0) }
+            }
+        };
+
+        // Act
+        var result = await _appointmentService.SetMyAvailabilityAsync(newDto);
+
+        // Assert — only the new slot should exist
+        result.Should().HaveCount(1);
+        result.First().DayOfWeek.Should().Be(DayOfWeek.Friday);
+
+        var dbSlots = await _appointmentsContext.LandlordAvailabilities
+            .Where(la => la.LandlordId == _testLandlordId)
+            .ToListAsync();
+        dbSlots.Should().HaveCount(1);
+        dbSlots.First().DayOfWeek.Should().Be(DayOfWeek.Friday);
+    }
+
+    [Fact]
+    public async Task SetMyAvailabilityAsync_EmptyList_ClearsAllSlots()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        _appointmentsContext.LandlordAvailabilities.Add(new LandlordAvailability
+        {
+            LandlordId = _testLandlordId, DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeSpan(9, 0, 0), EndTime = new TimeSpan(17, 0, 0),
+            IsActive = true, CreatedDate = DateTime.UtcNow
+        });
+        await _appointmentsContext.SaveChangesAsync();
+
+        var dto = new SetAvailabilityDto { Slots = new List<AvailabilitySlotInput>() };
+
+        // Act
+        var result = await _appointmentService.SetMyAvailabilityAsync(dto);
+
+        // Assert
+        result.Should().BeEmpty();
+
+        var dbSlots = await _appointmentsContext.LandlordAvailabilities
+            .Where(la => la.LandlordId == _testLandlordId)
+            .ToListAsync();
+        dbSlots.Should().BeEmpty();
+    }
+
+    #endregion
+
+    #region GetAvailableSlots with LandlordAvailability Tests
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_NoAvailabilitySet_ShouldUseFallback9To17()
+    {
+        // Arrange — no LandlordAvailability rows seeded
+        var futureDate = GetNextWeekday(DayOfWeek.Monday);
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, futureDate);
+
+        // Assert: fallback 9-17 should produce slots starting at 09:00
+        result.Should().NotBeEmpty();
+        result.Min(s => s.StartTime.Hour).Should().Be(9);
+        result.Max(s => s.StartTime.Hour).Should().BeLessThan(17);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_WithLandlordAvailability_ShouldRespectCustomWindow()
+    {
+        // Arrange — landlord only available 14:00–16:00 on Tuesdays
+        var tuesday = GetNextWeekday(DayOfWeek.Tuesday);
+
+        _appointmentsContext.LandlordAvailabilities.Add(new LandlordAvailability
+        {
+            LandlordId = _testLandlordId,
+            DayOfWeek  = DayOfWeek.Tuesday,
+            StartTime  = new TimeSpan(14, 0, 0),
+            EndTime    = new TimeSpan(16, 0, 0),
+            IsActive   = true,
+            CreatedDate = DateTime.UtcNow
+        });
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, tuesday);
+
+        // Assert: no slots before 14:00 or at/after 16:00
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(s => s.StartTime.Hour >= 14 && s.StartTime.Hour < 16);
+    }
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_WithLandlordAvailability_BookedSlotMarkedUnavailable()
+    {
+        // Arrange
+        var wednesday = GetNextWeekday(DayOfWeek.Wednesday);
+        var bookedTime = new DateTime(wednesday.Year, wednesday.Month, wednesday.Day, 10, 0, 0);
+
+        _appointmentsContext.LandlordAvailabilities.Add(new LandlordAvailability
+        {
+            LandlordId = _testLandlordId,
+            DayOfWeek  = DayOfWeek.Wednesday,
+            StartTime  = new TimeSpan(9, 0, 0),
+            EndTime    = new TimeSpan(13, 0, 0),
+            IsActive   = true,
+            CreatedDate = DateTime.UtcNow
+        });
+
+        _appointmentsContext.Appointments.Add(new Appointment
+        {
+            AppointmentGuid = Guid.NewGuid(),
+            ApartmentId     = _testApartmentId,
+            TenantId        = _testTenantId,
+            LandlordId      = _testLandlordId,
+            AppointmentDate = bookedTime,
+            Status          = AppointmentStatus.Confirmed,
+            CreatedDate     = DateTime.UtcNow
+        });
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, wednesday);
+
+        // Assert
+        var bookedSlot = result.FirstOrDefault(s => s.StartTime == bookedTime);
+        bookedSlot.Should().NotBeNull();
+        bookedSlot!.IsAvailable.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAppointmentStatusAsync_AlreadyConfirmed_ShouldRemainConfirmed()
+    {
+        // Arrange
+        var appointment = await CreateTestAppointment();
+        appointment.Status = AppointmentStatus.Confirmed;
+        await _appointmentsContext.SaveChangesAsync();
+
+        SetupUserContext(_testLandlordId, _testLandlordGuid);
+
+        var updateDto = new UpdateAppointmentStatusDto
+        {
+            Status = AppointmentStatus.Confirmed,
+            LandlordNotes = "Still confirmed"
+        };
+
+        // Act
+        var result = await _appointmentService.UpdateAppointmentStatusAsync(appointment.AppointmentId, updateDto);
+
+        // Assert
+        result.Status.Should().Be(AppointmentStatus.Confirmed);
+        result.LandlordNotes.Should().Be("Still confirmed");
+    }
+
+    [Fact]
+    public async Task GetAvailableSlotsAsync_NoActiveAvailability_ShouldFallback()
+    {
+        // Arrange
+        var monday = GetNextWeekday(DayOfWeek.Monday);
+        
+        // Add only inactive slots
+        _appointmentsContext.LandlordAvailabilities.Add(new LandlordAvailability
+        {
+            LandlordId = _testLandlordId,
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeSpan(10, 0, 0),
+            EndTime = new TimeSpan(12, 0, 0),
+            IsActive = false
+        });
+        await _appointmentsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _appointmentService.GetAvailableSlotsAsync(_testApartmentId, monday);
+
+        // Assert: Should fallback to 9:00 - 17:00
+        result.Should().NotBeEmpty();
+        result.Min(s => s.StartTime.Hour).Should().Be(9);
+        result.Max(s => s.StartTime.Hour).Should().BeLessThan(17);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private async Task<Appointment> CreateTestAppointment()
@@ -578,6 +915,15 @@ public class AppointmentServiceTests : IDisposable
         _appointmentsContext.Appointments.Add(appointment);
         await _appointmentsContext.SaveChangesAsync();
         return appointment;
+    }
+
+    /// <summary>Returns the next future date (at midnight) whose DayOfWeek matches <paramref name="dayOfWeek"/>.</summary>
+    private static DateTime GetNextWeekday(DayOfWeek dayOfWeek)
+    {
+        var today = DateTime.Today;
+        int daysUntil = ((int)dayOfWeek - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntil == 0) daysUntil = 7; // always pick a future date
+        return today.AddDays(daysUntil);
     }
 
     #endregion

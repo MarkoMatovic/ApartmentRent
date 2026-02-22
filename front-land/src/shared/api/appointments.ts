@@ -4,6 +4,8 @@ import type {
     CreateAppointmentDto,
     AvailableSlotDto,
     UpdateAppointmentStatusDto,
+    LandlordAvailabilityDto,
+    SetAvailabilityDto,
 } from '../types/appointment';
 
 const API_URL = 'https://localhost:7092/api/appointments';
@@ -60,6 +62,22 @@ export const appointmentsApi = {
     getById: async (id: number): Promise<AppointmentDto> => {
         const token = localStorage.getItem('authToken');
         const response = await axios.get(`${API_URL}/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data;
+    },
+
+    getMyAvailability: async (): Promise<LandlordAvailabilityDto[]> => {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.get(`${API_URL}/availability`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data;
+    },
+
+    setMyAvailability: async (data: SetAvailabilityDto): Promise<LandlordAvailabilityDto[]> => {
+        const token = localStorage.getItem('authToken');
+        const response = await axios.put(`${API_URL}/availability`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;

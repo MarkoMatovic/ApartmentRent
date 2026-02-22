@@ -8,6 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
+using System.Text.Json;
 using Lander;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Models;
@@ -15,6 +16,8 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications.NotificationsHub;
+using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.SavedSearches.Models;
 
 namespace LandlordApp.Tests.Services;
 
@@ -22,10 +25,12 @@ public class ApartmentServiceTests : IDisposable
 {
     private readonly ListingsContext _context;
     private readonly UsersContext _usersContext;
+    private readonly SavedSearchesContext _savedSearchesContext;
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly Mock<IMemoryCache> _mockCache;
     private readonly Mock<IHubContext<NotificationHub>> _mockHubContext;
     private readonly Mock<ILogger<ApartmentService>> _mockLogger;
+    private readonly Mock<IEmailService> _mockEmailService;
     private readonly ApartmentService _apartmentService;
     private readonly int _testLandlordId = 1;
     private readonly Guid _testLandlordGuid = Guid.NewGuid();
@@ -47,11 +52,22 @@ public class ApartmentServiceTests : IDisposable
         
         _usersContext = new UsersContext(usersOptions);
 
+        var savedSearchesOptions = new DbContextOptionsBuilder<SavedSearchesContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
+        _savedSearchesContext = new SavedSearchesContext(savedSearchesOptions);
+
         // Setup mocks
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         _mockCache = new Mock<IMemoryCache>();
         _mockHubContext = new Mock<IHubContext<NotificationHub>>();
         _mockLogger = new Mock<ILogger<ApartmentService>>();
+        _mockEmailService = new Mock<IEmailService>();
+        _mockEmailService
+            .Setup(x => x.SendListingUnavailableEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
         
         // Setup IMemoryCache mock to handle cache operations
         object? nullValue = null;
@@ -79,6 +95,8 @@ public class ApartmentServiceTests : IDisposable
         _apartmentService = new ApartmentService(
             _context,
             _usersContext,
+            _savedSearchesContext,
+            _mockEmailService.Object,
             _mockHttpContextAccessor.Object,
             _mockCache.Object,
             _mockHubContext.Object,
@@ -127,7 +145,10 @@ public class ApartmentServiceTests : IDisposable
     public void Dispose()
     {
         _context.Database.EnsureDeleted();
+        _savedSearchesContext.Database.EnsureDeleted();
         _context.Dispose();
+        _savedSearchesContext.Dispose();
+        _usersContext.Dispose();
     }
 
     #region CreateApartmentAsync Tests
@@ -249,7 +270,6 @@ public class ApartmentServiceTests : IDisposable
         
         // Verify other features in database since they're not in ApartmentDto
         var apartmentInDb = await _context.Apartments
-            .Include(a => a.Features)
             .FirstOrDefaultAsync(a => a.ApartmentId == result.ApartmentId);
         apartmentInDb.Should().NotBeNull();
         apartmentInDb!.HasBalcony.Should().BeTrue();
@@ -293,6 +313,176 @@ public class ApartmentServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.Items.Should().OnlyContain(a => a.City == "Beograd");
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_WithMultipleFilters_ShouldReturnCorrectResults()
+    {
+        // Arrange
+        await SeedTestApartments(); // Ensure test data is available
+        var filters = new ApartmentFilterDto { City = "Beograd", MinRent = 450, ListingType = ListingType.Rent };
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(filters);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Title.Should().Be("Stan 2");
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_FilterByBooleanFlags_ShouldReturnMatching()
+    {
+        // Arrange
+        var apt1 = await CreateTestApartment("Furnished Pets", 1500);
+        apt1.IsFurnished = true;
+        apt1.IsPetFriendly = true;
+        apt1.HasBalcony = true;
+        apt1.HasParking = true;
+        apt1.IsSmokingAllowed = true;
+
+        var apt2 = await CreateTestApartment("Unfurnished No Pets", 1200);
+        apt2.IsFurnished = false;
+        apt2.IsPetFriendly = false;
+        apt2.HasBalcony = false;
+        apt2.HasParking = false;
+        apt2.IsSmokingAllowed = false;
+
+        await _context.SaveChangesAsync();
+
+        // Act
+        var resultFurnished = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { IsFurnished = true });
+        var resultPets = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { IsPetFriendly = true });
+        var resultBalcony = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { HasBalcony = true });
+        var resultParking = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { HasParking = true });
+        var resultSmoking = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { IsSmokingAllowed = true });
+
+        // Assert
+        resultFurnished.Items.Should().ContainSingle(a => a.ApartmentId == apt1.ApartmentId);
+        resultPets.Items.Should().ContainSingle(a => a.ApartmentId == apt1.ApartmentId);
+        resultBalcony.Items.Should().ContainSingle(a => a.ApartmentId == apt1.ApartmentId);
+        resultParking.Items.Should().ContainSingle(a => a.ApartmentId == apt1.ApartmentId);
+        resultSmoking.Items.Should().ContainSingle(a => a.ApartmentId == apt1.ApartmentId);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_FilterByApartmentType_ShouldReturnMatching()
+    {
+        // Arrange
+        var studio = await CreateTestApartment("Studio Apartment", 1000);
+        studio.ApartmentType = ApartmentType.Studio;
+        var room = await CreateTestApartment("Single Room", 500);
+        room.ApartmentType = ApartmentType.Room;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { ApartmentType = ApartmentType.Studio });
+
+        // Assert
+        result.Items.Should().ContainSingle(a => a.ApartmentId == studio.ApartmentId);
+        result.Items.Should().NotContain(a => a.ApartmentId == room.ApartmentId);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_FilterByAvailableFrom_ShouldReturnMatching()
+    {
+        // Arrange
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var future = today.AddDays(30);
+        var past = today.AddDays(-30);
+
+        var aptFuture = await CreateTestApartment("Future Apt", 1000);
+        aptFuture.AvailableFrom = future;
+        var aptPast = await CreateTestApartment("Past Apt", 1000);
+        aptPast.AvailableFrom = past;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { AvailableFrom = today });
+
+        // Assert
+        result.Items.Should().Contain(a => a.ApartmentId == aptFuture.ApartmentId);
+        result.Items.Should().NotContain(a => a.ApartmentId == aptPast.ApartmentId);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_FilterByIsImmediatelyAvailable_ShouldReturnMatching()
+    {
+        // Arrange
+        var aptImmediate = await CreateTestApartment("Immediate", 1000);
+        aptImmediate.IsImmediatelyAvailable = true;
+        var aptLater = await CreateTestApartment("Later", 1000);
+        aptLater.IsImmediatelyAvailable = false;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { IsImmediatelyAvailable = true });
+
+        // Assert
+        result.Items.Should().ContainSingle(a => a.ApartmentId == aptImmediate.ApartmentId);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_SortByRent_ShouldReturnOrdered()
+    {
+        // Arrange
+        await CreateTestApartment("Cheap", 1000);
+        await CreateTestApartment("Expensive", 3000);
+        await CreateTestApartment("Mid", 2000);
+
+        // Act
+        var asc = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { SortBy = "rent", SortOrder = "asc" });
+        var desc = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { SortBy = "rent", SortOrder = "desc" });
+
+        // Assert
+        asc.Items[0].Rent.Should().Be(1000);
+        desc.Items[0].Rent.Should().Be(3000);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_SortBySize_ShouldReturnOrdered()
+    {
+        // Arrange
+        var apt1 = await CreateTestApartment("Small", 1000); apt1.SizeSquareMeters = 30;
+        var apt2 = await CreateTestApartment("Large", 3000); apt2.SizeSquareMeters = 90;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { SortBy = "size", SortOrder = "desc" });
+
+        // Assert
+        result.Items[0].SizeSquareMeters.Should().Be(90);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsAsync_SortByDate_ShouldReturnNewestFirstByDefault()
+    {
+        // Arrange
+        var old = await CreateTestApartment("Old", 1000); old.CreatedDate = DateTime.UtcNow.AddDays(-5);
+        var recent = await CreateTestApartment("New", 1000); recent.CreatedDate = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { SortBy = "date", SortOrder = "desc" });
+
+        // Assert
+        result.Items[0].Title.Should().Be("New");
+    }
+
+    [Fact]
+    public async Task CreateApartmentAsync_ShouldBroadcastNotification()
+    {
+        // Arrange
+        SetupUserContext(_testLandlordId, _testLandlordGuid); // Use existing test landlord
+        var input = new ApartmentInputDto { Title = "Notify Me", City = "London", Rent = 1000, Address = "Test Adresa" };
+
+        // Act
+        await _apartmentService.CreateApartmentAsync(input);
+
+        _mockHubContext.Verify(
+            x => x.Clients,
+            Times.AtLeastOnce);
     }
 
     [Fact]
@@ -359,6 +549,27 @@ public class ApartmentServiceTests : IDisposable
         result.Items.Should().HaveCount(10);
         result.Page.Should().Be(2);
         result.TotalCount.Should().BeGreaterThanOrEqualTo(25);
+    }
+
+    [Fact]
+    public async Task CreateApartmentAsync_EmptyImageUrls_ShouldNotAddImages()
+    {
+        // Arrange
+        var dto = new ApartmentInputDto
+        {
+            Title = "No Images",
+            Address = "Test 123",
+            Rent = 100,
+            ImageUrls = new List<string>() // Empty list
+        };
+
+        // Act
+        var result = await _apartmentService.CreateApartmentAsync(dto);
+
+        // Assert
+        result.Should().NotBeNull();
+        var imagesCount = await _context.ApartmentImages.CountAsync(i => i.ApartmentId == result.ApartmentId);
+        imagesCount.Should().Be(0);
     }
 
     #endregion
@@ -466,6 +677,25 @@ public class ApartmentServiceTests : IDisposable
         await act.Should().ThrowAsync<Exception>();
     }
 
+    [Fact]
+    public async Task UpdateApartmentAsync_UnauthorizedUser_ShouldThrowException()
+    {
+        // Arrange
+        var apartment = await CreateTestApartment("My Apartment", 500);
+        
+        // Setup unauthorized user context (different GUID)
+        var unauthorizedUserGuid = Guid.NewGuid();
+        SetupUserContext(999, unauthorizedUserGuid);
+        
+        var updateDto = new ApartmentUpdateInputDto { Title = "Hacked Title" };
+
+        // Act
+        var act = async () => await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId, updateDto);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
     #endregion
 
     #region DeleteApartmentAsync Tests
@@ -496,6 +726,127 @@ public class ApartmentServiceTests : IDisposable
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteApartmentAsync_UnauthorizedUser_ShouldThrowException()
+    {
+        // Arrange
+        var apartment = await CreateTestApartment("Delete Me", 300);
+        
+        // Setup unauthorized user context
+        SetupUserContext(999, Guid.NewGuid());
+
+        // Act
+        var act = async () => await _apartmentService.DeleteApartmentAsync(apartment.ApartmentId);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    [Fact]
+    public async Task DeleteApartmentAsync_WithSavedSearchEmailEnabled_ShouldSendNotification()
+    {
+        // Arrange
+        var apartment = await CreateTestApartment("Obavjestenje stan", 400);
+
+        // Seed a user with notification-enabled saved search for this apartment
+        var notifiedUser = new User
+        {
+            UserId = 50,
+            UserGuid = Guid.NewGuid(),
+            FirstName = "Notified",
+            LastName = "User",
+            Email = "notified@test.com",
+            Password = "hashed",
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        };
+        _usersContext.Users.Add(notifiedUser);
+        await _usersContext.SaveChangesAsync();
+
+        _savedSearchesContext.SavedSearches.Add(new SavedSearch
+        {
+            UserId = notifiedUser.UserId,
+            Name = "My saved search",
+            SearchType = "apartment",
+            FiltersJson = JsonSerializer.Serialize(new { ApartmentId = apartment.ApartmentId }),
+            EmailNotificationsEnabled = true,
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        });
+        await _savedSearchesContext.SaveChangesAsync();
+
+        // Act
+        await _apartmentService.DeleteApartmentAsync(apartment.ApartmentId);
+
+        // Assert — email must have been sent exactly once for the user
+        _mockEmailService.Verify(
+            x => x.SendListingUnavailableEmailAsync(
+                "notified@test.com",
+                "Notified",
+                "Obavjestenje stan",
+                It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteApartmentAsync_NotificationsDisabled_ShouldNotSendEmail()
+    {
+        // Arrange
+        var apartment = await CreateTestApartment("Silent delete stan", 400);
+
+        var silentUser = new User
+        {
+            UserId = 51,
+            UserGuid = Guid.NewGuid(),
+            FirstName = "Silent",
+            LastName = "User",
+            Email = "silent@test.com",
+            Password = "hashed",
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        };
+        _usersContext.Users.Add(silentUser);
+        await _usersContext.SaveChangesAsync();
+
+        _savedSearchesContext.SavedSearches.Add(new SavedSearch
+        {
+            UserId = silentUser.UserId,
+            Name = "Disabled notifications search",
+            SearchType = "apartment",
+            FiltersJson = JsonSerializer.Serialize(new { ApartmentId = apartment.ApartmentId }),
+            EmailNotificationsEnabled = false, // disabled
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        });
+        await _savedSearchesContext.SaveChangesAsync();
+
+        // Act
+        await _apartmentService.DeleteApartmentAsync(apartment.ApartmentId);
+
+        // Assert — email must NOT have been sent
+        _mockEmailService.Verify(
+            x => x.SendListingUnavailableEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteApartmentAsync_NoSavedSearches_ShouldDeleteWithoutSendingEmails()
+    {
+        // Arrange — no saved searches exist
+        var apartment = await CreateTestApartment("No watchers stan", 300);
+
+        // Act
+        var result = await _apartmentService.DeleteApartmentAsync(apartment.ApartmentId);
+
+        // Assert
+        result.Should().BeTrue();
+        _mockEmailService.Verify(
+            x => x.SendListingUnavailableEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never);
     }
 
     #endregion

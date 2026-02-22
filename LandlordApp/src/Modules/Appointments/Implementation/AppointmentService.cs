@@ -17,6 +17,7 @@ namespace Lander.src.Modules.Appointments.Implementation
         private readonly IEmailService _emailService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<AppointmentService> _logger;
+        private readonly Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService _approvalService;
 
         public AppointmentService(
             AppointmentsContext context,
@@ -24,7 +25,8 @@ namespace Lander.src.Modules.Appointments.Implementation
             UsersContext usersContext,
             IEmailService emailService,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<AppointmentService> logger)
+            ILogger<AppointmentService> logger,
+            Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService approvalService)
         {
             _context = context;
             _listingsContext = listingsContext;
@@ -32,6 +34,7 @@ namespace Lander.src.Modules.Appointments.Implementation
             _emailService = emailService;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
+            _approvalService = approvalService;
         }
 
         private int GetCurrentUserId()
@@ -71,6 +74,13 @@ namespace Lander.src.Modules.Appointments.Implementation
             if (!apartment.LandlordId.HasValue)
             {
                 throw new ArgumentException("Apartment does not have a landlord assigned");
+            }
+
+            // Check if user has an approved application for this apartment
+            var hasApprovedApplication = await _approvalService.HasApprovedApplicationAsync(tenantId, dto.ApartmentId);
+            if (!hasApprovedApplication)
+            {
+                throw new UnauthorizedAccessException("You must have an approved application before scheduling a viewing for this apartment");
             }
 
             // Check if appointment time is in the future
@@ -179,16 +189,38 @@ namespace Lander.src.Modules.Appointments.Implementation
                     throw new ArgumentException("Apartment not found");
                 }
 
-                // For now, generate slots from 9 AM to 5 PM (can be enhanced with landlord availability)
                 var slots = new List<AvailableSlotDto>();
-                var startHour = 9;
-                var endHour = 17;
                 var slotDuration = 30; // minutes
 
-                // Get existing appointments for this day
+                // Get landlord availability for given day of week
+                var dayOfWeek = date.DayOfWeek;
+                List<(TimeSpan start, TimeSpan end)> availabilityWindows = new();
+
+                if (apartment.LandlordId.HasValue)
+                {
+                    var landlordAvailability = await _context.LandlordAvailabilities
+                        .Where(la => la.LandlordId == apartment.LandlordId.Value &&
+                                     la.DayOfWeek == dayOfWeek &&
+                                     la.IsActive)
+                        .ToListAsync();
+
+                    if (landlordAvailability.Any())
+                    {
+                        availabilityWindows = landlordAvailability
+                            .Select(la => (la.StartTime, la.EndTime))
+                            .ToList();
+                    }
+                }
+
+                // Fallback: 9:00 – 17:00 if landlord has no availability set
+                if (!availabilityWindows.Any())
+                {
+                    availabilityWindows.Add((new TimeSpan(9, 0, 0), new TimeSpan(17, 0, 0)));
+                }
+
+                // Get existing booked appointments for this day
                 var dayStart = date.Date;
                 var dayEnd = date.Date.AddDays(1);
-
                 var bookedAppointments = await _context.Appointments
                     .Where(a => a.ApartmentId == apartmentId &&
                                a.AppointmentDate >= dayStart &&
@@ -198,19 +230,23 @@ namespace Lander.src.Modules.Appointments.Implementation
                     .Select(a => a.AppointmentDate)
                     .ToListAsync();
 
-                // Use local time for comparison
                 var now = DateTime.Now;
                 var today = now.Date;
 
-                for (int hour = startHour; hour < endHour; hour++)
+                foreach (var (winStart, winEnd) in availabilityWindows)
                 {
-                    for (int minute = 0; minute < 60; minute += slotDuration)
+                    var currentTime = winStart;
+                    while (currentTime.Add(TimeSpan.FromMinutes(slotDuration)) <= winEnd)
                     {
-                        var slotTime = new DateTime(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Local);
-                        
-                        // Only show future slots (if date is today, check time; if date is future, show all)
+                        var slotTime = new DateTime(date.Year, date.Month, date.Day,
+                            currentTime.Hours, currentTime.Minutes, 0, DateTimeKind.Local);
+
+                        // Skip past slots when date is today
                         if (date.Date == today && slotTime <= now)
+                        {
+                            currentTime = currentTime.Add(TimeSpan.FromMinutes(slotDuration));
                             continue;
+                        }
 
                         var isBooked = bookedAppointments.Any(a => a == slotTime);
 
@@ -220,6 +256,8 @@ namespace Lander.src.Modules.Appointments.Implementation
                             EndTime = slotTime.AddMinutes(slotDuration),
                             IsAvailable = !isBooked
                         });
+
+                        currentTime = currentTime.Add(TimeSpan.FromMinutes(slotDuration));
                     }
                 }
 
@@ -320,6 +358,65 @@ namespace Lander.src.Modules.Appointments.Implementation
                 return null;
 
             return await MapToDto(appointment);
+        }
+
+        public async Task<List<LandlordAvailabilityDto>> GetMyAvailabilityAsync()
+        {
+            var landlordId = GetCurrentUserId();
+
+            var availability = await _context.LandlordAvailabilities
+                .Where(la => la.LandlordId == landlordId && la.IsActive)
+                .OrderBy(la => la.DayOfWeek)
+                .ThenBy(la => la.StartTime)
+                .ToListAsync();
+
+            return availability.Select(la => new LandlordAvailabilityDto
+            {
+                AvailabilityId = la.AvailabilityId,
+                LandlordId = la.LandlordId,
+                DayOfWeek = la.DayOfWeek,
+                StartTime = la.StartTime,
+                EndTime = la.EndTime,
+                IsActive = la.IsActive
+            }).ToList();
+        }
+
+        public async Task<List<LandlordAvailabilityDto>> SetMyAvailabilityAsync(SetAvailabilityDto dto)
+        {
+            var landlordId = GetCurrentUserId();
+
+            // Remove existing availability for this landlord
+            var existing = await _context.LandlordAvailabilities
+                .Where(la => la.LandlordId == landlordId)
+                .ToListAsync();
+
+            _context.LandlordAvailabilities.RemoveRange(existing);
+
+            // Add new availability slots
+            var newSlots = dto.Slots.Select(s => new LandlordAvailability
+            {
+                LandlordId = landlordId,
+                DayOfWeek = s.DayOfWeek,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                IsActive = true,
+                CreatedDate = DateTime.UtcNow
+            }).ToList();
+
+            _context.LandlordAvailabilities.AddRange(newSlots);
+            await _context.SaveEntitiesAsync();
+
+            _logger.LogInformation("Landlord {LandlordId} set {Count} availability slots", landlordId, newSlots.Count);
+
+            return newSlots.Select(la => new LandlordAvailabilityDto
+            {
+                AvailabilityId = la.AvailabilityId,
+                LandlordId = la.LandlordId,
+                DayOfWeek = la.DayOfWeek,
+                StartTime = la.StartTime,
+                EndTime = la.EndTime,
+                IsActive = la.IsActive
+            }).ToList();
         }
 
         private async Task<AppointmentDto> MapToDto(Appointment appointment)

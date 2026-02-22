@@ -17,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { roommatesApi } from '../shared/api/roommates';
 import { analyticsApi } from '../shared/api/analytics';
+import { applicationsApi } from '../shared/api/applicationsApi';
 import ApartmentMap from '../components/Map/ApartmentMap';
 import RoommateCard from '../components/Roommate/RoommateCard';
 import ApartmentImageGallery from '../components/Apartment/ApartmentImageGallery';
@@ -35,6 +36,8 @@ import {
 } from '@mui/icons-material';
 import ApplicationModal from '../components/Applications/ApplicationModal';
 import AppointmentModal from '../components/Appointments/AppointmentModal';
+import LandlordProfileModal from '../components/Modals/LandlordProfileModal';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const ApartmentDetailPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
@@ -42,6 +45,7 @@ const ApartmentDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [openApplyModal, setOpenApplyModal] = React.useState(false);
   const [openAppointmentModal, setOpenAppointmentModal] = React.useState(false);
+  const [openProfileModal, setOpenProfileModal] = React.useState(false);
 
   const { data: apartment, isLoading } = useQuery({
     queryKey: ['apartment', id],
@@ -53,6 +57,14 @@ const ApartmentDetailPage: React.FC = () => {
     queryKey: ['roommates', 'apartment', id],
     queryFn: () => roommatesApi.getAll({ apartmentId: Number(id) } as any),
     enabled: !!id,
+  });
+
+  // Check if user has approved application for this apartment
+  const { data: approvalStatus } = useQuery({
+    queryKey: ['application-approval', id],
+    queryFn: () => applicationsApi.checkApprovalStatus(Number(id)),
+    enabled: !!id,
+    retry: false,
   });
 
   // Track apartment view when component mounts and apartment data is loaded
@@ -90,6 +102,26 @@ const ApartmentDetailPage: React.FC = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         {apartment.title}
       </Typography>
+
+      {/* Landlord Info */}
+      {apartment.landlordName && (
+        <Box display="flex" alignItems="center" gap={1} mb={2}>
+          <PersonIcon fontSize="small" color="action" />
+          <Typography variant="body2" color="text.secondary">
+            Listed by: {apartment.landlordName}
+          </Typography>
+          {apartment.landlordId && (
+            <Button
+              size="small"
+              startIcon={<AccountCircleIcon />}
+              onClick={() => setOpenProfileModal(true)}
+              sx={{ ml: 1 }}
+            >
+              View Profile
+            </Button>
+          )}
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -334,9 +366,20 @@ const ApartmentDetailPage: React.FC = () => {
                 startIcon={<CalendarIcon />}
                 sx={{ mt: 1 }}
                 onClick={() => setOpenAppointmentModal(true)}
+                disabled={!approvalStatus?.hasApprovedApplication}
               >
                 {t('apartments:scheduleViewing', { defaultValue: 'Schedule Viewing' })}
               </Button>
+
+              {/* Show message if application not approved */}
+              {!approvalStatus?.hasApprovedApplication && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                  {approvalStatus?.applicationStatus === 'Pending'
+                    ? t('apartments:applicationPending', { defaultValue: 'Your application is pending approval' })
+                    : t('apartments:applyFirst', { defaultValue: 'Apply for this apartment to schedule a viewing' })
+                  }
+                </Typography>
+              )}
 
               {/* Apply Button */}
               <Button
@@ -376,6 +419,15 @@ const ApartmentDetailPage: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Landlord Profile Modal */}
+      {apartment.landlordId && (
+        <LandlordProfileModal
+          open={openProfileModal}
+          onClose={() => setOpenProfileModal(false)}
+          userId={apartment.landlordId}
+        />
+      )}
     </Container>
   );
 };

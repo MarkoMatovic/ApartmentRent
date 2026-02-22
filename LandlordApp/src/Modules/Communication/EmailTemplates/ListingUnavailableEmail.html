@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listing Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #1976d2; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .alert-box { background-color: #fff3e0; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #ff9800; }
+        .apartment-title { font-size: 22px; font-weight: bold; color: #333; }
+        .reason { color: #666; font-size: 14px; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #1976d2; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Listing Status Update</h1>
+        </div>
+        <div class="content">
+            <h2>Hello {{UserName}},</h2>
+            <p>We wanted to let you know about a change to a listing you have saved:</p>
+            <div class="alert-box">
+                <div class="apartment-title">{{ApartmentTitle}}</div>
+                <p class="reason">{{Reason}}</p>
+            </div>
+            <p>You may want to browse other available listings that match your criteria.</p>
+            <a href="https://landlander.com/apartments" class="button">Browse Listings</a>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 Landlander Platform. All rights reserved.</p>
+            <p>You can manage your saved searches and email preferences in your account settings.</p>
+        </div>
+    </div>
+</body>
+</html>
