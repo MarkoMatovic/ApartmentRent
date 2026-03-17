@@ -3,9 +3,6 @@ using Microsoft.Extensions.Options;
 
 namespace Lander.src.Infrastructure.Authorization
 {
-    /// <summary>
-    /// Policy provider that creates permission-based authorization policies dynamically.
-    /// </summary>
     public class PermissionPolicyProvider : IAuthorizationPolicyProvider
     {
         private readonly DefaultAuthorizationPolicyProvider _fallbackPolicyProvider;

@@ -1,5 +1,7 @@
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 
 namespace Lander.src.Modules.Appointments
 {
@@ -7,8 +9,15 @@ namespace Lander.src.Modules.Appointments
     {
         public AppointmentsContext CreateDbContext(string[] args)
         {
+            IConfigurationRoot configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .Build();
+
             var optionsBuilder = new DbContextOptionsBuilder<AppointmentsContext>();
-            optionsBuilder.UseSqlServer("Server=localhost;Database=LandLander;Trusted_Connection=True;TrustServerCertificate=True;");
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+            optionsBuilder.UseSqlServer(connectionString);
 
             return new AppointmentsContext(optionsBuilder.Options);
         }
