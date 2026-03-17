@@ -12,10 +12,6 @@ public partial class ApartmentsController
     // Fields and Constructor moved to ApartmentsController.cs
 
     
-    /// <summary>
-    /// .NET 10 Feature: Semantic search using vector embeddings
-    /// Search apartments by meaning, not just keywords
-    /// </summary>
     [HttpGet("semantic-search")]
     [AllowAnonymous]
     public async Task<ActionResult<List<ApartmentDto>>> SemanticSearch(
@@ -25,13 +21,10 @@ public partial class ApartmentsController
         if (string.IsNullOrWhiteSpace(query))
             return BadRequest(new { error = "Query cannot be empty" });
         
-        // Generate embedding for search query
         var queryEmbedding = _embeddingService.GenerateEmbedding(query);
         
-        // Get all apartments with embeddings
         var apartments = await _apartmentService.GetAllApartmentsForSemanticSearchAsync();
         
-        // Calculate similarity scores
         var results = apartments
             .Where(a => !string.IsNullOrEmpty(a.DescriptionEmbedding))
             .Select(a => new
@@ -50,9 +43,6 @@ public partial class ApartmentsController
         return Ok(results);
     }
     
-    /// <summary>
-    /// Generate embeddings for all apartments (admin only)
-    /// </summary>
     [HttpPost("generate-embeddings")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateEmbeddings()

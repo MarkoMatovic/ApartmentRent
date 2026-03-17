@@ -144,7 +144,7 @@ builder.Services.AddScoped<ISavedSearchService, SavedSearchService>();
 builder.Services.Configure<TwilioSettings>(builder.Configuration.GetSection("Twilio"));
 builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
-builder.Services.Configure<SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+builder.Services.Configure<BrevoSettings>(builder.Configuration.GetSection("Brevo"));
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
@@ -157,8 +157,6 @@ builder.Services.AddSingleton<NotificationStreamService>();
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
-// .NET 10 Feature: Payment Integration (Stripe)
-builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IStripeService, Lander.src.Modules.Payments.Implementation.StripeService>();
 
 // .NET 10 Feature: Vector Search for semantic apartment search
 builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();
