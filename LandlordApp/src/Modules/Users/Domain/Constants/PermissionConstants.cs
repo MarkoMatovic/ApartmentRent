@@ -1,9 +1,5 @@
 namespace Lander.src.Modules.Users.Domain.Constants
 {
-    /// <summary>
-    /// Contains all permission constants used throughout the application.
-    /// Permissions are organized by functional area.
-    /// </summary>
     public static class PermissionConstants
     {
         // ===== APARTMENT MANAGEMENT =====

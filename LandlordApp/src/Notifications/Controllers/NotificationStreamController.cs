@@ -18,26 +18,20 @@ public class NotificationStreamController : ControllerBase
         _streamService = streamService;
     }
     
-    /// <summary>
-    /// .NET 10 Feature: Server-Sent Events endpoint for real-time notifications
-    /// </summary>
     [HttpGet("stream")]
     public async Task StreamNotifications(CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();
         
-        // Configure SSE headers
         Response.Headers.Append("Content-Type", "text/event-stream");
         Response.Headers.Append("Cache-Control", "no-cache");
         Response.Headers.Append("Connection", "keep-alive");
-        Response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
+        Response.Headers.Append("X-Accel-Buffering", "no"); 
         
         try
         {
-            // Send initial connection confirmation
             await SendSseMessage("connected", new { userId, timestamp = DateTime.UtcNow });
             
-            // Stream notifications
             await foreach (var notification in _streamService.StreamNotificationsAsync(userId, cancellationToken))
             {
                 await SendSseMessage("notification", notification);
@@ -45,13 +39,9 @@ public class NotificationStreamController : ControllerBase
         }
         catch (OperationCanceledException)
         {
-            // Client disconnected - this is normal
         }
     }
     
-    /// <summary>
-    /// Test endpoint to send a notification to current user
-    /// </summary>
     [HttpPost("test")]
     public async Task<IActionResult> SendTestNotification([FromBody] string message)
     {
@@ -69,9 +59,6 @@ public class NotificationStreamController : ControllerBase
         return Ok(new { success = true, message = "Notification sent" });
     }
     
-    /// <summary>
-    /// Get active SSE connection count (admin only)
-    /// </summary>
     [HttpGet("connections")]
     public IActionResult GetConnectionCount()
     {

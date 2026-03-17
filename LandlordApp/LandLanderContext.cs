@@ -345,7 +345,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.IsDelivered).HasDefaultValue(false);
-            entity.Property(e => e.SendGridMessageId).HasMaxLength(255);
+            entity.Property(e => e.ProviderMessageId).HasMaxLength(255);
             entity.Property(e => e.ErrorMessage).HasColumnType("text");
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(getdate())")
