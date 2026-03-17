@@ -9,7 +9,7 @@ public partial class EmailLog
     public string? TemplateId { get; set; }
     public DateTime SentAt { get; set; }
     public bool IsDelivered { get; set; }
-    public string? SendGridMessageId { get; set; }
+    public string? ProviderMessageId { get; set; }
     public string? ErrorMessage { get; set; }
     public Guid? CreatedByGuid { get; set; }
     public DateTime? CreatedDate { get; set; }

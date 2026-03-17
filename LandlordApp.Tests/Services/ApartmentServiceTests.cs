@@ -92,6 +92,12 @@ public class ApartmentServiceTests : IDisposable
         SetupUserContext(_testLandlordId, _testLandlordGuid);
 
         // Create service instance
+        var reviewsOptions = new DbContextOptionsBuilder<ReviewsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        var reviewsContext = new ReviewsContext(reviewsOptions);
+
         _apartmentService = new ApartmentService(
             _context,
             _usersContext,
@@ -100,6 +106,7 @@ public class ApartmentServiceTests : IDisposable
             _mockHttpContextAccessor.Object,
             _mockCache.Object,
             _mockHubContext.Object,
+            reviewsContext,
             _mockLogger.Object
         );
     }
