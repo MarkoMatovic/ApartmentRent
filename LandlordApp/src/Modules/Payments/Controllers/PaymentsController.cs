@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Modules.Payments.Dtos;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
@@ -15,12 +16,14 @@ public class PaymentsController : ControllerBase
     private readonly IMonriService _monriService;
     private readonly IUserInterface _userService;
     private readonly IConfiguration _configuration;
+    private readonly IdempotencyService _idempotencyService;
 
-    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration)
+    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration, IdempotencyService idempotencyService)
     {
         _monriService = monriService;
         _userService = userService;
         _configuration = configuration;
+        _idempotencyService = idempotencyService;
     }
 
     [HttpGet("plans")]
@@ -43,7 +46,7 @@ public class PaymentsController : ControllerBase
 
     [HttpPost("create-payment")]
     [Authorize]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("mutating")]
     public async Task<IActionResult> CreatePayment([FromBody] CreateMonriPaymentRequest request)
     {
         var userGuid = User.FindFirstValue("sub");
@@ -51,6 +54,10 @@ public class PaymentsController : ControllerBase
 
         var user = await _userService.GetUserByGuidAsync(Guid.Parse(userGuid));
         if (user == null) return Unauthorized();
+
+        var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(idempotencyKey) && _idempotencyService.IsDuplicate($"payment:{user.UserId}:{idempotencyKey}"))
+            return Conflict(new { message = "Duplicate request — this payment was already initiated." });
 
         var userProfile = await _userService.GetUserProfileAsync(user.UserId);
         if (userProfile == null) return Unauthorized();

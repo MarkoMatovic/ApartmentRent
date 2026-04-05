@@ -5,17 +5,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Lander;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
 using Lander.Helpers;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Dtos.Dto;
+using Lander.src.Common;
 
 namespace LandlordApp.Tests.Services;
 
@@ -28,6 +30,8 @@ public class UserServiceTests : IDisposable
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<IApartmentService> _mockApartmentService;
     private readonly Mock<IRoommateService> _mockRoommateService;
+    private readonly Mock<ILogger<UserService>> _mockLogger;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly UserService _userService;
 
     // Helper: creates a valid User with all required non-nullable fields
@@ -71,13 +75,20 @@ public class UserServiceTests : IDisposable
         _mockEmailService = new Mock<IEmailService>();
         _mockApartmentService = new Mock<IApartmentService>();
         _mockRoommateService = new Mock<IRoommateService>();
+        _mockLogger = new Mock<ILogger<UserService>>();
+        _mockConfiguration = new Mock<IConfiguration>();
+        _mockConfiguration.Setup(x => x["Jwt:Secret"]).Returns("ThisIsAVerySecureSecretKeyForTestingPurposesOnly12345678");
+        _mockConfiguration.Setup(x => x["Jwt:Issuer"]).Returns("TestIssuer");
+        _mockConfiguration.Setup(x => x["Jwt:Audience"]).Returns("TestAudience");
+        _mockConfiguration.Setup(x => x["App:FrontendBaseUrl"]).Returns("http://localhost:5173");
         var refreshTokenService = new RefreshTokenService(_context);
 
         _userService = new UserService(
             _context, _reviewsContext, _tokenProvider,
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
-            refreshTokenService);
+            Array.Empty<IUserDeletedHandler>(),
+            refreshTokenService, _mockLogger.Object, _mockConfiguration.Object);
 
         SeedTestData();
     }
@@ -293,7 +304,7 @@ public class UserServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteUserAsync_ShouldCleanupRelated()
+    public async Task DeleteUserAsync_ShouldCallHandlersAndRemoveUser()
     {
         var guid = Guid.NewGuid();
         var user = MakeUser(userId: 99, email: "del@test.com");
@@ -301,10 +312,170 @@ public class UserServiceTests : IDisposable
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        await _userService.DeleteUserAsync(new DeleteUserInputDto { UserGuid = guid });
-        _mockApartmentService.Verify(s => s.DeleteApartmentsByLandlordIdAsync(99), Times.Once);
-        _mockRoommateService.Verify(s => s.DeleteRoommateByUserIdAsync(99), Times.Once);
-        (await _context.Users.AnyAsync()).Should().BeFalse();
+        var mockHandler = new Mock<IUserDeletedHandler>();
+        mockHandler.Setup(h => h.HandleAsync(It.IsAny<int>())).Returns(Task.CompletedTask);
+
+        var refreshTokenService = new RefreshTokenService(_context);
+        var svc = new UserService(
+            _context, _reviewsContext, _tokenProvider,
+            _mockHttpContextAccessor.Object, _mockEmailService.Object,
+            _mockApartmentService.Object, _mockRoommateService.Object,
+            new[] { mockHandler.Object },
+            refreshTokenService, _mockLogger.Object, _mockConfiguration.Object);
+
+        await svc.DeleteUserAsync(new DeleteUserInputDto { UserGuid = guid });
+
+        mockHandler.Verify(h => h.HandleAsync(99), Times.Once);
+        (await _context.Users.AnyAsync(u => u.UserGuid == guid)).Should().BeFalse();
+    }
+
+    // ─── Account Lockout ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task LoginUserAsync_WrongPassword_IncrementsFailedAttempts()
+    {
+        var user = MakeUser(email: "locktest@test.com");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("correct");
+        user.FailedLoginAttempts = 0;
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        await _userService.LoginUserAsync(new LoginUserInputDto { Email = "locktest@test.com", Password = "wrong" });
+
+        var dbUser = await _context.Users.FirstAsync(u => u.Email == "locktest@test.com");
+        dbUser.FailedLoginAttempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LoginUserAsync_FiveFailedAttempts_LocksAccount()
+    {
+        var user = MakeUser(email: "lockout5@test.com");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("correct");
+        user.FailedLoginAttempts = 4;
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // 5th failed attempt triggers lockout
+        var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "lockout5@test.com", Password = "wrong" });
+
+        result.Should().BeNull();
+        var dbUser = await _context.Users.FirstAsync(u => u.Email == "lockout5@test.com");
+        dbUser.LockoutUntil.Should().NotBeNull();
+        dbUser.LockoutUntil!.Value.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(15), precision: TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
+    public async Task LoginUserAsync_LockedAccount_RejectsEvenWithCorrectPassword()
+    {
+        var user = MakeUser(email: "locked@test.com");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("correct");
+        user.FailedLoginAttempts = 5;
+        user.LockoutUntil = DateTime.UtcNow.AddMinutes(10);
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "locked@test.com", Password = "correct" });
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LoginUserAsync_ExpiredLockout_AllowsLogin()
+    {
+        var user = MakeUser(email: "expiredlock@test.com");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("correct");
+        user.IsActive = true;
+        user.FailedLoginAttempts = 5;
+        user.LockoutUntil = DateTime.UtcNow.AddMinutes(-1); // lockout expired
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "expiredlock@test.com", Password = "correct" });
+
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task LoginUserAsync_SuccessAfterPreviousFails_ResetsCounter()
+    {
+        var user = MakeUser(email: "reset@test.com");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("correct");
+        user.IsActive = true;
+        user.FailedLoginAttempts = 3;
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "reset@test.com", Password = "correct" });
+
+        result.Should().NotBeNull();
+        var dbUser = await _context.Users.FirstAsync(u => u.Email == "reset@test.com");
+        dbUser.FailedLoginAttempts.Should().Be(0);
+        dbUser.LockoutUntil.Should().BeNull();
+    }
+
+    // ─── Email Verification & Password Reset ─────────────────────────────────
+
+    [Fact]
+    public async Task VerifyEmailAsync_ValidToken_ActivatesUser()
+    {
+        var user = MakeUser(email: "verify@test.com", isActive: false);
+        user.EmailVerificationToken = "valid-token-123";
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.VerifyEmailAsync("valid-token-123");
+
+        result.Should().BeTrue();
+        var dbUser = await _context.Users.FirstAsync(u => u.Email == "verify@test.com");
+        dbUser.IsActive.Should().BeTrue();
+        dbUser.EmailVerifiedAt.Should().NotBeNull();
+        dbUser.EmailVerificationToken.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task VerifyEmailAsync_InvalidToken_ReturnsFalse()
+    {
+        var result = await _userService.VerifyEmailAsync("nonexistent-token");
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ValidToken_UpdatesPassword()
+    {
+        var user = MakeUser(email: "resetpw@test.com");
+        user.PasswordResetToken = "reset-token-abc";
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.ResetPasswordAsync("reset-token-abc", "newSecurePass");
+
+        result.Should().BeTrue();
+        var dbUser = await _context.Users.FirstAsync(u => u.Email == "resetpw@test.com");
+        BCrypt.Net.BCrypt.Verify("newSecurePass", dbUser.Password).Should().BeTrue();
+        dbUser.PasswordResetToken.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ExpiredToken_ReturnsFalse()
+    {
+        var user = MakeUser(email: "expiredtoken@test.com");
+        user.PasswordResetToken = "expired-token";
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(-1); // expired
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var result = await _userService.ResetPasswordAsync("expired-token", "newpass");
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SendPasswordResetEmailAsync_UnknownEmail_DoesNotRevealExistence()
+    {
+        // Should complete without throwing — not reveal that email doesn't exist
+        var act = async () => await _userService.SendPasswordResetEmailAsync("ghost@test.com");
+        await act.Should().NotThrowAsync();
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

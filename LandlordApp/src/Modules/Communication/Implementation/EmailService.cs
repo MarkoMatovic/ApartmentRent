@@ -2,6 +2,8 @@ using Lander.Helpers;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.CircuitBreaker;
 using System.Security.Claims;
 using sib_api_v3_sdk.Api;
 using sib_api_v3_sdk.Client;
@@ -14,6 +16,24 @@ namespace Lander.src.Modules.Communication.Implementation;
 
 public class EmailService : IEmailService
 {
+    private static readonly ResiliencePipeline _pipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new Polly.Retry.RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromSeconds(2),
+            BackoffType = DelayBackoffType.Exponential,
+            ShouldHandle = new PredicateBuilder().Handle<Exception>()
+        })
+        .AddCircuitBreaker(new Polly.CircuitBreaker.CircuitBreakerStrategyOptions
+        {
+            FailureRatio = 0.5,
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            MinimumThroughput = 5,
+            BreakDuration = TimeSpan.FromMinutes(1),
+            ShouldHandle = new PredicateBuilder().Handle<Exception>()
+        })
+        .Build();
+
     private readonly BrevoSettings _settings;
     private readonly CommunicationsContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -48,7 +68,8 @@ public class EmailService : IEmailService
                 htmlContent: htmlContent
             );
 
-            var result = await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail));
+            var result = await _pipeline.ExecuteAsync(async ct =>
+                await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail), ct));
 
             var messageId = result?.MessageId;
             await LogEmailAsync(null, to, subject, htmlContent, null, true, messageId, null);

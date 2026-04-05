@@ -6,11 +6,31 @@ using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Polly;
+using Polly.CircuitBreaker;
 using Twilio;
 using Twilio.Rest.Api.V2010.Account;
 namespace Lander.src.Modules.Communication.Implementation;
 public class SmsService : ISmsService
 {
+    private static readonly ResiliencePipeline _smsPipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new Polly.Retry.RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromSeconds(2),
+            BackoffType = DelayBackoffType.Exponential,
+            ShouldHandle = new PredicateBuilder().Handle<Exception>()
+        })
+        .AddCircuitBreaker(new Polly.CircuitBreaker.CircuitBreakerStrategyOptions
+        {
+            FailureRatio = 0.5,
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            MinimumThroughput = 5,
+            BreakDuration = TimeSpan.FromMinutes(1),
+            ShouldHandle = new PredicateBuilder().Handle<Exception>()
+        })
+        .Build();
+
     private readonly TwilioSettings _twilioSettings;
     private readonly CommunicationsContext _context;
     public SmsService(IOptions<TwilioSettings> twilioSettings, CommunicationsContext context)
@@ -43,11 +63,11 @@ public class SmsService : ISmsService
             throw;
         }
         TwilioClient.Init(_twilioSettings.AccountSid, _twilioSettings.AuthToken);
-        var twilioMessage = await MessageResource.CreateAsync(
-            body: sendSmsInputDto.MessageText,
-            from: new Twilio.Types.PhoneNumber(_twilioSettings.PhoneNumber),
-            to: new Twilio.Types.PhoneNumber(sendSmsInputDto.ToPhoneNumber)
-        );
+        var twilioMessage = await _smsPipeline.ExecuteAsync(async ct =>
+            await MessageResource.CreateAsync(
+                body: sendSmsInputDto.MessageText,
+                from: new Twilio.Types.PhoneNumber(_twilioSettings.PhoneNumber),
+                to: new Twilio.Types.PhoneNumber(sendSmsInputDto.ToPhoneNumber)));
         return new SendSmsDto
         {
             Success = true,

@@ -171,10 +171,37 @@ builder.Services.AddRateLimiter(options =>
         policy.QueueLimit = 5;
     });
 
+    options.AddFixedWindowLimiter("mutating", policy =>
+    {
+        policy.PermitLimit = 30;
+        policy.Window = TimeSpan.FromMinutes(1);
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("readonly", policy =>
+    {
+        policy.PermitLimit = 100;
+        policy.Window = TimeSpan.FromMinutes(1);
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 5;
+    });
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User?.Identity?.Name ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
     options.RejectionStatusCode = 429;
 });
 
 builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IdempotencyService>();
 builder.Services.AddOutputCache(options =>
 {
     options.AddBasePolicy(builder => builder.Cache());
@@ -198,6 +225,7 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
+builder.Services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IRoommateService, RoommateService>();
 builder.Services.AddScoped<ISearchRequestService, SearchRequestService>();
@@ -220,6 +248,10 @@ builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.I
 
 // Payment Integration (Monri)
 builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriService, Lander.src.Modules.Payments.Implementation.MonriService>();
+
+// User deletion handlers (decoupled cleanup via IUserDeletedHandler)
+builder.Services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();
+builder.Services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Roommates.Implementation.RoommateUserDeletedHandler>();
 
 // .NET 10 Feature: Vector Search for semantic apartment search
 builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();
@@ -342,7 +374,7 @@ app.Use(async (context, next) =>
         headers.Append("Content-Security-Policy",
             "default-src 'self'; " +
             "script-src 'self'; " +
-            "style-src 'self' 'unsafe-inline'; " +
+            "style-src 'self'; " +
             "img-src 'self' data: blob: https:; " +
             "connect-src 'self' wss: ws:; " +
             "frame-ancestors 'none'; " +

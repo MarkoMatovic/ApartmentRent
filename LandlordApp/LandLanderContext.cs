@@ -530,6 +530,16 @@ public class ListingsContext : DbContext, IUnitOfWork
             entity.HasIndex(e => e.NumberOfRooms);
             entity.HasIndex(e => e.ListingType);
             entity.HasIndex(e => e.CreatedDate);
+
+            // Phase 2: Composite indexes for global query filter + common sorts
+            // The EF query filter (!IsDeleted && IsActive) executes on every query —
+            // without a covering index SQL Server does a full table scan first.
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted");
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.CreatedDate })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.City })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
@@ -1133,6 +1143,9 @@ public class SavedSearchesContext : DbContext, IUnitOfWork
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasIndex(e => e.UserId);
+            // Notification query filter: WHERE IsActive = 1 AND EmailNotificationsEnabled = 1
+            entity.HasIndex(e => new { e.IsActive, e.EmailNotificationsEnabled })
+                  .HasDatabaseName("IX_SavedSearches_IsActive_EmailNotifications");
         });
     }
 }

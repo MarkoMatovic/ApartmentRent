@@ -41,6 +41,9 @@ public class MonriService : IMonriService
         string buyerEmail,
         string buyerName)
     {
+        ValidateRedirectUrl(successUrl, nameof(successUrl));
+        ValidateRedirectUrl(failureUrl, nameof(failureUrl));
+
         var plan = GetPlan(planId);
 
         // Order number encodes the userId and planId so we can recover them in the callback
@@ -231,6 +234,18 @@ public class MonriService : IMonriService
             Amount = long.Parse(section["Amount"] ?? "999"),
             Currency = section["Currency"] ?? "EUR"
         };
+    }
+
+    private void ValidateRedirectUrl(string url, string paramName)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            throw new ArgumentException($"Invalid URL for {paramName}: '{url}'");
+
+        var allowedHosts = _configuration.GetSection("Monri:AllowedRedirectHosts").Get<string[]>()
+                           ?? Array.Empty<string>();
+
+        if (allowedHosts.Length > 0 && !allowedHosts.Contains(uri.Host, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException($"Redirect host '{uri.Host}' is not allowed for {paramName}.");
     }
 
     private sealed class MonriPlan
