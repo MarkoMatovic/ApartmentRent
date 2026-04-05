@@ -63,4 +63,8 @@ public partial class Apartment
     public string? DescriptionEmbedding { get; set; }  
     public bool IsDeleted { get; set; }
     public bool IsActive { get; set; }
+    
+    // Premium feature: Featured listing
+    public bool IsFeatured { get; set; } = false;
+    public DateTime? FeaturedUntil { get; set; }
 }

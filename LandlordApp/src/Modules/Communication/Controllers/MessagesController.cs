@@ -37,7 +37,7 @@ public class MessagesController : ControllerBase
     [HttpPost(ApiActionsV1.SendMessage, Name = nameof(ApiActionsV1.SendMessage))]
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
-        var message = await _messageService.SendMessageAsync(input.SenderId, input.ReceiverId, input.MessageText);
+        var message = await _messageService.SendMessageAsync(input.SenderId, input.ReceiverId, input.MessageText, input.IsSuperLike);
         _ = _analyticsService.TrackEventAsync(
             "MessageSent",
             "Communication",

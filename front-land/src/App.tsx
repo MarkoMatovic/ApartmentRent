@@ -22,6 +22,7 @@ import EditApartmentPage from './pages/EditApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import SupportPage from './pages/SupportPage';
 import PricingPage from './pages/PricingPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 import UserRoommateAnalyticsPage from './pages/UserRoommateAnalyticsPage';
 import TenantApplicationsPage from './pages/TenantApplicationsPage';
 import LandlordApplicationsPage from './pages/LandlordApplicationsPage';
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/admin/reports" element={<ReportsPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/analytics/roommate" element={<UserRoommateAnalyticsPage />} />
                 <Route path="/applications/sent" element={<TenantApplicationsPage />} />
                 <Route path="/applications/received" element={<LandlordApplicationsPage />} />

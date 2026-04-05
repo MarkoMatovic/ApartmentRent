@@ -75,7 +75,8 @@ const ProfilePage: React.FC = () => {
   const [privacySettings, setPrivacySettings] = useState({
     analyticsConsent: user?.analyticsConsent ?? true,
     chatHistoryConsent: user?.chatHistoryConsent ?? true,
-    profileVisibility: user?.profileVisibility ?? true
+    profileVisibility: user?.profileVisibility ?? true,
+    isIncognito: user?.isIncognito ?? false
   });
   const [privacyUpdating, setPrivacyUpdating] = useState(false);
 
@@ -95,7 +96,8 @@ const ProfilePage: React.FC = () => {
       setPrivacySettings({
         analyticsConsent: user.analyticsConsent ?? true,
         chatHistoryConsent: user.chatHistoryConsent ?? true,
-        profileVisibility: user.profileVisibility ?? true
+        profileVisibility: user.profileVisibility ?? true,
+        isIncognito: user.isIncognito ?? false
       });
     }
   }, [user]);
@@ -435,6 +437,26 @@ const ProfilePage: React.FC = () => {
                   />
                 }
                 label="Profile Visibility (Allow others to find you)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={privacySettings.isIncognito}
+                    onChange={handlePrivacyChange}
+                    name="isIncognito"
+                    disabled={!user.hasPersonalAnalytics && !user.hasLandlordAnalytics} // Mocked premium check
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">Incognito Mode (Premium)</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Hide your profile views from other users' analytics.
+                    </Typography>
+                  </Box>
+                }
               />
             </Grid>
             <Grid item xs={12}>

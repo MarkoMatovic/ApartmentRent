@@ -2,14 +2,26 @@ import React, { useEffect } from 'react';
 import { Container, Typography, Paper, Button, Box } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../shared/context/AuthContext';
+import { authApi } from '../shared/api/auth';
 
 const PaymentSuccessPage: React.FC = () => {
     const navigate = useNavigate();
+    const { token, updateUser } = useAuth();
 
     useEffect(() => {
-        // Optionally refresh user data to reflect premium status
-        // This could trigger a re-fetch of the user profile
-    }, []);
+        const refreshProfile = async () => {
+            if (token) {
+                try {
+                    const profile = await authApi.getProfile();
+                    updateUser(profile);
+                } catch (error) {
+                    console.error('Failed to refresh profile after payment', error);
+                }
+            }
+        };
+        refreshProfile();
+    }, [token, updateUser]);
 
     return (
         <Container maxWidth="sm" sx={{ py: 8 }}>

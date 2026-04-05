@@ -64,6 +64,9 @@ builder.Services.AddDbContext<AnalyticsContext>(options =>
 builder.Services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<Lander.src.Modules.Payments.PaymentsContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 builder.Services.AddCors(options =>
 {
@@ -164,6 +167,8 @@ builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.Simple
 // Appointment Booking System
 builder.Services.AddScoped<Lander.src.Modules.Appointments.Interfaces.IAppointmentService, Lander.src.Modules.Appointments.Implementation.AppointmentService>();
 
+// Payments
+builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentService, Lander.src.Modules.Payments.Implementation.PaytenPaymentService>();
 
 builder.Services.AddScoped<TokenProvider>();
 builder.Services.AddHttpContextAccessor();

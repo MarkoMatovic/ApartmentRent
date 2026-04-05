@@ -28,6 +28,8 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         // Premium Features
         public bool HasPersonalAnalytics { get; set; } = false;
         public bool HasLandlordAnalytics { get; set; } = false;
+        public int TokenBalance { get; set; } = 0;
+        public bool IsIncognito { get; set; } = false;
 
         public int? UserRoleId { get; set; }
         public Guid? CreatedByGuid { get; set; }

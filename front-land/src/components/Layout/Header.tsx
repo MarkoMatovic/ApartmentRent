@@ -9,8 +9,7 @@ import {
   Menu,
   MenuItem,
   Badge,
-  TextField,
-  InputAdornment,
+
   useTheme,
   useMediaQuery,
   Drawer,
@@ -21,12 +20,12 @@ import {
   Divider,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Notifications as NotificationsIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   Menu as MenuIcon,
   AccountCircle,
+  MoreHoriz as MoreHorizIcon,
   Analytics as AnalyticsIcon,
   Star as StarIcon,
   Report as ReportIcon,
@@ -51,7 +50,6 @@ const Header: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -75,14 +73,7 @@ const Header: React.FC = () => {
     navigate('/', { replace: true });
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/apartments?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
   const navItems = [
-    { label: t('home'), path: '/' },
     { label: t('apartments'), path: '/apartments' },
     ...(isAuthenticated ? [
       { label: t('messages'), path: '/messages' },
@@ -119,7 +110,7 @@ const Header: React.FC = () => {
           }}
           onClick={() => navigate('/')}
         >
-          Landlander
+          TuRentaj
         </Typography>
 
         {/* Desktop Navigation */}
@@ -194,39 +185,7 @@ const Header: React.FC = () => {
           </Box>
         )}
 
-        {/* Search Bar - Desktop only */}
-        {!isMobile && (
-          <TextField
-            size="small"
-            placeholder={t('searchApartments')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              mr: 2,
-              bgcolor: 'white',
-              borderRadius: 1,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'transparent',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'transparent',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'transparent',
-                },
-              },
-            }}
-          />
-        )}
+
 
         {/* Right side icons */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
@@ -245,21 +204,20 @@ const Header: React.FC = () => {
           {isAuthenticated ? (
             <>
               {!isMobile && (
-                <IconButton color="inherit" onClick={handleMenuOpen}>
-                  <AccountCircle />
-                  <Typography variant="body2" sx={{ ml: 1, display: { xs: 'none', sm: 'block' } }}>
-                    {user?.firstName} {user?.lastName}
-                  </Typography>
-                </IconButton>
+                <>
+                  <IconButton color="inherit" onClick={() => navigate('/profile')} size="medium">
+                    <AccountCircle />
+                  </IconButton>
+                  <IconButton color="inherit" onClick={handleMenuOpen} size="medium">
+                    <MoreHorizIcon />
+                  </IconButton>
+                </>
               )}
               <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
               >
-                <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
-                  {t('profile')}
-                </MenuItem>
                 <MenuItem onClick={() => { navigate('/my-apartments'); handleMenuClose(); }}>
                   {t('myApartments')}
                 </MenuItem>

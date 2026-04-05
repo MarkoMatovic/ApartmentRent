@@ -298,7 +298,8 @@ public class ApartmentService : IApartmentService
             // Named query filter automatically applies: !a.IsDeleted && a.IsActive
             .AsNoTracking()
             .AsSplitQuery()
-            .OrderBy(a => a.Rent)
+            .OrderByDescending(a => a.IsFeatured)
+            .ThenBy(a => a.Rent)
             .Take(100)
             .Select(a => new
             {
@@ -322,6 +323,8 @@ public class ApartmentService : IApartmentService
             IsFurnished = a.Apartment.IsFurnished,
             IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
             IsLookingForRoommate = a.Apartment.IsLookingForRoommate,
+            IsFeatured = a.Apartment.IsFeatured,
+            FeaturedUntil = a.Apartment.FeaturedUntil,
             ApartmentImages = a.Apartment.ApartmentImages
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
@@ -398,18 +401,20 @@ public class ApartmentService : IApartmentService
         var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
         
         // Modern .NET 10 approach: Use pattern matching with tuple switch expression
+        var baseOrderedQuery = query.OrderByDescending(a => a.IsFeatured);
+        
         IOrderedQueryable<Apartment> orderedQuery = (sortBy, sortOrder) switch
         {
             // For price sorting: Use Rent if > 0 (rentals), otherwise use Price (sales)
             // This handles both ListingType.Rent (has Rent > 0) and ListingType.Sale (has Price > 0, Rent = 0)
-            ("rent" or "price", "asc") => query.OrderBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
-            ("rent" or "price", "desc") => query.OrderByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            ("rent" or "price", "asc") => baseOrderedQuery.ThenBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            ("rent" or "price", "desc") => baseOrderedQuery.ThenByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
             
-            ("size", "asc") => query.OrderBy(a => a.SizeSquareMeters),
-            ("size", "desc") => query.OrderByDescending(a => a.SizeSquareMeters),
+            ("size", "asc") => baseOrderedQuery.ThenBy(a => a.SizeSquareMeters),
+            ("size", "desc") => baseOrderedQuery.ThenByDescending(a => a.SizeSquareMeters),
             
-            ("date", "asc") => query.OrderBy(a => a.CreatedDate),
-            ("date", "desc") or _ => query.OrderByDescending(a => a.CreatedDate)
+            ("date", "asc") => baseOrderedQuery.ThenBy(a => a.CreatedDate),
+            ("date", "desc") or _ => baseOrderedQuery.ThenByDescending(a => a.CreatedDate)
         };
         var apartments = await orderedQuery
             .Include(a => a.ApartmentImages)
@@ -458,7 +463,9 @@ public class ApartmentService : IApartmentService
                     ApartmentId = img.ApartmentId,
                     ImageUrl = img.ImageUrl,
                     IsPrimary = img.IsPrimary
-                }).ToList()
+                }).ToList(),
+            IsFeatured = a.IsFeatured,
+            FeaturedUntil = a.FeaturedUntil
         }).ToList();
         
         var result = new PagedResult<ApartmentDto>
@@ -632,7 +639,9 @@ public class ApartmentService : IApartmentService
                 ApartmentId = img.ApartmentId,
                 ImageUrl = img.ImageUrl,
                 IsPrimary = img.IsPrimary
-            }).ToList()
+            }).ToList(),
+            IsFeatured = apartment.IsFeatured,
+            FeaturedUntil = apartment.FeaturedUntil
         };
     }
 

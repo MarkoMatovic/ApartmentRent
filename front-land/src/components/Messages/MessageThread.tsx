@@ -12,6 +12,7 @@ import {
     InsertDriveFile as FileIcon,
     PictureAsPdf as PdfIcon,
     Description as DocIcon,
+    Star as StarIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { Message } from '../../shared/types/message';
@@ -116,14 +117,37 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ messages }) => {
                             {/* Message Text */}
                             {message.messageText && (
                                 <Paper
-                                    elevation={1}
+                                    elevation={message.isSuperLike ? 4 : 1}
                                     sx={{
                                         p: 1.5,
-                                        bgcolor: isOwnMessage ? 'primary.main' : 'background.paper',
-                                        color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                                        bgcolor: message.isSuperLike 
+                                            ? 'rgba(255, 215, 0, 0.15)' 
+                                            : (isOwnMessage ? 'primary.main' : 'background.paper'),
+                                        color: isOwnMessage && !message.isSuperLike ? 'primary.contrastText' : 'text.primary',
+                                        border: message.isSuperLike ? '2px solid #FFD700' : 'none',
+                                        position: 'relative',
+                                        overflow: 'visible'
                                     }}
                                 >
-                                    <Typography variant="body2">
+                                    {message.isSuperLike && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            top: -12,
+                                            right: isOwnMessage ? 'auto' : -12,
+                                            left: isOwnMessage ? -12 : 'auto',
+                                            bgcolor: '#FFD700',
+                                            borderRadius: '50%',
+                                            width: 24,
+                                            height: 24,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: 2
+                                        }}>
+                                            <StarIcon sx={{ fontSize: 16, color: '#000' }} />
+                                        </Box>
+                                    )}
+                                    <Typography variant="body2" sx={{ fontWeight: message.isSuperLike ? 'bold' : 'normal' }}>
                                         {message.messageText}
                                     </Typography>
                                 </Paper>

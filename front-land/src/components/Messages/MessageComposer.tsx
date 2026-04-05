@@ -11,11 +11,13 @@ import {
     Send as SendIcon,
     AttachFile as AttachFileIcon,
     Close as CloseIcon,
+    Star as StarIcon,
+    StarOutline as StarOutlineIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 
 interface MessageComposerProps {
-    onSendMessage: (content: string) => void;
+    onSendMessage: (content: string, isSuperLike?: boolean) => void;
     onSendFile?: (file: File) => void;
     disabled?: boolean;
 }
@@ -40,6 +42,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 }) => {
     const { t } = useTranslation(['chat']);
     const [message, setMessage] = useState('');
+    const [isSuperLike, setIsSuperLike] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileError, setFileError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,8 +53,9 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             setSelectedFile(null);
             setFileError(null);
         } else if (message.trim()) {
-            onSendMessage(message.trim());
+            onSendMessage(message.trim(), isSuperLike);
             setMessage('');
+            setIsSuperLike(false);
         }
     };
 
@@ -139,22 +143,38 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
                 />
-                {onSendFile && (
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    {onSendFile && (
+                        <IconButton
+                            color="default"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={disabled || !!selectedFile}
+                        >
+                            <AttachFileIcon />
+                        </IconButton>
+                    )}
                     <IconButton
-                        color="default"
-                        onClick={() => fileInputRef.current?.click()}
+                        color={isSuperLike ? "warning" : "default"}
+                        onClick={() => setIsSuperLike(!isSuperLike)}
                         disabled={disabled || !!selectedFile}
+                        title="Super-Like (1 Token)"
+                        sx={{
+                            color: isSuperLike ? '#FFD700' : 'inherit',
+                            '&:hover': {
+                                color: '#FFD700',
+                            }
+                        }}
                     >
-                        <AttachFileIcon />
+                        {isSuperLike ? <StarIcon /> : <StarOutlineIcon />}
                     </IconButton>
-                )}
-                <IconButton
-                    color="primary"
-                    onClick={handleSend}
-                    disabled={disabled || (!message.trim() && !selectedFile)}
-                >
-                    <SendIcon />
-                </IconButton>
+                    <IconButton
+                        color="primary"
+                        onClick={handleSend}
+                        disabled={disabled || (!message.trim() && !selectedFile)}
+                    >
+                        <SendIcon />
+                    </IconButton>
+                </Box>
             </Box>
         </Paper>
     );

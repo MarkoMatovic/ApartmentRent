@@ -298,7 +298,9 @@ public class UserService : IUserInterface
             RoleName = user.UserRole?.RoleName,
             CreatedDate = user.CreatedDate,
             AverageRating = averageRating,
-            ReviewCount = reviewCount
+            ReviewCount = reviewCount,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance
         };
     }
     public async Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto)
@@ -344,7 +346,9 @@ public class UserService : IUserInterface
             ChatHistoryConsent = user.ChatHistoryConsent,
             ProfileVisibility = user.ProfileVisibility,
             UserRoleId = user.UserRoleId,
-            CreatedDate = user.CreatedDate
+            CreatedDate = user.CreatedDate,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance
         };
     }
 
@@ -360,6 +364,7 @@ public class UserService : IUserInterface
         user.AnalyticsConsent = privacySettingsDto.AnalyticsConsent;
         user.ChatHistoryConsent = privacySettingsDto.ChatHistoryConsent;
         user.ProfileVisibility = privacySettingsDto.ProfileVisibility;
+        user.IsIncognito = privacySettingsDto.IsIncognito;
         user.ModifiedDate = DateTime.UtcNow;
 
         var transaction = await _context.BeginTransactionAsync();
@@ -390,7 +395,9 @@ public class UserService : IUserInterface
             ChatHistoryConsent = user.ChatHistoryConsent,
             ProfileVisibility = user.ProfileVisibility,
             UserRoleId = user.UserRoleId,
-            CreatedDate = user.CreatedDate
+            CreatedDate = user.CreatedDate,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance
         };
     }
 

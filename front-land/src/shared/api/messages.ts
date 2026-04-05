@@ -63,7 +63,8 @@ export const messagesApi = {
         const response = await apiClient.post('/api/v1/messages/send', {
             senderId: userId,
             receiverId: data.receiverId,
-            messageText: data.content
+            messageText: data.content,
+            isSuperLike: data.isSuperLike
         });
         return response.data;
     },

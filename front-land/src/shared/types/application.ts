@@ -8,12 +8,14 @@ export interface ApartmentApplication {
     applicationDate: string;
     status: string;
     createdDate: string;
+    isPriority: boolean;
     apartment?: Apartment;
     user?: User; // Tenant details
 }
 
 export interface CreateApplicationDto {
     apartmentId: number;
+    isPriority: boolean;
 }
 
 export interface UpdateApplicationStatusDto {

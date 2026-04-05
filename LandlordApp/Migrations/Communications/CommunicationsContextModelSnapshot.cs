@@ -170,6 +170,9 @@ namespace Lander.Migrations.Communications
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsSuperLike")
+                        .HasColumnType("bit");
+
                     b.Property<string>("MessageText")
                         .IsRequired()
                         .HasColumnType("text");

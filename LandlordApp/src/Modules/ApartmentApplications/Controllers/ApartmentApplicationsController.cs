@@ -36,7 +36,7 @@ public class ApartmentApplicationsController : ControllerBase
         var user = await _userService.GetUserByGuidAsync(Guid.Parse(userGuid));
         if (user == null) return Unauthorized();
 
-        var result = await _applicationService.ApplyForApartmentAsync(user.UserId, input.ApartmentId);
+        var result = await _applicationService.ApplyForApartmentAsync(user.UserId, input.ApartmentId, input.IsPriority);
         
         if (result == null)
             return BadRequest("Application failed. You may have already applied for this apartment.");

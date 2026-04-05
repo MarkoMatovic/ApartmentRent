@@ -13,6 +13,9 @@ public partial class ApartmentApplication
     public Guid? ModifiedByGuid { get; set; }
     public DateTime? ModifiedDate { get; set; }
     
+    // Premium Features
+    public bool IsPriority { get; set; } = false;
+    
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public virtual Apartment? Apartment { get; set; }
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
