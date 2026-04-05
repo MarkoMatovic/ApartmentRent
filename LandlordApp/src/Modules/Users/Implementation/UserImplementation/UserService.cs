@@ -368,8 +368,6 @@ public class UserService : IUserInterface
             CreatedDate = user.CreatedDate,
             AverageRating = averageRating,
             ReviewCount = reviewCount,
-            IsIncognito = user.IsIncognito,
-            TokenBalance = user.TokenBalance
         };
     }
     public async Task<UserProfileDto> UpdateUserProfileAsync(int userId, UserProfileUpdateInputDto updateDto)
@@ -419,8 +417,6 @@ public class UserService : IUserInterface
             TokenBalance = user.TokenBalance,
             UserRoleId = user.UserRoleId,
             CreatedDate = user.CreatedDate,
-            IsIncognito = user.IsIncognito,
-            TokenBalance = user.TokenBalance
         };
     }
 
@@ -471,8 +467,6 @@ public class UserService : IUserInterface
             TokenBalance = user.TokenBalance,
             UserRoleId = user.UserRoleId,
             CreatedDate = user.CreatedDate,
-            IsIncognito = user.IsIncognito,
-            TokenBalance = user.TokenBalance
         };
     }
 
