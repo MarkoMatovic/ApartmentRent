@@ -29,7 +29,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
         _userService = userService;
     }
 
-    public async Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId)
+    public async Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId, bool isPriority = false)
     {
         // Check if already applied
         var existing = await _context.ApartmentApplications
@@ -48,8 +48,9 @@ public class ApartmentApplicationService : IApartmentApplicationService
             ApartmentId = apartmentId,
             ApplicationDate = DateTime.UtcNow,
             Status = "Pending",
+            IsPriority = isPriority,
             CreatedDate = DateTime.UtcNow,
-            CreatedByGuid = Guid.NewGuid(), // Placeholder or fetch actual GUID if available
+            CreatedByGuid = Guid.NewGuid(),
         };
 
         _context.ApartmentApplications.Add(application);
@@ -79,7 +80,8 @@ public class ApartmentApplicationService : IApartmentApplicationService
         // Get applications for landlord's apartments
         var applications = await _context.ApartmentApplications
             .Where(a => a.ApartmentId.HasValue && apartmentIds.Contains(a.ApartmentId.Value))
-            .OrderByDescending(a => a.ApplicationDate)
+            .OrderByDescending(a => a.IsPriority)
+            .ThenByDescending(a => a.ApplicationDate)
             .ToListAsync();
 
         // Map to DTOs with apartment and user details
@@ -99,6 +101,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 ApartmentId = app.ApartmentId,
                 ApplicationDate = app.ApplicationDate,
                 Status = app.Status,
+                IsPriority = app.IsPriority,
                 CreatedDate = app.CreatedDate,
                 Apartment = apartment != null ? new ApartmentDetailsDto
                 {

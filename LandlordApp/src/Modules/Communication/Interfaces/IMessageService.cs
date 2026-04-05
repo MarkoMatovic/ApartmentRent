@@ -1,10 +1,10 @@
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Microsoft.AspNetCore.Http;
-namespace Lander.src.Modules.Communication.Intefaces;
+namespace Lander.src.Modules.Communication.Interfaces;
 public interface IMessageService
 {
-    Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText);
+    Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false);
     Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50);
     Task<List<ConversationDto>> GetUserConversationsAsync(int userId);
     Task MarkAsReadAsync(int messageId);

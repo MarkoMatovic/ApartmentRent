@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types/user';
+import { User, RegisterRequest } from '../types/user';
+import { Permission } from '../types/permission';
 import { authApi } from '../api/auth';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: any) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updatedUser: User) => void;
   isAuthenticated: boolean;
@@ -60,10 +61,12 @@ const decodeToken = (token: string): User | null => {
       isLookingForRoommate: payload.isLookingForRoommate === 'true' || payload.isLookingForRoommate === true,
       userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
       roleName: payload.role || payload.roleName,
-      permissions: permissions as any,
+      permissions: permissions as Permission[],
       hasPersonalAnalytics: payload.hasPersonalAnalytics === 'true' || payload.hasPersonalAnalytics === true,
       hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
       subscriptionExpiresAt: payload.subscriptionExpiresAt || undefined,
+      tokenBalance: payload.tokenBalance !== undefined ? parseInt(payload.tokenBalance) : 3,
+      isIncognito: payload.isIncognito === 'true' || payload.isIncognito === true,
     };
   } catch (error) {
     return null;
@@ -77,8 +80,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('authToken');
-      const storedUser = localStorage.getItem('user');
+      const storedToken = sessionStorage.getItem('authToken');
+      const storedUser = sessionStorage.getItem('user');
 
       if (storedToken) {
         setToken(storedToken);
@@ -89,14 +92,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const decodedUser = decodeToken(storedToken);
             if (decodedUser) {
               setUser(decodedUser);
-              localStorage.setItem('user', JSON.stringify(decodedUser));
+              sessionStorage.setItem('user', JSON.stringify(decodedUser));
             }
           }
         } else {
           const decodedUser = decodeToken(storedToken);
           if (decodedUser) {
             setUser(decodedUser);
-            localStorage.setItem('user', JSON.stringify(decodedUser));
+            sessionStorage.setItem('user', JSON.stringify(decodedUser));
             // Pošalji custom event da se osveži broj nepročitanih poruka
             window.dispatchEvent(new Event('authTokenChanged'));
           }
@@ -112,20 +115,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const tokenResult = await authApi.login({ email, password });
 
-      if (!tokenResult || typeof tokenResult !== 'string' || tokenResult.split('.').length !== 3) {
+      if (!tokenResult?.accessToken || tokenResult.accessToken.split('.').length !== 3) {
         throw new Error('Neispravan format tokena sa servera');
       }
 
-      setToken(tokenResult);
-      localStorage.setItem('authToken', tokenResult);
+      setToken(tokenResult.accessToken);
+      sessionStorage.setItem('authToken', tokenResult.accessToken);
+      // Note: refresh token is stored in httpOnly cookie by the server — not handled here
 
       // Pošalji custom event da se osveži broj nepročitanih poruka
       window.dispatchEvent(new Event('authTokenChanged'));
 
-      const decodedUser = decodeToken(tokenResult);
+      const decodedUser = decodeToken(tokenResult.accessToken);
       if (decodedUser) {
         setUser(decodedUser);
-        localStorage.setItem('user', JSON.stringify(decodedUser));
+        sessionStorage.setItem('user', JSON.stringify(decodedUser));
       } else {
         throw new Error('Problem sa dekodiranjem korisničkih podataka');
       }
@@ -134,7 +138,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (data: any) => {
+  const register = async (data: RegisterRequest) => {
     try {
       const newUser = await authApi.register(data);
       setUser(newUser);
@@ -145,20 +149,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
+      // Refresh token is sent automatically via httpOnly cookie; no need to read it from storage
       await authApi.logout();
     } catch (error) {
-      // Ignore logout errors
+      // Ignore logout errors — always clear local state
     } finally {
       setUser(null);
       setToken(null);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('user');
     }
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    sessionStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const value: AuthContextType = {

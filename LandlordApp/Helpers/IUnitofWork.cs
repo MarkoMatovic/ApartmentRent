@@ -2,7 +2,7 @@
 
 namespace Lander.Helpers
 {
-    public interface IUnitofWork : IDisposable
+    public interface IUnitOfWork : IDisposable
     {
         Task<int> SaveEntitiesAsync(CancellationToken cancellationToken = default(CancellationToken));
         Task<IDbContextTransaction?> BeginTransactionAsync();

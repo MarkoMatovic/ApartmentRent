@@ -17,19 +17,49 @@ const PricingPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const [loading, setLoading] = useState(false);
 
-  const handleSubscribe = async (priceId: string) => {
+  const handleSubscribe = async (planId: string) => {
     setLoading(true);
     try {
-      const { url } = await paymentsApi.createCheckoutSession(
-        priceId,
+      const formFields = await paymentsApi.createPayment(
+        planId,
         `${window.location.origin}/payment-success`,
-        `${window.location.origin}/pricing`
+        `${window.location.origin}/payment-failure`
       );
-      window.location.href = url;
+
+      // Dynamically build and submit a form to Monri's hosted payment page
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = formFields.formAction;
+
+      const fields: Record<string, string> = {
+        authenticity_token: formFields.authenticityToken,
+        order_number: formFields.orderNumber,
+        amount: String(formFields.amount),
+        currency: formFields.currency,
+        order_info: formFields.orderInfo,
+        digest: formFields.digest,
+        success_url_override: formFields.successUrl,
+        failure_url_override: formFields.failureUrl,
+        callback_url: formFields.callbackUrl,
+        buyer_name: formFields.buyerName,
+        buyer_email: formFields.buyerEmail,
+        language: 'sr',
+      };
+
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (error: any) {
       addNotification({
-        title: 'Error',
-        message: error.response?.data?.error || 'Failed to create checkout session',
+        title: 'Greška',
+        message: error.response?.data?.error || 'Nije moguće pokrenuti plaćanje',
         type: 'error'
       });
       setLoading(false);
@@ -57,10 +87,10 @@ const PricingPage: React.FC = () => {
             variant="contained"
             color="primary"
             fullWidth
-            onClick={() => handleSubscribe('price_personal_analytics')}
+            onClick={() => handleSubscribe('personal_analytics')}
             disabled={loading}
           >
-            {loading ? <CircularProgress size={24} /> : 'Subscribe'}
+            {loading ? <CircularProgress size={24} /> : 'Pretplati se'}
           </Button>
         </Box>
 
@@ -78,10 +108,10 @@ const PricingPage: React.FC = () => {
             variant="contained"
             color="secondary"
             fullWidth
-            onClick={() => handleSubscribe('price_landlord_analytics')}
+            onClick={() => handleSubscribe('landlord_analytics')}
             disabled={loading}
           >
-            {loading ? <CircularProgress size={24} /> : 'Subscribe'}
+            {loading ? <CircularProgress size={24} /> : 'Pretplati se'}
           </Button>
         </Box>
       </Paper>

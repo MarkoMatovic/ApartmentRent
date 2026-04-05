@@ -8,7 +8,7 @@ interface JwtPayload {
 }
 
 const getUserId = (): number => {
-    const token = localStorage.getItem('authToken'); // Changed from 'token' to 'authToken'
+    const token = sessionStorage.getItem('authToken');
     if (!token) throw new Error('No auth token');
     const decoded = jwtDecode<JwtPayload>(token);
     return parseInt(decoded.userId);
@@ -63,7 +63,8 @@ export const messagesApi = {
         const response = await apiClient.post('/api/v1/messages/send', {
             senderId: userId,
             receiverId: data.receiverId,
-            messageText: data.content
+            messageText: data.content,
+            isSuperLike: data.isSuperLike ?? false,
         });
         return response.data;
     },

@@ -9,7 +9,7 @@ namespace Lander.src.Modules.Users.Infrastructure.Repository
     {
         private readonly UsersContext _context = context ?? throw new ArgumentNullException(nameof(context));
         
-        public IUnitofWork UnitOfWork => _context;
+        public IUnitOfWork UnitOfWork => _context;
 
         public Permission Add(Permission entity)
         {
