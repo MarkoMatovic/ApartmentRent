@@ -85,6 +85,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Polly" Version="8.5.2" />
+    <PackageReference Include="Polly.Extensions" Version="8.5.2" />
     <PackageReference Include="sib_api_v3_sdk" Version="4.0.2" />
     <PackageReference Include="Stripe.net" Version="50.3.0" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
@@ -108,6 +110,7 @@
     <Folder Include="src\Modules\ApartmentApplications\Dtos\InputDto\" />
     <Folder Include="src\Modules\ApartmentApplications\Interfaces\" />
     <Folder Include="src\Modules\ApartmentApplications\Implementation\" />
+    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

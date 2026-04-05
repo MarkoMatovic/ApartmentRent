@@ -16,6 +16,7 @@ public class AnalyticsServiceTests : IDisposable
     private readonly AnalyticsContext _analyticsContext;
     private readonly ListingsContext _listingsContext;
     private readonly RoommatesContext _roommatesContext;
+    private readonly UsersContext _usersContext;
     private readonly AnalyticsService _analyticsService;
 
     public AnalyticsServiceTests()
@@ -30,11 +31,16 @@ public class AnalyticsServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
+        var usersOptions = new DbContextOptionsBuilder<UsersContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
         _analyticsContext = new AnalyticsContext(analyticsOptions);
         _listingsContext  = new ListingsContext(listingsOptions);
         _roommatesContext = new RoommatesContext(roommatesOptions);
+        _usersContext     = new UsersContext(usersOptions);
 
-        _analyticsService = new AnalyticsService(_analyticsContext, _listingsContext, _roommatesContext);
+        _analyticsService = new AnalyticsService(_analyticsContext, _listingsContext, _roommatesContext, _usersContext);
     }
 
     public void Dispose()
@@ -42,9 +48,11 @@ public class AnalyticsServiceTests : IDisposable
         _analyticsContext.Database.EnsureDeleted();
         _listingsContext.Database.EnsureDeleted();
         _roommatesContext.Database.EnsureDeleted();
+        _usersContext.Database.EnsureDeleted();
         _analyticsContext.Dispose();
         _listingsContext.Dispose();
         _roommatesContext.Dispose();
+        _usersContext.Dispose();
     }
 
     // Helper: create an AnalyticsEvent with required fields

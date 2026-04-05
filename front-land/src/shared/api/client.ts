@@ -1,9 +1,16 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7092';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+if (!API_BASE_URL) {
+  if (import.meta.env.PROD) {
+    throw new Error('VITE_API_URL is not set. This environment variable is required in production.');
+  }
+  console.warn('[client] VITE_API_URL is not set — falling back to https://localhost:7092 (dev only)');
+}
+const _baseUrl = API_BASE_URL ?? 'https://localhost:7092';
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: _baseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,18 +18,41 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor za JWT token
+/** Returns true if the JWT token expires within the next `thresholdSeconds` seconds. */
+function isTokenExpiringSoon(token: string, thresholdSeconds = 30): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp: number = payload.exp;
+    if (!exp) return false;
+    return exp - Date.now() / 1000 < thresholdSeconds;
+  } catch {
+    return false;
+  }
+}
+
+// Request interceptor — attaches token and proactively refreshes if expiring soon
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = sessionStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (!token) return config;
+
+    // Proactively refresh if token expires within 30s (skip for refresh endpoint itself)
+    if (isTokenExpiringSoon(token) && !config.url?.includes('token/refresh')) {
+      try {
+        const { data } = await apiClient.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
+        sessionStorage.setItem('authToken', data.accessToken);
+        config.headers.Authorization = `Bearer ${data.accessToken}`;
+        return config;
+      } catch {
+        // Proactive refresh failed — let the request proceed with the old token;
+        // the 401 response interceptor will handle the fallback.
+      }
     }
+
+    config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Queue za zahteve koji čekaju na refresh tokena

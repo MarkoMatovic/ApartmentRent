@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
+using Lander.src.Common;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Roommates.Interfaces;
 namespace Lander.src.Modules.Users.Implementation.UserImplementation;
@@ -26,6 +27,7 @@ public class UserService : IUserInterface
     private readonly IEmailService _emailService;
     private readonly IApartmentService _apartmentService;
     private readonly IRoommateService _roommateService;
+    private readonly IEnumerable<IUserDeletedHandler> _deletionHandlers;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly ILogger<UserService> _logger;
     private readonly IConfiguration _configuration;
@@ -37,6 +39,7 @@ public class UserService : IUserInterface
         IEmailService emailService,
         IApartmentService apartmentService,
         IRoommateService roommateService,
+        IEnumerable<IUserDeletedHandler> deletionHandlers,
         RefreshTokenService refreshTokenService,
         ILogger<UserService> logger,
         IConfiguration configuration)
@@ -48,6 +51,7 @@ public class UserService : IUserInterface
         _emailService = emailService;
         _apartmentService = apartmentService;
         _roommateService = roommateService;
+        _deletionHandlers = deletionHandlers;
         _refreshTokenService = refreshTokenService;
         _logger = logger;
         _configuration = configuration;
@@ -255,9 +259,9 @@ public class UserService : IUserInterface
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == deleteUserInputDto.UserGuid);
         if (user != null)
         {
-            // GDPR Cleanup: Delete related data first
-            await _apartmentService.DeleteApartmentsByLandlordIdAsync(user.UserId);
-            await _roommateService.DeleteRoommateByUserIdAsync(user.UserId);
+            // GDPR Cleanup: Delete related data first (decoupled via IUserDeletedHandler)
+            foreach (var handler in _deletionHandlers)
+                await handler.HandleAsync(user.UserId);
 
             var transaction = await _context.BeginTransactionAsync();
             try

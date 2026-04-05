@@ -15,13 +15,16 @@ public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
     private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
+    private readonly IdempotencyService _idempotencyService;
 
     public MessagesController(
         IMessageService messageService,
-        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
+        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService,
+        IdempotencyService idempotencyService)
     {
         _messageService = messageService;
         _analyticsService = analyticsService;
+        _idempotencyService = idempotencyService;
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
@@ -78,6 +81,10 @@ public class MessagesController : ControllerBase
         var currentId = GetCurrentUserId();
         if (input.SenderId != currentId)
             return Forbid();
+
+        var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(idempotencyKey) && _idempotencyService.IsDuplicate($"msg:{currentId}:{idempotencyKey}"))
+            return Conflict(new { message = "Duplicate request." });
 
         var message = await _messageService.SendMessageAsync(
             input.SenderId, input.ReceiverId, input.MessageText, input.IsSuperLike);

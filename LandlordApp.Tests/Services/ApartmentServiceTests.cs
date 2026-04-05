@@ -16,7 +16,7 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications.NotificationsHub;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.SavedSearches.Models;
 
 namespace LandlordApp.Tests.Services;
