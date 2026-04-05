@@ -19,8 +19,6 @@ public class UserProfileDto
     public int? UserRoleId { get; set; }
     public string? RoleName { get; set; }
     public DateTime? CreatedDate { get; set; }
-    public bool IsIncognito { get; set; }
-    public int TokenBalance { get; set; }
     
     // Rating information
     public decimal? AverageRating { get; set; }

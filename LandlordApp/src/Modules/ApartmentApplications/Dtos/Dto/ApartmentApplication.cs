@@ -7,12 +7,11 @@ namespace Lander.src.Modules.ApartmentApplications.Dtos.Dto
         public int? ApartmentId { get; set; }
         public DateTime? ApplicationDate { get; set; }
         public string? Status { get; set; }
-        public bool IsPriority { get; set; }
+        public bool IsPriority { get; set; } = false;
         public Guid? CreatedByGuid { get; set; }
         public DateTime? CreatedDate { get; set; }
         public Guid? ModifiedByGuid { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public bool IsPriority { get; set; } = false;
         
         // Nested apartment details
         public ApartmentDetailsDto? Apartment { get; set; }

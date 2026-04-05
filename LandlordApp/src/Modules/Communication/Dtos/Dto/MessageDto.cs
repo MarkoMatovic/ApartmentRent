@@ -19,8 +19,6 @@ public class MessageDto
     public long? FileSize { get; set; }
     public string? FileType { get; set; }
 
-    // Phase 2: Super-Like
-    public bool IsSuperLike { get; set; }
 }
 public class ConversationDto
 {

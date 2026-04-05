@@ -58,7 +58,6 @@ public class MessageService : IMessageService
             IsSuperLike = isSuperLike,
             SentAt = DateTime.UtcNow,
             IsRead = false,
-            IsSuperLike = isSuperLike,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
@@ -104,7 +103,6 @@ public class MessageService : IMessageService
             IsSuperLike = isSuperLike,
             SentAt = message.SentAt ?? DateTime.UtcNow,
             IsRead = message.IsRead ?? false,
-            IsSuperLike = message.IsSuperLike,
             SenderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : null,
             ReceiverName = receiver != null ? $"{receiver.FirstName} {receiver.LastName}" : null,
             SenderProfilePicture = sender?.ProfilePicture,
@@ -142,7 +140,6 @@ public class MessageService : IMessageService
                 IsSuperLike = m.IsSuperLike,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
                 IsRead = m.IsRead ?? false,
-                IsSuperLike = m.IsSuperLike
             })
             .ToListAsync();
         var userIds = new[] { userId1, userId2 };
@@ -228,7 +225,6 @@ public class MessageService : IMessageService
                         IsSuperLike = conv.LastMessage.IsSuperLike,
                         SentAt = conv.LastMessage.SentAt ?? DateTime.UtcNow,
                         IsRead = conv.LastMessage.IsRead ?? false,
-                        IsSuperLike = conv.LastMessage.IsSuperLike
                     };
                 }
 
@@ -464,7 +460,6 @@ public class MessageService : IMessageService
                 IsSuperLike = m.IsSuperLike,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
                 IsRead = m.IsRead ?? false,
-                IsSuperLike = m.IsSuperLike
             })
             .ToListAsync();
 

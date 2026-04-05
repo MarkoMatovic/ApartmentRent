@@ -28,13 +28,7 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         // Premium Features
         public bool HasPersonalAnalytics { get; set; } = false;
         public bool HasLandlordAnalytics { get; set; } = false;
-        public int TokenBalance { get; set; } = 0;
-        public bool IsIncognito { get; set; } = false;
-
-        // Phase 2: Super-Like tokens
         public int TokenBalance { get; set; } = 3;
-
-        // Phase 2: Incognito Mode
         public bool IsIncognito { get; set; } = false;
 
         // Login lockout
