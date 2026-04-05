@@ -9,6 +9,9 @@ public partial class Message
     public DateTime? SentAt { get; set; }
     public bool? IsRead { get; set; }
     
+    // Premium features
+    public bool IsSuperLike { get; set; } = false;
+    
     // File upload properties
     public string? FileUrl { get; set; }
     public string? FileName { get; set; }

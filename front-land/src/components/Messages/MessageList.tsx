@@ -24,6 +24,7 @@ import {
     Block as BlockIcon,
     Delete as DeleteIcon,
     Report as ReportIcon,
+    Star as StarIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -135,8 +136,11 @@ export const MessageList: React.FC<MessageListProps> = ({
                                             variant="body2"
                                             color="text.secondary"
                                             noWrap
-                                            sx={{ maxWidth: 200 }}
+                                            sx={{ maxWidth: 200, display: 'flex', alignItems: 'center', gap: 0.5 }}
                                         >
+                                            {conversation.lastMessage?.isSuperLike && (
+                                                <StarIcon sx={{ fontSize: 16, color: '#FFD700' }} />
+                                            )}
                                             {conversation.lastMessage?.messageText || 'No messages yet'}
                                         </Typography>
                                         {conversation.lastMessage?.sentAt && (

@@ -20,5 +20,16 @@ export const paymentsApi = {
             cancelUrl
         });
         return response.data;
+    },
+
+    /**
+     * Create Payten checkout session
+     */
+    initiatePaytenCheckout: async (planType: string, amount: number): Promise<{ checkoutUrl: string }> => {
+        const response = await apiClient.post('/api/Subscriptions/checkout', {
+            planType,
+            amount
+        });
+        return response.data;
     }
 };

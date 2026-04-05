@@ -36,7 +36,7 @@ public class MessageService : IMessageService
         _notificationHubContext = notificationHubContext;
         _webHostEnvironment = webHostEnvironment;
     }
-    public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText)
+    public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         var message = new Message
@@ -46,6 +46,7 @@ public class MessageService : IMessageService
             MessageText = messageText,
             SentAt = DateTime.UtcNow,
             IsRead = false,
+            IsSuperLike = isSuperLike,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             CreatedDate = DateTime.UtcNow,
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
@@ -54,8 +55,19 @@ public class MessageService : IMessageService
         var transaction = await _context.BeginTransactionAsync();
         try
         {
+            if (isSuperLike)
+            {
+                var senderUser = await _usersContext.Users.FindAsync(senderId);
+                if (senderUser == null || senderUser.TokenBalance < 1)
+                {
+                    throw new Exception("Nedovoljno tokena za Super-Like poruku.");
+                }
+                senderUser.TokenBalance -= 1;
+            }
+
             _context.Messages.Add(message);
             await _context.SaveEntitiesAsync();
+            await _usersContext.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
         catch
@@ -79,6 +91,7 @@ public class MessageService : IMessageService
             MessageText = messageText,
             SentAt = message.SentAt ?? DateTime.UtcNow,
             IsRead = message.IsRead ?? false,
+            IsSuperLike = message.IsSuperLike,
             SenderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : null,
             ReceiverName = receiver != null ? $"{receiver.FirstName} {receiver.LastName}" : null,
             SenderProfilePicture = sender?.ProfilePicture,
@@ -114,7 +127,8 @@ public class MessageService : IMessageService
                 ReceiverId = m.ReceiverId ?? 0,
                 MessageText = m.MessageText,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
-                IsRead = m.IsRead ?? false
+                IsRead = m.IsRead ?? false,
+                IsSuperLike = m.IsSuperLike
             })
             .ToListAsync();
         var userIds = new[] { userId1, userId2 };
@@ -198,7 +212,8 @@ public class MessageService : IMessageService
                         ReceiverId = conv.LastMessage.ReceiverId ?? 0,
                         MessageText = conv.LastMessage.MessageText,
                         SentAt = conv.LastMessage.SentAt ?? DateTime.UtcNow,
-                        IsRead = conv.LastMessage.IsRead ?? false
+                        IsRead = conv.LastMessage.IsRead ?? false,
+                        IsSuperLike = conv.LastMessage.IsSuperLike
                     };
                 }
 
@@ -250,6 +265,7 @@ public class MessageService : IMessageService
             MessageText = message.MessageText,
             SentAt = message.SentAt ?? DateTime.UtcNow,
             IsRead = message.IsRead ?? false,
+            IsSuperLike = message.IsSuperLike,
             SenderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : null,
             ReceiverName = receiver != null ? $"{receiver.FirstName} {receiver.LastName}" : null,
             SenderProfilePicture = sender?.ProfilePicture,
@@ -431,7 +447,8 @@ public class MessageService : IMessageService
                 ReceiverId = m.ReceiverId ?? 0,
                 MessageText = m.MessageText,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
-                IsRead = m.IsRead ?? false
+                IsRead = m.IsRead ?? false,
+                IsSuperLike = m.IsSuperLike
             })
             .ToListAsync();
 

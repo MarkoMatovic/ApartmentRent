@@ -24,12 +24,15 @@ export interface User {
   profileVisibility?: boolean;
   averageRating?: number;
   reviewCount?: number;
+  isIncognito?: boolean;
+  tokenBalance?: number;
 }
 
 export interface PrivacySettings {
   analyticsConsent: boolean;
   chatHistoryConsent: boolean;
   profileVisibility: boolean;
+  isIncognito: boolean;
 }
 
 export interface UserRole {

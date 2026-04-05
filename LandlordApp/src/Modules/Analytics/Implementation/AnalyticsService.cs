@@ -10,11 +10,13 @@ public class AnalyticsService : IAnalyticsService
     private readonly AnalyticsContext _context;
     private readonly ListingsContext _listingsContext;
     private readonly RoommatesContext _roommatesContext;
-    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext, RoommatesContext roommatesContext)
+    private readonly UsersContext _usersContext;
+    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext, RoommatesContext roommatesContext, UsersContext usersContext)
     {
         _context = context;
         _listingsContext = listingsContext;
         _roommatesContext = roommatesContext;
+        _usersContext = usersContext;
     }
     public async Task TrackEventAsync(
         string eventType, 
@@ -27,6 +29,15 @@ public class AnalyticsService : IAnalyticsService
         string? ipAddress = null, 
         string? userAgent = null)
     {
+        if (userId.HasValue)
+        {
+            var user = await _usersContext.Users.FindAsync(userId.Value);
+            if (user != null && user.IsIncognito)
+            {
+                return; // Do not track events for incognito users
+            }
+        }
+        
         var analyticsEvent = new AnalyticsEvent
         {
             EventType = eventType,

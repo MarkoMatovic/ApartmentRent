@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Lander.Helpers;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.Communication.Models;
@@ -118,6 +118,13 @@ public class ApplicationsContext : DbContext, IUnitofWork
                 .HasConstraintName("FK__SearchPre__UserI__787EE5A0")
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Exclude User from migrations in this context as it belongs to UsersContext
+        modelBuilder.Entity<User>().ToTable("Users", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        // Also exclude Role/Permission which might be brought in via User
+        modelBuilder.Entity<Role>().ToTable("Roles", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<Permission>().ToTable("Permissions", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
     }
 }
 public partial class NotificationContext : DbContext, IUnitofWork

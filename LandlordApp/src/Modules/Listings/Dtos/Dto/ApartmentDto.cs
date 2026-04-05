@@ -14,8 +14,10 @@ public class ApartmentDto
     public ApartmentType? ApartmentType { get; set; }
     public ListingType ListingType { get; set; }
     public bool? IsFurnished { get; set; }
-    public bool? IsImmediatelyAvailable { get; set; }
+    public bool IsImmediatelyAvailable { get; set; }
     public bool IsLookingForRoommate { get; set; }
+    public bool IsFeatured { get; set; }
+    public DateTime? FeaturedUntil { get; set; }
     public List<ApartmentImageDto>? ApartmentImages { get; set; }
     public decimal? AverageRating { get; set; }
     public int ReviewCount { get; set; }
@@ -56,6 +58,8 @@ public class GetApartmentDto
     public bool IsImmediatelyAvailable { get; set; }
     public bool IsLookingForRoommate { get; set; }
     public string? ContactPhone { get; set; }
+    public bool IsFeatured { get; set; }
+    public DateTime? FeaturedUntil { get; set; }
     public int? LandlordId { get; set; }
     public string? LandlordName { get; set; }
     public string? LandlordEmail { get; set; }

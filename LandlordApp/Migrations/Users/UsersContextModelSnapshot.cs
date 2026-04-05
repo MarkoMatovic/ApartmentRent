@@ -171,6 +171,9 @@ namespace Lander.Migrations.Users
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsIncognito")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsLookingForRoommate")
                         .HasColumnType("bit");
 
@@ -199,6 +202,9 @@ namespace Lander.Migrations.Users
 
                     b.Property<bool>("ProfileVisibility")
                         .HasColumnType("bit");
+
+                    b.Property<int>("TokenBalance")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("UserGuid")
                         .ValueGeneratedOnAdd()
