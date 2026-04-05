@@ -38,7 +38,7 @@ public class UserServiceTests : IDisposable
             FirstName = "Test",
             LastName = "User",
             Email = email,
-            Password = HashPassword("password"),
+            Password = BCrypt.Net.BCrypt.HashPassword("password"),
             IsActive = isActive,
             UserRoleId = roleId,
             UserGuid = Guid.NewGuid()
@@ -71,11 +71,13 @@ public class UserServiceTests : IDisposable
         _mockEmailService = new Mock<IEmailService>();
         _mockApartmentService = new Mock<IApartmentService>();
         _mockRoommateService = new Mock<IRoommateService>();
+        var refreshTokenService = new RefreshTokenService(_context);
 
         _userService = new UserService(
             _context, _reviewsContext, _tokenProvider,
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
-            _mockApartmentService.Object, _mockRoommateService.Object);
+            _mockApartmentService.Object, _mockRoommateService.Object,
+            refreshTokenService);
 
         SeedTestData();
     }
@@ -117,19 +119,21 @@ public class UserServiceTests : IDisposable
     public async Task LoginUserAsync_ValidCredentials_ShouldReturnToken()
     {
         var user = MakeUser(email: "login@test.com");
-        user.Password = HashPassword("TestPassword123");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("TestPassword123");
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
         var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "login@test.com", Password = "TestPassword123" });
         result.Should().NotBeNull();
+        result!.AccessToken.Should().NotBeNullOrEmpty();
+        result.RefreshToken.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
     public async Task LoginUserAsync_InactiveUser_ShouldReturnNull()
     {
         var user = MakeUser(email: "inactive@test.com", isActive: false);
-        user.Password = HashPassword("pass");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("pass");
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
@@ -278,14 +282,14 @@ public class UserServiceTests : IDisposable
         var guid = Guid.NewGuid();
         var user = MakeUser(email: "chpass@test.com");
         user.UserGuid = guid;
-        user.Password = HashPassword("old");
+        user.Password = BCrypt.Net.BCrypt.HashPassword("old");
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
         SetupUserContext(1, guid);
 
         await _userService.ChangePasswordAsync(new ChangePasswordInputDto { OldPassword = "old", NewPassword = "newpass" });
         var dbUser = await _context.Users.FirstAsync(u => u.UserGuid == guid);
-        dbUser.Password.Should().Be(HashPassword("newpass"));
+        BCrypt.Net.BCrypt.Verify("newpass", dbUser.Password).Should().BeTrue();
     }
 
     [Fact]
@@ -304,13 +308,6 @@ public class UserServiceTests : IDisposable
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
-
-    private static string HashPassword(string password)
-    {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
-    }
 
     private void SetupUserContext(int userId, Guid userGuid)
     {

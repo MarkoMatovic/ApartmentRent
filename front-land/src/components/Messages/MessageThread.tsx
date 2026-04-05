@@ -12,6 +12,7 @@ import {
     InsertDriveFile as FileIcon,
     PictureAsPdf as PdfIcon,
     Description as DocIcon,
+    Star as StarIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { Message } from '../../shared/types/message';
@@ -109,18 +110,34 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ messages }) => {
                                 alignItems: isOwnMessage ? 'flex-end' : 'flex-start',
                             }}
                         >
-                            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                                {message.senderName}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    {message.senderName}
+                                </Typography>
+                                {message.isSuperLike && (
+                                    <StarIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                                )}
+                            </Box>
 
                             {/* Message Text */}
                             {message.messageText && (
                                 <Paper
-                                    elevation={1}
+                                    elevation={message.isSuperLike ? 3 : 1}
                                     sx={{
                                         p: 1.5,
-                                        bgcolor: isOwnMessage ? 'primary.main' : 'background.paper',
-                                        color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                                        ...(message.isSuperLike
+                                            ? {
+                                                background: isOwnMessage
+                                                    ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)'
+                                                    : 'linear-gradient(135deg, #fef3c7 0%, #fee2e2 100%)',
+                                                color: isOwnMessage ? '#fff' : 'text.primary',
+                                                border: '1px solid',
+                                                borderColor: 'warning.main',
+                                            }
+                                            : {
+                                                bgcolor: isOwnMessage ? 'primary.main' : 'background.paper',
+                                                color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                                            }),
                                     }}
                                 >
                                     <Typography variant="body2">

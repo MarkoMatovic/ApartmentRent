@@ -1,16 +1,17 @@
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using Lander.Helpers;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
+using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -25,25 +26,33 @@ public class UserService : IUserInterface
     private readonly IEmailService _emailService;
     private readonly IApartmentService _apartmentService;
     private readonly IRoommateService _roommateService;
+    private readonly RefreshTokenService _refreshTokenService;
+    private readonly ILogger<UserService> _logger;
+    private readonly IConfiguration _configuration;
     public UserService(
         UsersContext context,
         ReviewsContext reviewsContext,
-        TokenProvider tokenProvider, 
+        TokenProvider tokenProvider,
         IHttpContextAccessor httpContextAccessor,
         IEmailService emailService,
         IApartmentService apartmentService,
-        IRoommateService roommateService)
+        IRoommateService roommateService,
+        RefreshTokenService refreshTokenService,
+        ILogger<UserService> logger,
+        IConfiguration configuration)
     {
         _context = context;
         _reviewsContext = reviewsContext;
         _tokenProvider = tokenProvider;
         _httpContextAccessor = httpContextAccessor;
-
         _emailService = emailService;
         _apartmentService = apartmentService;
         _roommateService = roommateService;
+        _refreshTokenService = refreshTokenService;
+        _logger = logger;
+        _configuration = configuration;
     }
-    public async Task<string?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
+    public async Task<AuthTokenDto?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto)
     {
         User? user = await _context.Users
          .Include(u => u.UserRole)
@@ -52,20 +61,59 @@ public class UserService : IUserInterface
         {
             return null;
         }
-        string hashedInputPassword = HashPassword(userRegistrationInputDto.Password);
-        if (user.Password != hashedInputPassword)
+
+        // Check lockout before verifying password to prevent timing attacks
+        if (user.LockoutUntil.HasValue && user.LockoutUntil.Value > DateTime.UtcNow)
         {
+            _logger.LogWarning("Login attempt for locked account {Email}", user.Email);
             return null;
+        }
+
+        if (!VerifyPassword(userRegistrationInputDto.Password, user.Password))
+        {
+            user.FailedLoginAttempts++;
+            if (user.FailedLoginAttempts >= 5)
+            {
+                user.LockoutUntil = DateTime.UtcNow.AddMinutes(15);
+                _logger.LogWarning("Account locked: {Email} after {Attempts} failed attempts", user.Email, user.FailedLoginAttempts);
+            }
+            await _context.SaveEntitiesAsync();
+            return null;
+        }
+
+        // Successful auth — reset lockout counters
+        if (user.FailedLoginAttempts > 0)
+        {
+            user.FailedLoginAttempts = 0;
+            user.LockoutUntil = null;
+            await _context.SaveEntitiesAsync();
+        }
+
+        // Gradual migration: re-hash with BCrypt if stored as legacy SHA-256
+        if (!user.Password.StartsWith("$2"))
+        {
+            var transaction = await _context.BeginTransactionAsync();
+            try
+            {
+                user.Password = BCrypt.Net.BCrypt.HashPassword(userRegistrationInputDto.Password);
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in LoginUserAsync");
+                _context.RollBackTransaction();
+            }
         }
 
         if (!user.IsActive)
         {
-            // Optional: Log attempt or return specific message if DTO allowed it.
-            // For now, returning null to signify "login not possible" or "invalid credentials".
             return null;
         }
-        var token = await _tokenProvider.CreateAsync(user);
-        return token;
+
+        var accessToken = await _tokenProvider.CreateAsync(user);
+        var refreshToken = await _refreshTokenService.CreateAsync(user.UserId);
+        return new AuthTokenDto { AccessToken = accessToken, RefreshToken = refreshToken };
     }
     public async Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto)
     {
@@ -99,21 +147,22 @@ public class UserService : IUserInterface
                 FirstName = userRegistrationInputDto.FirstName,
                 LastName = userRegistrationInputDto.LastName,
                 Email = userRegistrationInputDto.Email,
-                Password = HashPassword(userRegistrationInputDto.Password),
+                Password = BCrypt.Net.BCrypt.HashPassword(userRegistrationInputDto.Password),
                 DateOfBirth = userRegistrationInputDto.DateOfBirth,
                 PhoneNumber = userRegistrationInputDto.PhoneNumber,
                 ProfilePicture = userRegistrationInputDto.ProfilePicture,
                 CreatedDate = DateTime.UtcNow,
                 CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
                 ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
-                IsActive = true, // Automatski aktiviraj korisnika
+                IsActive = false, // Korisnik mora verifikovati email
                 UserRoleId = tenantRole.RoleId // Dodeli rolu "Tenant"
             };
             _context.Users.Add(user);
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
             var userName = $"{user.FirstName} {user.LastName}";
-            _ = _emailService.SendWelcomeEmailAsync(user.Email, userName);
+            FireAndForget(_emailService.SendWelcomeEmailAsync(user.Email, userName), "SendWelcomeEmail");
+            FireAndForget(SendVerificationEmailAsync(user.UserId), "SendVerificationEmail");
             return new UserRegistrationDto
         {
             UserId = user.UserId,
@@ -129,24 +178,37 @@ public class UserService : IUserInterface
             IsLookingForRoommate = user.IsLookingForRoommate
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error in RegisterUserAsync");
             _context.RollBackTransaction();
             throw;
         }
     }
-    public Task LogoutUserAsync()
+    public async Task LogoutUserAsync(string? rawRefreshToken = null)
     {
         _httpContextAccessor.HttpContext?.SignOutAsync();
-        return Task.CompletedTask;
+        if (!string.IsNullOrEmpty(rawRefreshToken))
+            await _refreshTokenService.RevokeAsync(rawRefreshToken);
     }
-    private string HashPassword(string password)
+    private void FireAndForget(Task task, string operation)
     {
-        using (var sha256 = SHA256.Create())
-        {
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashedBytes);
-        }
+        task.ContinueWith(
+            t => _logger.LogError(t.Exception, "Background task failed: {Operation}", operation),
+            TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    private static bool VerifyPassword(string plainText, string storedHash)
+    {
+        // BCrypt hashes start with "$2"
+        if (storedHash.StartsWith("$2"))
+            return BCrypt.Net.BCrypt.Verify(plainText, storedHash);
+
+        // Legacy SHA-256 fallback (migration path)
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var legacyHash = Convert.ToBase64String(
+            sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(plainText)));
+        return legacyHash == storedHash;
     }
     public async Task DeactivateUserAsync(DeactivateUserInputDto deactivateUserInputDto)
     {
@@ -160,8 +222,9 @@ public class UserService : IUserInterface
                 await _context.SaveEntitiesAsync();
                 await _context.CommitTransactionAsync(transaction);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error in DeactivateUserAsync");
                 _context.RollBackTransaction();
                 throw;
             }
@@ -179,8 +242,9 @@ public class UserService : IUserInterface
                 await _context.SaveEntitiesAsync();
                 await _context.CommitTransactionAsync(transaction);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error in ReactivateUserAsync");
                 _context.RollBackTransaction();
                 throw;
             }
@@ -202,8 +266,9 @@ public class UserService : IUserInterface
                 await _context.SaveEntitiesAsync();
                 await _context.CommitTransactionAsync(transaction);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error in DeleteUserAsync");
                 _context.RollBackTransaction();
                 throw;
             }
@@ -214,18 +279,19 @@ public class UserService : IUserInterface
     {
         var userGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == Guid.Parse(userGuid));
-        if (user == null || HashPassword(changePasswordInputDto.OldPassword) != user.Password)
+        if (user == null || !VerifyPassword(changePasswordInputDto.OldPassword, user.Password))
             throw new Exception("Incorrect old password.");
         var transaction = await _context.BeginTransactionAsync();
         try
         {
-            user.Password = HashPassword(changePasswordInputDto.NewPassword);
+            user.Password = BCrypt.Net.BCrypt.HashPassword(changePasswordInputDto.NewPassword);
             user.ModifiedDate = DateTime.UtcNow;
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error in ChangePasswordAsync");
             _context.RollBackTransaction();
             throw;
         }
@@ -248,8 +314,9 @@ public class UserService : IUserInterface
                 await _context.SaveEntitiesAsync();
                 await _context.CommitTransactionAsync(transaction);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error in UpdateRoommateStatusAsync");
                 _context.RollBackTransaction();
                 throw;
             }
@@ -294,6 +361,8 @@ public class UserService : IUserInterface
             AnalyticsConsent = user.AnalyticsConsent,
             ChatHistoryConsent = user.ChatHistoryConsent,
             ProfileVisibility = user.ProfileVisibility,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance,
             UserRoleId = user.UserRoleId,
             RoleName = user.UserRole?.RoleName,
             CreatedDate = user.CreatedDate,
@@ -323,8 +392,9 @@ public class UserService : IUserInterface
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error in UpdateUserProfileAsync");
             _context.RollBackTransaction();
             throw;
         }
@@ -343,6 +413,8 @@ public class UserService : IUserInterface
             AnalyticsConsent = user.AnalyticsConsent,
             ChatHistoryConsent = user.ChatHistoryConsent,
             ProfileVisibility = user.ProfileVisibility,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance,
             UserRoleId = user.UserRoleId,
             CreatedDate = user.CreatedDate
         };
@@ -360,6 +432,7 @@ public class UserService : IUserInterface
         user.AnalyticsConsent = privacySettingsDto.AnalyticsConsent;
         user.ChatHistoryConsent = privacySettingsDto.ChatHistoryConsent;
         user.ProfileVisibility = privacySettingsDto.ProfileVisibility;
+        user.IsIncognito = privacySettingsDto.IsIncognito;
         user.ModifiedDate = DateTime.UtcNow;
 
         var transaction = await _context.BeginTransactionAsync();
@@ -368,8 +441,9 @@ public class UserService : IUserInterface
             await _context.SaveEntitiesAsync();
             await _context.CommitTransactionAsync(transaction);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error in UpdatePrivacySettingsAsync");
             _context.RollBackTransaction();
             throw;
         }
@@ -389,6 +463,8 @@ public class UserService : IUserInterface
             AnalyticsConsent = user.AnalyticsConsent,
             ChatHistoryConsent = user.ChatHistoryConsent,
             ProfileVisibility = user.ProfileVisibility,
+            IsIncognito = user.IsIncognito,
+            TokenBalance = user.TokenBalance,
             UserRoleId = user.UserRoleId,
             CreatedDate = user.CreatedDate
         };
@@ -428,7 +504,70 @@ public class UserService : IUserInterface
 
         user.UserRoleId = targetRole.RoleId;
         user.ModifiedDate = DateTime.UtcNow;
-        
+
         await _context.SaveEntitiesAsync();
+    }
+
+    public async Task SendVerificationEmailAsync(int userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+        if (user == null) throw new Exception("User not found");
+
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                           .Replace("+", "-").Replace("/", "_").TrimEnd('=');
+        user.EmailVerificationToken = token;
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+
+        var frontendBaseUrl = _configuration["App:FrontendBaseUrl"] ?? "http://localhost:5173";
+        var verificationLink = $"{frontendBaseUrl}/verify-email?token={Uri.EscapeDataString(token)}";
+        var userName = $"{user.FirstName} {user.LastName}";
+        FireAndForget(_emailService.SendEmailVerificationAsync(user.Email, userName, verificationLink), "SendEmailVerification");
+    }
+
+    public async Task<bool> VerifyEmailAsync(string token)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
+        if (user == null) return false;
+
+        user.IsActive = true;
+        user.EmailVerifiedAt = DateTime.UtcNow;
+        user.EmailVerificationToken = null;
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+        return true;
+    }
+
+    public async Task SendPasswordResetEmailAsync(string email)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user == null) return; // Don't reveal if email exists
+
+        var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+                           .Replace("+", "-").Replace("/", "_").TrimEnd('=');
+        user.PasswordResetToken = token;
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(2);
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+
+        var frontendBaseUrl = _configuration["App:FrontendBaseUrl"] ?? "http://localhost:5173";
+        var resetLink = $"{frontendBaseUrl}/reset-password?token={Uri.EscapeDataString(token)}";
+        var userName = $"{user.FirstName} {user.LastName}";
+        FireAndForget(_emailService.SendPasswordResetEmailAsync(user.Email, userName, resetLink), "SendPasswordResetEmail");
+    }
+
+    public async Task<bool> ResetPasswordAsync(string token, string newPassword)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetToken == token &&
+            u.PasswordResetTokenExpiry > DateTime.UtcNow);
+        if (user == null) return false;
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiry = null;
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
+        return true;
     }
 }

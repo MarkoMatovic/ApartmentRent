@@ -5,5 +5,6 @@ namespace Lander.src.Modules.Users.Dtos.InputDto
         public bool AnalyticsConsent { get; set; }
         public bool ChatHistoryConsent { get; set; }
         public bool ProfileVisibility { get; set; }
+        public bool IsIncognito { get; set; }
     }
 }

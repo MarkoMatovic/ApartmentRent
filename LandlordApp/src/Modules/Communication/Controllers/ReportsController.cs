@@ -4,7 +4,7 @@ using Lander.src.Modules.Communication.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 
 namespace Lander.src.Modules.Communication.Controllers;
 

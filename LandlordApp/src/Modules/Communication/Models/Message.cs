@@ -15,6 +15,9 @@ public partial class Message
     public long? FileSize { get; set; }
     public string? FileType { get; set; }
     
+    // Phase 2: Super-Like
+    public bool IsSuperLike { get; set; } = false;
+
     public Guid? CreatedByGuid { get; set; }
     public DateTime? CreatedDate { get; set; }
     public Guid? ModifiedByGuid { get; set; }

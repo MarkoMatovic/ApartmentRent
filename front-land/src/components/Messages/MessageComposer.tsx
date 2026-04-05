@@ -6,16 +6,20 @@ import {
     Box,
     Chip,
     Alert,
+    Tooltip,
 } from '@mui/material';
 import {
     Send as SendIcon,
     AttachFile as AttachFileIcon,
     Close as CloseIcon,
+    Star as StarIcon,
+    StarBorder as StarBorderIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../shared/context/AuthContext';
 
 interface MessageComposerProps {
-    onSendMessage: (content: string) => void;
+    onSendMessage: (content: string, isSuperLike?: boolean) => void;
     onSendFile?: (file: File) => void;
     disabled?: boolean;
 }
@@ -39,10 +43,16 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     disabled = false,
 }) => {
     const { t } = useTranslation(['chat']);
+    const { user } = useAuth();
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileError, setFileError] = useState<string | null>(null);
+    const [isSuperLike, setIsSuperLike] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const isPremium = !!(user?.hasPersonalAnalytics || user?.hasLandlordAnalytics);
+    const tokenBalance = user?.tokenBalance ?? 0;
+    const canSuperLike = isPremium && tokenBalance > 0;
 
     const handleSend = () => {
         if (selectedFile && onSendFile) {
@@ -50,8 +60,9 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             setSelectedFile(null);
             setFileError(null);
         } else if (message.trim()) {
-            onSendMessage(message.trim());
+            onSendMessage(message.trim(), isSuperLike && canSuperLike);
             setMessage('');
+            setIsSuperLike(false);
         }
     };
 
@@ -66,13 +77,11 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         const file = event.target.files?.[0];
         if (!file) return;
 
-        // Validate file size
         if (file.size > MAX_FILE_SIZE) {
             setFileError(t('chat:fileTooLarge'));
             return;
         }
 
-        // Validate file type
         if (!ALLOWED_FILE_TYPES.includes(file.type)) {
             setFileError(t('chat:invalidFileType'));
             return;
@@ -80,7 +89,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
         setSelectedFile(file);
         setFileError(null);
-        setMessage(''); // Clear message when file is selected
+        setMessage('');
     };
 
     const handleRemoveFile = () => {
@@ -91,6 +100,12 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         }
     };
 
+    const superLikeTooltip = !isPremium
+        ? 'Super-Like is a premium feature'
+        : tokenBalance === 0
+        ? 'No tokens remaining'
+        : `Super-Like (${tokenBalance} token${tokenBalance !== 1 ? 's' : ''} remaining)`;
+
     return (
         <Paper
             elevation={2}
@@ -99,12 +114,29 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 1,
+                ...(isSuperLike && canSuperLike && {
+                    border: '1px solid',
+                    borderColor: 'warning.main',
+                    background: (theme) =>
+                        theme.palette.mode === 'dark'
+                            ? 'rgba(255,193,7,0.05)'
+                            : 'rgba(255,193,7,0.04)',
+                }),
             }}
         >
             {fileError && (
                 <Alert severity="error" onClose={() => setFileError(null)}>
                     {fileError}
                 </Alert>
+            )}
+
+            {isSuperLike && canSuperLike && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <StarIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                    <Box component="span" sx={{ fontSize: 12, color: 'warning.main', fontWeight: 500 }}>
+                        Super-Like · {tokenBalance} token{tokenBalance !== 1 ? 's' : ''} remaining
+                    </Box>
+                </Box>
             )}
 
             {selectedFile && (
@@ -119,7 +151,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                 </Box>
             )}
 
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
                 <TextField
                     fullWidth
                     multiline
@@ -139,6 +171,21 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
                 />
+
+                {/* Super-Like toggle */}
+                <Tooltip title={superLikeTooltip} arrow>
+                    <span>
+                        <IconButton
+                            color={isSuperLike && canSuperLike ? 'warning' : 'default'}
+                            onClick={() => canSuperLike && setIsSuperLike((v) => !v)}
+                            disabled={disabled || !canSuperLike || !!selectedFile}
+                            size="small"
+                        >
+                            {isSuperLike && canSuperLike ? <StarIcon /> : <StarBorderIcon />}
+                        </IconButton>
+                    </span>
+                </Tooltip>
+
                 {onSendFile && (
                     <IconButton
                         color="default"
@@ -149,7 +196,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                     </IconButton>
                 )}
                 <IconButton
-                    color="primary"
+                    color={isSuperLike && canSuperLike ? 'warning' : 'primary'}
                     onClick={handleSend}
                     disabled={disabled || (!message.trim() && !selectedFile)}
                 >

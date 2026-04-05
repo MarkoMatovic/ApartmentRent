@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using Lander.src.Modules.Payments.Dtos;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 
@@ -10,13 +12,13 @@ namespace Lander.src.Modules.Payments.Controllers;
 [ApiController]
 public class PaymentsController : ControllerBase
 {
-    private readonly IStripeService _stripeService;
+    private readonly IMonriService _monriService;
     private readonly IUserInterface _userService;
     private readonly IConfiguration _configuration;
 
-    public PaymentsController(IStripeService stripeService, IUserInterface userService, IConfiguration configuration)
+    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration)
     {
-        _stripeService = stripeService;
+        _monriService = monriService;
         _userService = userService;
         _configuration = configuration;
     }
@@ -24,22 +26,25 @@ public class PaymentsController : ControllerBase
     [HttpGet("plans")]
     public IActionResult GetSubscriptionPlans()
     {
-        var premiumPlan = new Lander.src.Modules.Payments.Dtos.SubscriptionPlanDto
-        {
-            Name = _configuration["Stripe:PremiumPlan:Name"] ?? "Premium Analytics",
-            Description = "Get access to advanced analytics, insights, and ML-powered features",
-            Price = decimal.Parse(_configuration["Stripe:PremiumPlan:PriceEUR"] ?? "1.99"),
-            Currency = _configuration["Stripe:PremiumPlan:Currency"] ?? "EUR",
-            StripePriceId = _configuration["Stripe:PremiumPlan:PriceId"] ?? "",
-            Interval = "month"
-        };
+        var plans = _configuration.GetSection("Monri:Plans").GetChildren()
+            .Select(s => new SubscriptionPlanDto
+            {
+                Name = s["Name"] ?? s.Key,
+                Description = s["Description"] ?? string.Empty,
+                Price = decimal.Parse(s["Amount"] ?? "999") / 100,
+                Currency = s["Currency"] ?? "EUR",
+                PlanId = s.Key,
+                Interval = s["Interval"] ?? "month"
+            })
+            .ToList();
 
-        return Ok(new[] { premiumPlan });
+        return Ok(plans);
     }
 
-    [HttpPost("create-checkout-session")]
+    [HttpPost("create-payment")]
     [Authorize]
-    public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionRequest request)
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> CreatePayment([FromBody] CreateMonriPaymentRequest request)
     {
         var userGuid = User.FindFirstValue("sub");
         if (string.IsNullOrEmpty(userGuid)) return Unauthorized();
@@ -47,45 +52,47 @@ public class PaymentsController : ControllerBase
         var user = await _userService.GetUserByGuidAsync(Guid.Parse(userGuid));
         if (user == null) return Unauthorized();
 
-        try
-        {
-            var session = await _stripeService.CreateCheckoutSessionAsync(
-                request.PriceId,
-                request.SuccessUrl,
-                request.CancelUrl,
-                user.UserId
-            );
+        var userProfile = await _userService.GetUserProfileAsync(user.UserId);
+        if (userProfile == null) return Unauthorized();
 
-            return Ok(new { url = session.Url });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+        var formDto = _monriService.CreatePaymentForm(
+            request.PlanId,
+            request.SuccessUrl,
+            request.FailureUrl,
+            user.UserId,
+            userProfile.Email ?? string.Empty,
+            $"{userProfile.FirstName} {userProfile.LastName}".Trim()
+        );
+
+        return Ok(formDto);
     }
 
-    [HttpPost("webhook")]
-    [AllowAnonymous] // Webhooks come from Stripe, not authenticated users
-    public async Task<IActionResult> Webhook()
+    [HttpPost("callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Callback()
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-        var signature = Request.Headers["Stripe-Signature"];
 
         try
         {
-            await _stripeService.HandleWebhookAsync(json, signature);
+            await _monriService.HandleCallbackAsync(json);
             return Ok();
         }
-        catch (Exception ex)
+        catch (ArgumentException)
         {
-            return BadRequest(new { error = ex.Message }); // Stripe expects 400 if signature is invalid
+            return BadRequest();
+        }
+        catch
+        {
+            // Always return 200 to Monri to prevent retries on internal errors
+            return Ok();
         }
     }
 }
 
-public class CreateCheckoutSessionRequest
+public class CreateMonriPaymentRequest
 {
-    public string PriceId { get; set; }
-    public string SuccessUrl { get; set; }
-    public string CancelUrl { get; set; }
+    public string PlanId { get; set; } = string.Empty;
+    public string SuccessUrl { get; set; } = string.Empty;
+    public string FailureUrl { get; set; } = string.Empty;
 }

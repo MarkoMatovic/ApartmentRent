@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet build:*)",
+      "Bash(del \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\.claude\\\\worktrees\\\\goofy-clarke\\\\LandlordApp\\\\src\\\\Modules\\\\Payments\\\\Implementation\\\\StripeService.cs\")",
+      "Bash(del \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\.claude\\\\worktrees\\\\goofy-clarke\\\\LandlordApp\\\\src\\\\Modules\\\\Payments\\\\Interfaces\\\\IStripeService.cs\")",
+      "Bash(xargs wc:*)",
+      "Bash(find /c/Users/38161/Desktop/Landlord/.claude/worktrees/goofy-clarke/LandlordApp/Helpers -type f -name *.cs)",
+      "Bash(dir \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\.claude\\\\worktrees\\\\goofy-clarke\\\\LandlordApp\\\\Helpers\"\" /b)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

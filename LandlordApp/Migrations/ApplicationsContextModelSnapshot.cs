@@ -18,7 +18,7 @@ namespace Lander.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("Applications")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -47,6 +47,11 @@ namespace Lander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
+
+                    b.Property<bool>("IsPriority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid?>("ModifiedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -120,6 +125,38 @@ namespace Lander.Migrations
                     b.ToTable("SearchPreferences", "Applications");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Permission", b =>
+                {
+                    b.Property<int>("PermissionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionId"));
+
+                    b.Property<Guid?>("CreatedByGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ModifiedByGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PermissionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("PermissionId");
+
+                    b.ToTable("Permission", "Applications");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -152,6 +189,27 @@ namespace Lander.Migrations
                     b.ToTable("Role", "Applications");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CreatedByGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermission", "Applications");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -159,6 +217,12 @@ namespace Lander.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+
+                    b.Property<bool>("AnalyticsConsent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ChatHistoryConsent")
+                        .HasColumnType("bit");
 
                     b.Property<Guid?>("CreatedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -177,7 +241,19 @@ namespace Lander.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("HasLandlordAnalytics")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("HasPersonalAnalytics")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsIncognito")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsLookingForRoommate")
                         .HasColumnType("bit");
 
                     b.Property<string>("LastName")
@@ -199,6 +275,12 @@ namespace Lander.Migrations
 
                     b.Property<string>("ProfilePicture")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("ProfileVisibility")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TokenBalance")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("UserGuid")
                         .HasColumnType("uniqueidentifier");
@@ -224,6 +306,25 @@ namespace Lander.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", b =>
                 {
                     b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", "UserRole")
@@ -233,8 +334,15 @@ namespace Lander.Migrations
                     b.Navigation("UserRole");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", b =>
                 {
+                    b.Navigation("RolePermissions");
+
                     b.Navigation("Users");
                 });
 

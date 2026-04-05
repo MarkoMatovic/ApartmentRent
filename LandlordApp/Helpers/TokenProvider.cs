@@ -39,7 +39,11 @@ public sealed class TokenProvider
             new Claim(ClaimTypes.Role, user.UserRole?.RoleName ?? "Guest"),
             new Claim("userId", user.UserId.ToString()),
             new Claim("isActive", user.IsActive.ToString()),
-            new Claim("isLookingForRoommate", user.IsLookingForRoommate.ToString())
+            new Claim("isLookingForRoommate", user.IsLookingForRoommate.ToString()),
+            new Claim("hasPersonalAnalytics", user.HasPersonalAnalytics.ToString()),
+            new Claim("hasLandlordAnalytics", user.HasLandlordAnalytics.ToString()),
+            new Claim("tokenBalance", user.TokenBalance.ToString()),
+            new Claim("isIncognito", user.IsIncognito.ToString())
         };
 
         if (!string.IsNullOrEmpty(user.PhoneNumber))
@@ -67,7 +71,7 @@ public sealed class TokenProvider
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(60),
+            Expires = DateTime.UtcNow.AddMinutes(15),
             SigningCredentials = credentials,
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"]

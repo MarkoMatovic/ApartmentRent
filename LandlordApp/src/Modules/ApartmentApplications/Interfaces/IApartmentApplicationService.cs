@@ -6,7 +6,7 @@ namespace Lander.src.Modules.ApartmentApplications.Interfaces;
 
 public interface IApartmentApplicationService
 {
-    Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId);
+    Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId, bool isPriority = false);
     Task<List<ApartmentApplicationDto>> GetLandlordApplicationsAsync(int landlordId);
     Task<List<ApartmentApplicationDto>> GetTenantApplicationsAsync(int tenantId);
     Task<ApartmentApplication?> UpdateApplicationStatusAsync(int applicationId, string status, int landlordUserId);
