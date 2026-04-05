@@ -1,9 +1,14 @@
 import apiClient from './client';
 import { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, User } from '../types/user';
 
+export interface AuthTokenDto {
+  accessToken: string;
+  refreshToken?: string; // empty string from server — refresh token lives in httpOnly cookie
+}
+
 export const authApi = {
-  login: async (data: LoginRequest): Promise<string> => {
-    const response = await apiClient.post<string>(`/api/v1/auth/login`, data);
+  login: async (data: LoginRequest): Promise<AuthTokenDto> => {
+    const response = await apiClient.post<AuthTokenDto>(`/api/v1/auth/login`, data);
     return response.data;
   },
 
@@ -13,7 +18,14 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
+    // Refresh token is sent automatically via httpOnly cookie — no body payload needed
     await apiClient.post(`/api/v1/auth/logout`);
+  },
+
+  rotateTokens: async (): Promise<AuthTokenDto> => {
+    // Cookie carries the refresh token automatically via withCredentials: true
+    const response = await apiClient.post<AuthTokenDto>(`/api/v1/auth/token/refresh`);
+    return response.data;
   },
 
   forgotPassword: async (data: ForgotPasswordRequest): Promise<void> => {

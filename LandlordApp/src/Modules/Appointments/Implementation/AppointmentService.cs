@@ -1,7 +1,7 @@
 using Lander.src.Modules.Appointments.Dtos;
 using Lander.src.Modules.Appointments.Interfaces;
 using Lander.src.Modules.Appointments.Models;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Microsoft.EntityFrameworkCore;

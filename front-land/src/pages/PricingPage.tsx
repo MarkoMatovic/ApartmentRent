@@ -52,7 +52,6 @@ const PricingPage: React.FC = () => {
     setLoading(true);
     try {
       const amount = analyticsCycle === 'Yearly' ? 49.99 : 4.99;
-      // Using the Payten integration we built
       const response = await paymentsApi.initiatePaytenCheckout(`Analytics ${analyticsCycle}`, amount);
       if (response && response.checkoutUrl) window.location.href = response.checkoutUrl;
     } catch (error: any) {
@@ -65,11 +64,59 @@ const PricingPage: React.FC = () => {
     setLoading(true);
     try {
       const amount = featuredDuration === '30 Days' ? 29.99 : 9.99;
-      // Using the Payten integration we built
       const response = await paymentsApi.initiatePaytenCheckout(`Featured Listing ${featuredDuration}`, amount);
       if (response && response.checkoutUrl) window.location.href = response.checkoutUrl;
     } catch (error: any) {
       addNotification({ title: 'Error', message: 'Failed to initiate checkout', type: 'error' });
+      setLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (planId: string) => {
+    setLoading(true);
+    try {
+      const formFields = await paymentsApi.createPayment(
+        planId,
+        `${window.location.origin}/payment-success`,
+        `${window.location.origin}/payment-failure`
+      );
+
+      // Dynamically build and submit a form to Monri's hosted payment page
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = formFields.formAction;
+
+      const fields: Record<string, string> = {
+        authenticity_token: formFields.authenticityToken,
+        order_number: formFields.orderNumber,
+        amount: String(formFields.amount),
+        currency: formFields.currency,
+        order_info: formFields.orderInfo,
+        digest: formFields.digest,
+        success_url_override: formFields.successUrl,
+        failure_url_override: formFields.failureUrl,
+        callback_url: formFields.callbackUrl,
+        buyer_name: formFields.buyerName,
+        buyer_email: formFields.buyerEmail,
+        language: 'sr',
+      };
+
+      Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error: any) {
+      addNotification({
+        title: 'Greška',
+        message: error.response?.data?.error || 'Nije moguće pokrenuti plaćanje',
+        type: 'error'
+      });
       setLoading(false);
     }
   };

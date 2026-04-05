@@ -63,6 +63,43 @@ namespace Lander.Migrations.Users
                     b.ToTable("Permissions", "UsersRoles");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", "UsersRoles");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -157,6 +194,18 @@ namespace Lander.Migrations.Users
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("EmailVerificationToken")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedLoginAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -172,10 +221,15 @@ namespace Lander.Migrations.Users
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsIncognito")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsLookingForRoommate")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LockoutUntil")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -192,6 +246,13 @@ namespace Lander.Migrations.Users
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PasswordResetToken")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("PasswordResetTokenExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -204,7 +265,9 @@ namespace Lander.Migrations.Users
                         .HasColumnType("bit");
 
                     b.Property<int>("TokenBalance")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(3);
 
                     b.Property<Guid>("UserGuid")
                         .ValueGeneratedOnAdd()
@@ -226,6 +289,17 @@ namespace Lander.Migrations.Users
                         .IsUnique();
 
                     b.ToTable("Users", "UsersRoles");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RefreshToken", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>

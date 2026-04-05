@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Alert, FormControlLabel, Checkbox, Box, Paper } from '@mui/material';
+import {
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    Button, Typography, Alert, FormControlLabel, Checkbox, Box, Paper, Chip
+} from '@mui/material';
 import { Star as StarIcon } from '@mui/icons-material';
 import { applicationsApi } from '../../shared/api/applicationsApi';
 import { useNotifications } from '../../shared/context/NotificationContext';
@@ -23,11 +26,12 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
         try {
             await applicationsApi.applyForApartment({ apartmentId, isPriority });
             addNotification({
-                title: isPriority ? 'Priority Application Sent!' : 'Application Sent',
-                message: `Successfully applied for ${apartmentTitle}`,
+                title: isPriority ? 'Priority Application Sent' : 'Application Sent',
+                message: `Successfully applied for ${apartmentTitle}${isPriority ? ' (Priority)' : ''}`,
                 type: 'success'
             });
             onClose();
+            setIsPriority(false);
         } catch (err: any) {
             setError(err.response?.data || 'Failed to apply. Please try again.');
         } finally {
@@ -35,67 +39,65 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
         }
     };
 
+    const handleClose = () => {
+        setIsPriority(false);
+        setError(null);
+        onClose();
+    };
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{
-            sx: { borderRadius: 3, p: 1 }
-        }}>
-            <DialogTitle sx={{ fontWeight: 'bold' }}>Prijavi se za: {apartmentTitle}</DialogTitle>
+        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Apply for {apartmentTitle}</DialogTitle>
             <DialogContent>
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-                <Typography variant="body1" sx={{ mb: 3 }}>
-                    Da li ste sigurni da želite da pošaljete prijavu za ovaj stan? Stanodavac će odmah biti obavešten.
+                <Typography sx={{ mb: 3 }}>
+                    Are you sure you want to apply for this apartment? The landlord will be notified immediately.
                 </Typography>
 
-                <Paper 
-                    variant="outlined" 
-                    sx={{ 
-                        p: 2, 
-                        mb: 2, 
+                <Box
+                    sx={{
+                        border: 1,
+                        borderColor: isPriority ? 'warning.main' : 'divider',
                         borderRadius: 2,
-                        cursor: 'pointer',
+                        p: 2,
+                        bgcolor: isPriority ? 'warning.50' : 'background.paper',
                         transition: 'all 0.2s',
-                        borderColor: isPriority ? 'primary.main' : 'divider',
-                        bgcolor: isPriority ? 'action.hover' : 'transparent',
-                        '&:hover': { bgcolor: 'action.hover' }
                     }}
-                    onClick={() => setIsPriority(!isPriority)}
                 >
                     <FormControlLabel
                         control={
-                            <Checkbox 
-                                checked={isPriority} 
+                            <Checkbox
+                                checked={isPriority}
                                 onChange={(e) => setIsPriority(e.target.checked)}
-                                icon={<StarIcon color="disabled" />}
-                                checkedIcon={<StarIcon color="primary" />}
+                                color="warning"
+                                icon={<StarIcon />}
+                                checkedIcon={<StarIcon />}
                             />
                         }
                         label={
                             <Box>
-                                <Typography variant="subtitle1" fontWeight="bold">
-                                    Prioritetna prijava (Premium)
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography fontWeight="medium">Priority Application</Typography>
+                                    <Chip label="Premium" size="small" color="warning" variant="outlined" />
+                                </Box>
                                 <Typography variant="body2" color="text.secondary">
-                                    Vaša prijava će se pojaviti na samom vrhu kod stanodavca i biti istaknuta zvezdicom. (Cena: €2.00)
+                                    Your application appears at the top of the landlord's list.
                                 </Typography>
                             </Box>
                         }
-                        sx={{ m: 0, width: '100%', alignItems: 'flex-start' }}
                     />
-                </Paper>
+                </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={onClose} disabled={loading} color="inherit">Otkaži</Button>
-                <Button 
-                    onClick={handleApply} 
-                    variant="contained" 
+            <DialogActions>
+                <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+                <Button
+                    onClick={handleApply}
+                    variant="contained"
+                    color={isPriority ? 'warning' : 'primary'}
                     disabled={loading}
-                    sx={{ 
-                        px: 4, 
-                        borderRadius: 2,
-                        boxShadow: isPriority ? '0 4px 14px 0 rgba(0,118,255,0.39)' : 'none'
-                    }}
+                    startIcon={isPriority ? <StarIcon /> : undefined}
                 >
-                    {loading ? 'Slanje...' : 'Potvrdi prijavu'}
+                    {loading ? 'Sending...' : isPriority ? 'Send Priority Application' : 'Confirm Application'}
                 </Button>
             </DialogActions>
         </Dialog>

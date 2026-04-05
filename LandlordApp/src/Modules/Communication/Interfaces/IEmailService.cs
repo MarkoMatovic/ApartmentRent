@@ -1,4 +1,4 @@
-namespace Lander.src.Modules.Communication.Intefaces;
+namespace Lander.src.Modules.Communication.Interfaces;
 public interface IEmailService
 {
     Task<bool> SendEmailAsync(string to, string subject, string htmlContent);
@@ -11,4 +11,6 @@ public interface IEmailService
     Task<bool> SendAppointmentConfirmationEmailAsync(string to, string userName, DateTime appointmentDate, string apartmentTitle);
     Task<bool> SendSavedSearchAlertEmailAsync(string to, int matchCount, string searchCriteria);
     Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason);
+    Task<bool> SendEmailVerificationAsync(string to, string userName, string verificationLink);
+    Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink);
 }

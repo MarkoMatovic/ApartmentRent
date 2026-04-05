@@ -14,6 +14,7 @@ export interface Message {
     fileName?: string;
     fileSize?: number;
     fileType?: string;
+    // Phase 2: Super-Like
     isSuperLike?: boolean;
 }
 

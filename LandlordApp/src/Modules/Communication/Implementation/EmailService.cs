@@ -1,5 +1,5 @@
 using Lander.Helpers;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
@@ -151,6 +151,19 @@ public class EmailService : IEmailService
         var subject = $"Update on saved listing: {apartmentTitle}";
         var templateData = new { UserName = userName, ApartmentTitle = apartmentTitle, Reason = reason };
         return await SendTemplatedEmailAsync(to, subject, "ListingUnavailableEmail", templateData);
+    }
+    public async Task<bool> SendEmailVerificationAsync(string to, string userName, string verificationLink)
+    {
+        var subject = "Verifikacija email adrese";
+        var templateData = new { UserName = userName, VerificationLink = verificationLink };
+        return await SendTemplatedEmailAsync(to, subject, "EmailVerificationEmail", templateData);
+    }
+
+    public async Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink)
+    {
+        var subject = "Reset lozinke";
+        var templateData = new { UserName = userName, ResetLink = resetLink };
+        return await SendTemplatedEmailAsync(to, subject, "PasswordResetEmail", templateData);
     }
 
     private async Task LogEmailAsync(int? userId, string recipientEmail, string subject, string htmlContent,
