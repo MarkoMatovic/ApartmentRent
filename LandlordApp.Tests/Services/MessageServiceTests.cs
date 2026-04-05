@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using Lander;
 using Lander.src.Modules.Communication.Implementation;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Notifications.NotificationsHub;

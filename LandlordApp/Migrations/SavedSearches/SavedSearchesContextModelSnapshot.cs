@@ -18,7 +18,7 @@ namespace Lander.Migrations.SavedSearches
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("SavedSearches")
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -76,6 +76,9 @@ namespace Lander.Migrations.SavedSearches
                         .HasName("PK__SavedSearches__SavedSearchId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("IsActive", "EmailNotificationsEnabled")
+                        .HasDatabaseName("IX_SavedSearches_IsActive_EmailNotifications");
 
                     b.ToTable("SavedSearches", "SavedSearches");
                 });

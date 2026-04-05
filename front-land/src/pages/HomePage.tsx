@@ -65,38 +65,65 @@ const HomePage: React.FC = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box>
-        {/* Welcome Section */}
-        <Container maxWidth="lg" sx={{ py: { xs: 1, md: 2 }, px: { xs: 2, md: 3 } }}>
-          <Typography variant="h3" component="h1" sx={{ fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' }, mb: 0 }}>
-            {isAuthenticated && user
-              ? t('welcome', { name: user.firstName })
-              : t('welcomeGuest')}
-          </Typography>
-        </Container>
-
         {/* Hero Search Section */}
         <Box
           sx={{
-            bgcolor: 'secondary.main',
-            py: { xs: 3, md: 6 },
+            py: { xs: 8, md: 12 },
+            position: 'relative',
             color: 'white',
+            backgroundImage: 'url(/hero-bg.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            minHeight: { xs: '50vh', md: '70vh' },
+            display: 'flex',
+            alignItems: 'center',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: 'rgba(0, 0, 0, 0.45)',
+              zIndex: 1,
+            },
           }}
         >
-          <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 } }}>
-            <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
+          <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, px: { xs: 2, md: 4 } }}>
+            <Typography 
+              variant="h3" 
+              component="h1" 
+              gutterBottom 
+              align="center" 
+              sx={{ 
+                fontWeight: 800, 
+                textShadow: '2px 2px 4px rgba(0,0,0,0.6)', 
+                fontSize: { xs: '2rem', md: '3.5rem' } 
+              }}
+            >
               {t('apartments:discoverTitle')}
             </Typography>
-            <Typography variant="body1" align="center" sx={{ mb: { xs: 2, md: 4 }, fontSize: { xs: '0.875rem', md: '1rem' } }}>
+            <Typography 
+              variant="h6" 
+              align="center" 
+              sx={{ 
+                mb: { xs: 4, md: 6 }, 
+                textShadow: '1px 1px 2px rgba(0,0,0,0.5)', 
+                fontSize: { xs: '1.1rem', md: '1.5rem' }, 
+                fontWeight: 400 
+              }}
+            >
               {t('apartments:discoverSubtitle')}
             </Typography>
 
             <Paper
-              elevation={3}
+              elevation={24}
               sx={{
                 p: { xs: 2, md: 3 },
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-                maxWidth: 900,
+                bgcolor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 4,
+                maxWidth: 1000,
                 mx: 'auto',
               }}
             >

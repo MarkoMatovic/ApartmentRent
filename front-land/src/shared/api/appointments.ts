@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from './client';
 import type {
     AppointmentDto,
     CreateAppointmentDto,
@@ -8,78 +8,50 @@ import type {
     SetAvailabilityDto,
 } from '../types/appointment';
 
-const API_URL = 'https://localhost:7092/api/appointments';
-
 export const appointmentsApi = {
     create: async (data: CreateAppointmentDto): Promise<AppointmentDto> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.post(API_URL, data, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.post('/api/appointments', data);
         return response.data;
     },
 
     getMyAppointments: async (): Promise<AppointmentDto[]> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`${API_URL}/my-appointments`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.get('/api/appointments/my-appointments');
         return response.data;
     },
 
     getLandlordAppointments: async (): Promise<AppointmentDto[]> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`${API_URL}/landlord-appointments`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.get('/api/appointments/landlord-appointments');
         return response.data;
     },
 
     getAvailableSlots: async (apartmentId: number, date: string): Promise<AvailableSlotDto[]> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`${API_URL}/available-slots/${apartmentId}`, {
+        const response = await apiClient.get(`/api/appointments/available-slots/${apartmentId}`, {
             params: { date },
-            headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     },
 
     updateStatus: async (id: number, data: UpdateAppointmentStatusDto): Promise<AppointmentDto> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.put(`${API_URL}/${id}/status`, data, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.put(`/api/appointments/${id}/status`, data);
         return response.data;
     },
 
     cancel: async (id: number): Promise<void> => {
-        const token = localStorage.getItem('authToken');
-        await axios.delete(`${API_URL}/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        await apiClient.delete(`/api/appointments/${id}`);
     },
 
     getById: async (id: number): Promise<AppointmentDto> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`${API_URL}/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.get(`/api/appointments/${id}`);
         return response.data;
     },
 
     getMyAvailability: async (): Promise<LandlordAvailabilityDto[]> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.get(`${API_URL}/availability`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.get('/api/appointments/availability');
         return response.data;
     },
 
     setMyAvailability: async (data: SetAvailabilityDto): Promise<LandlordAvailabilityDto[]> => {
-        const token = localStorage.getItem('authToken');
-        const response = await axios.put(`${API_URL}/availability`, data, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await apiClient.put('/api/appointments/availability', data);
         return response.data;
     },
 };

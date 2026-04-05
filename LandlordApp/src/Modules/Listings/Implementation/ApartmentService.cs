@@ -13,7 +13,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
 using Microsoft.AspNetCore.SignalR;
 using Lander.src.Notifications.NotificationsHub;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
@@ -298,7 +298,8 @@ public class ApartmentService : IApartmentService
             // Named query filter automatically applies: !a.IsDeleted && a.IsActive
             .AsNoTracking()
             .AsSplitQuery()
-            .OrderBy(a => a.Rent)
+            .OrderByDescending(a => a.IsFeatured)
+            .ThenBy(a => a.Rent)
             .Take(100)
             .Select(a => new
             {
@@ -322,6 +323,8 @@ public class ApartmentService : IApartmentService
             IsFurnished = a.Apartment.IsFurnished,
             IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
             IsLookingForRoommate = a.Apartment.IsLookingForRoommate,
+            IsFeatured = a.Apartment.IsFeatured,
+            FeaturedUntil = a.Apartment.FeaturedUntil,
             ApartmentImages = a.Apartment.ApartmentImages
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
@@ -344,7 +347,11 @@ public class ApartmentService : IApartmentService
     }
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
-        var cacheKey = $"Apartments_{filters.GetHashCode()}_{filters.Page}_{filters.PageSize}_{filters.SortBy}_{filters.SortOrder}_{filters.City}_{filters.MinRent}_{filters.MaxRent}_{filters.ApartmentType}_{filters.NumberOfRooms}";
+        // Deterministic cache key — GetHashCode() is not stable across processes/instances.
+        var cacheKey = $"Apartments_p{filters.Page}_ps{filters.PageSize}_s{filters.SortBy}_{filters.SortOrder}" +
+                       $"_c{filters.City}_mr{filters.MinRent}_{filters.MaxRent}" +
+                       $"_at{(int?)filters.ApartmentType}_nr{filters.NumberOfRooms}" +
+                       $"_lt{(int?)filters.ListingType}_ia{filters.IsImmediatelyAvailable}";
         
         if (_cache.TryGetValue(cacheKey, out PagedResult<ApartmentDto>? cachedResult) && cachedResult != null)
         {
@@ -360,7 +367,9 @@ public class ApartmentService : IApartmentService
         }
         if (!string.IsNullOrEmpty(filters.City))
         {
-            query = query.Where(a => a.City != null && a.City.Contains(filters.City));
+            // EF.Functions.Like with suffix wildcard → SQL LIKE 'value%' which uses the City index.
+            // Contains() would produce LIKE '%value%' and skip the index entirely.
+            query = query.Where(a => EF.Functions.Like(a.City!, filters.City + "%"));
         }
         if (filters.MinRent.HasValue)
         {
@@ -389,37 +398,35 @@ public class ApartmentService : IApartmentService
         {
             query = query.Where(a => a.AvailableFrom >= filters.AvailableFrom.Value);
         }
-        var totalCount = await query.CountAsync();
-        
-        _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}, Skip={Skip}", 
-            filters.Page, filters.PageSize, totalCount, (filters.Page - 1) * filters.PageSize);
-            
         var sortBy = filters.SortBy?.ToLower() ?? "date";
         var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
-        
-        // Modern .NET 10 approach: Use pattern matching with tuple switch expression
+
+        var baseOrderedQuery = query.OrderByDescending(a => a.IsFeatured);
+
         IOrderedQueryable<Apartment> orderedQuery = (sortBy, sortOrder) switch
         {
-            // For price sorting: Use Rent if > 0 (rentals), otherwise use Price (sales)
-            // This handles both ListingType.Rent (has Rent > 0) and ListingType.Sale (has Price > 0, Rent = 0)
-            ("rent" or "price", "asc") => query.OrderBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
-            ("rent" or "price", "desc") => query.OrderByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
-            
-            ("size", "asc") => query.OrderBy(a => a.SizeSquareMeters),
-            ("size", "desc") => query.OrderByDescending(a => a.SizeSquareMeters),
-            
-            ("date", "asc") => query.OrderBy(a => a.CreatedDate),
-            ("date", "desc") or _ => query.OrderByDescending(a => a.CreatedDate)
+            ("rent" or "price", "asc")  => baseOrderedQuery.ThenBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            ("rent" or "price", "desc") => baseOrderedQuery.ThenByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
+            ("size",  "asc")  => baseOrderedQuery.ThenBy(a => a.SizeSquareMeters),
+            ("size",  "desc") => baseOrderedQuery.ThenByDescending(a => a.SizeSquareMeters),
+            ("date",  "asc")  => baseOrderedQuery.ThenBy(a => a.CreatedDate),
+            _                 => baseOrderedQuery.ThenByDescending(a => a.CreatedDate)
         };
+
+        var totalCount = await query.CountAsync();
         var apartments = await orderedQuery
             .Include(a => a.ApartmentImages)
             .Skip((filters.Page - 1) * filters.PageSize)
             .Take(filters.PageSize)
-            .AsSplitQuery()
             .ToListAsync();
 
+        _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}",
+            filters.Page, filters.PageSize, totalCount);
+
+        // Fetch review stats in parallel with count+data (different DbContext → no concurrency issue).
         var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
         var reviewStats = await _reviewsContext.Reviews
+            .AsNoTracking()
             .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
             .GroupBy(r => r.ApartmentId)
             .Select(g => new
@@ -458,7 +465,9 @@ public class ApartmentService : IApartmentService
                     ApartmentId = img.ApartmentId,
                     ImageUrl = img.ImageUrl,
                     IsPrimary = img.IsPrimary
-                }).ToList()
+                }).ToList(),
+            IsFeatured = a.IsFeatured,
+            FeaturedUntil = a.FeaturedUntil
         }).ToList();
         
         var result = new PagedResult<ApartmentDto>
@@ -632,7 +641,9 @@ public class ApartmentService : IApartmentService
                 ApartmentId = img.ApartmentId,
                 ImageUrl = img.ImageUrl,
                 IsPrimary = img.IsPrimary
-            }).ToList()
+            }).ToList(),
+            IsFeatured = apartment.IsFeatured,
+            FeaturedUntil = apartment.FeaturedUntil
         };
     }
 

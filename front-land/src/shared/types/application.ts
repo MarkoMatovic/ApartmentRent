@@ -7,6 +7,7 @@ export interface ApartmentApplication {
     apartmentId: number;
     applicationDate: string;
     status: string;
+    isPriority: boolean;
     createdDate: string;
     apartment?: Apartment;
     user?: User; // Tenant details
@@ -14,6 +15,7 @@ export interface ApartmentApplication {
 
 export interface CreateApplicationDto {
     apartmentId: number;
+    isPriority?: boolean;
 }
 
 export interface UpdateApplicationStatusDto {

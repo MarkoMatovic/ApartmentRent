@@ -1,6 +1,6 @@
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
 

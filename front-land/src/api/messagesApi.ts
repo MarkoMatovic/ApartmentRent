@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'https://localhost:7092/api/v1';
+import apiClient from '../shared/api/client';
 
 export interface MessageDto {
   messageId: number;
@@ -38,47 +36,28 @@ export interface SendMessageInputDto {
 
 export const messagesApi = {
   getConversation: async (userId1: number, userId2: number, page = 1, pageSize = 50): Promise<ConversationMessagesDto> => {
-    const response = await axios.get(`${API_BASE_URL}/messages/conversation`, {
+    const response = await apiClient.get('/api/v1/messages/conversation', {
       params: { userId1, userId2, page, pageSize },
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`
-      }
     });
     return response.data;
   },
 
   getUserConversations: async (userId: number): Promise<ConversationDto[]> => {
-    const response = await axios.get(`${API_BASE_URL}/messages/user/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`
-      }
-    });
+    const response = await apiClient.get(`/api/v1/messages/user/${userId}`);
     return response.data;
   },
 
   sendMessage: async (input: SendMessageInputDto): Promise<MessageDto> => {
-    const response = await axios.post(`${API_BASE_URL}/messages/send`, input, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`
-      }
-    });
+    const response = await apiClient.post('/api/v1/messages/send', input);
     return response.data;
   },
 
   markAsRead: async (messageId: number): Promise<void> => {
-    await axios.put(`${API_BASE_URL}/messages/mark-read/${messageId}`, null, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`
-      }
-    });
+    await apiClient.put(`/api/v1/messages/mark-read/${messageId}`, null);
   },
 
   getUnreadCount: async (userId: number): Promise<number> => {
-    const response = await axios.get(`${API_BASE_URL}/messages/unread-count/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`
-      }
-    });
+    const response = await apiClient.get(`/api/v1/messages/unread-count/${userId}`);
     return response.data;
   }
 };

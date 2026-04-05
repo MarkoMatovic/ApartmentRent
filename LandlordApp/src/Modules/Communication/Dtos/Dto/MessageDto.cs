@@ -7,6 +7,7 @@ public class MessageDto
     public string MessageText { get; set; } = string.Empty;
     public DateTime SentAt { get; set; }
     public bool IsRead { get; set; }
+    public bool IsSuperLike { get; set; }
     public string? SenderName { get; set; }
     public string? ReceiverName { get; set; }
     public string? SenderProfilePicture { get; set; }
@@ -17,6 +18,7 @@ public class MessageDto
     public string? FileName { get; set; }
     public long? FileSize { get; set; }
     public string? FileType { get; set; }
+
 }
 public class ConversationDto
 {

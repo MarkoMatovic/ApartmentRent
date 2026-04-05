@@ -14,6 +14,8 @@ public class UserProfileDto
     public bool AnalyticsConsent { get; set; }
     public bool ChatHistoryConsent { get; set; }
     public bool ProfileVisibility { get; set; }
+    public bool IsIncognito { get; set; }
+    public int TokenBalance { get; set; }
     public int? UserRoleId { get; set; }
     public string? RoleName { get; set; }
     public DateTime? CreatedDate { get; set; }

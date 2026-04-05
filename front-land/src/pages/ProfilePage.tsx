@@ -23,6 +23,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../shared/context/AuthContext';
 import { authApi } from '../shared/api/auth';
@@ -51,8 +53,9 @@ const ProfilePage: React.FC = () => {
       await authApi.deleteUser({ userGuid: user.userGuid });
       setSuccess('Account deleted. You will be logged out.');
       setTimeout(() => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('authToken');
+        sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);
     } catch (error: any) {
@@ -75,7 +78,8 @@ const ProfilePage: React.FC = () => {
   const [privacySettings, setPrivacySettings] = useState({
     analyticsConsent: user?.analyticsConsent ?? true,
     chatHistoryConsent: user?.chatHistoryConsent ?? true,
-    profileVisibility: user?.profileVisibility ?? true
+    profileVisibility: user?.profileVisibility ?? true,
+    isIncognito: user?.isIncognito ?? false,
   });
   const [privacyUpdating, setPrivacyUpdating] = useState(false);
 
@@ -95,7 +99,8 @@ const ProfilePage: React.FC = () => {
       setPrivacySettings({
         analyticsConsent: user.analyticsConsent ?? true,
         chatHistoryConsent: user.chatHistoryConsent ?? true,
-        profileVisibility: user.profileVisibility ?? true
+        profileVisibility: user.profileVisibility ?? true,
+        isIncognito: user.isIncognito ?? false,
       });
     }
   }, [user]);
@@ -174,8 +179,9 @@ const ProfilePage: React.FC = () => {
       await authApi.deactivateUser(user.userGuid);
       setSuccess('Account deactivated. You will be logged out.');
       setTimeout(() => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('authToken');
+        sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);
     } catch (error: any) {
@@ -436,6 +442,44 @@ const ProfilePage: React.FC = () => {
                 }
                 label="Profile Visibility (Allow others to find you)"
               />
+            </Grid>
+            <Grid item xs={12}>
+              <Tooltip
+                title={!(user?.hasPersonalAnalytics || user?.hasLandlordAnalytics) ? 'Incognito Mode is a premium feature' : ''}
+                arrow
+              >
+                <span>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={privacySettings.isIncognito}
+                        onChange={handlePrivacyChange}
+                        name="isIncognito"
+                        color="default"
+                        disabled={!(user?.hasPersonalAnalytics || user?.hasLandlordAnalytics)}
+                      />
+                    }
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <VisibilityOffIcon fontSize="small" sx={{ color: privacySettings.isIncognito ? 'text.primary' : 'text.disabled' }} />
+                        <Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <span>Incognito Mode</span>
+                            {!(user?.hasPersonalAnalytics || user?.hasLandlordAnalytics) && (
+                              <Box component="span" sx={{ fontSize: 11, color: 'warning.main', fontWeight: 600, ml: 0.5 }}>
+                                PREMIUM
+                              </Box>
+                            )}
+                          </Box>
+                          <Box component="span" sx={{ fontSize: 12, color: 'text.secondary', display: 'block' }}>
+                            Browse listings without appearing in landlord's view analytics
+                          </Box>
+                        </Box>
+                      </Box>
+                    }
+                  />
+                </span>
+              </Tooltip>
             </Grid>
             <Grid item xs={12}>
               <Button

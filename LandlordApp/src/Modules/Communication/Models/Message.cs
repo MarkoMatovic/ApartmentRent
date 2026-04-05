@@ -9,12 +9,15 @@ public partial class Message
     public DateTime? SentAt { get; set; }
     public bool? IsRead { get; set; }
     
+    // Phase 2: Super-Like
+    public bool IsSuperLike { get; set; } = false;
+
     // File upload properties
     public string? FileUrl { get; set; }
     public string? FileName { get; set; }
     public long? FileSize { get; set; }
     public string? FileType { get; set; }
-    
+
     public Guid? CreatedByGuid { get; set; }
     public DateTime? CreatedDate { get; set; }
     public Guid? ModifiedByGuid { get; set; }

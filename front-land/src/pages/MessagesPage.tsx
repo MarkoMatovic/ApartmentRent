@@ -45,13 +45,14 @@ const MessagesPage: React.FC = () => {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: (content: string) => {
+        mutationFn: ({ content, isSuperLike }: { content: string; isSuperLike?: boolean }) => {
             const selectedConversation = conversations?.find(c => c.otherUserId === selectedConversationId);
             if (!selectedConversation) throw new Error('No conversation selected');
 
             return messagesApi.sendMessage({
                 receiverId: selectedConversation.otherUserId,
                 content,
+                isSuperLike,
             });
         },
         onSuccess: () => {
@@ -71,7 +72,7 @@ const MessagesPage: React.FC = () => {
             // Then send message with file info
             return messagesApi.sendMessage({
                 receiverId: selectedConversation.otherUserId,
-                content: uploadedFile.fileName || '',
+                content: uploadedFile.fileUrl.split('/').pop() || file.name,
             });
         },
         onSuccess: () => {
@@ -287,7 +288,7 @@ const MessagesPage: React.FC = () => {
                                     <>
                                         <MessageThread messages={messages} />
                                         <MessageComposer
-                                            onSendMessage={(content) => sendMessageMutation.mutate(content)}
+                                            onSendMessage={(content, isSuperLike) => sendMessageMutation.mutate({ content, isSuperLike })}
                                             onSendFile={(file) => uploadFileMutation.mutate(file)}
                                             disabled={sendMessageMutation.isPending || uploadFileMutation.isPending}
                                         />

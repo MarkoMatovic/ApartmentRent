@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Lander.Helpers;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.Communication.Models;
@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Lander;
 
 
-public class ApplicationsContext : DbContext, IUnitofWork
+public class ApplicationsContext : DbContext, IUnitOfWork
 {
     public ApplicationsContext(DbContextOptions<ApplicationsContext> options)
         : base(options)
@@ -96,6 +96,7 @@ public class ApplicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.ApartmentId).HasColumnName("ApartmentId");
+            entity.Property(e => e.IsPriority).HasDefaultValue(false);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ApartmentId);
@@ -118,9 +119,16 @@ public class ApplicationsContext : DbContext, IUnitofWork
                 .HasConstraintName("FK__SearchPre__UserI__787EE5A0")
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Exclude User from migrations in this context as it belongs to UsersContext
+        modelBuilder.Entity<User>().ToTable("Users", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        // Also exclude Role/Permission which might be brought in via User
+        modelBuilder.Entity<Role>().ToTable("Roles", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<Permission>().ToTable("Permissions", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
     }
 }
-public partial class NotificationContext : DbContext, IUnitofWork
+public partial class NotificationContext : DbContext, IUnitOfWork
 {
     public NotificationContext()
     {
@@ -237,7 +245,7 @@ public partial class NotificationContext : DbContext, IUnitofWork
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
 
-public class CommunicationsContext : DbContext, IUnitofWork
+public class CommunicationsContext : DbContext, IUnitOfWork
 {
     public CommunicationsContext(DbContextOptions<CommunicationsContext> options)
         : base(options)
@@ -325,6 +333,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.FileName).HasMaxLength(255);
             entity.Property(e => e.FileSize);
             entity.Property(e => e.FileType).HasMaxLength(50);
+            entity.Property(e => e.IsSuperLike).HasDefaultValue(false);
 
             // Note: Sender and Receiver navigation properties are ignored to avoid cross-schema FK constraints
             // User entities are in UsersRoles schema, not Communication schema
@@ -400,7 +409,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
         });
     }
 }
-public class ListingsContext : DbContext, IUnitofWork
+public class ListingsContext : DbContext, IUnitOfWork
 {
     public ListingsContext(DbContextOptions<ListingsContext> options)
         : base(options)
@@ -521,6 +530,16 @@ public class ListingsContext : DbContext, IUnitofWork
             entity.HasIndex(e => e.NumberOfRooms);
             entity.HasIndex(e => e.ListingType);
             entity.HasIndex(e => e.CreatedDate);
+
+            // Phase 2: Composite indexes for global query filter + common sorts
+            // The EF query filter (!IsDeleted && IsActive) executes on every query —
+            // without a covering index SQL Server does a full table scan first.
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted");
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.CreatedDate })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.City })
+                  .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
@@ -544,7 +563,7 @@ public class ListingsContext : DbContext, IUnitofWork
 
     }
 }
-public class ReviewsContext : DbContext, IUnitofWork
+public class ReviewsContext : DbContext, IUnitOfWork
 {
     public ReviewsContext(DbContextOptions<ReviewsContext> options)
         : base(options)
@@ -666,7 +685,7 @@ public class ReviewsContext : DbContext, IUnitofWork
     }
 }
 
-public class UsersContext : DbContext, IUnitofWork
+public class UsersContext : DbContext, IUnitOfWork
 {
     public UsersContext(DbContextOptions<UsersContext> options)
         : base(options)
@@ -676,6 +695,7 @@ public class UsersContext : DbContext, IUnitofWork
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -754,6 +774,12 @@ public class UsersContext : DbContext, IUnitofWork
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.ProfilePicture).HasMaxLength(255);
             entity.Property(e => e.UserGuid).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.TokenBalance).HasDefaultValue(3);
+            entity.Property(e => e.IsIncognito).HasDefaultValue(false);
+            entity.Property(e => e.EmailVerificationToken).HasMaxLength(200);
+            entity.Property(e => e.EmailVerifiedAt).HasColumnType("datetime2");
+            entity.Property(e => e.PasswordResetToken).HasMaxLength(200);
+            entity.Property(e => e.PasswordResetTokenExpiry).HasColumnType("datetime2");
 
             entity.HasOne(d => d.UserRole).WithMany(p => p.Users)
                 .HasForeignKey(d => d.UserRoleId)
@@ -816,10 +842,26 @@ public class UsersContext : DbContext, IUnitofWork
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__RolePerm__PermId");
         });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshTokens", "UsersRoles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.Property(e => e.ExpiresAt).HasColumnType("datetime2");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("(getutcdate())");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
 
-public class RoommatesContext : DbContext, IUnitofWork
+public class RoommatesContext : DbContext, IUnitOfWork
 {
     public RoommatesContext(DbContextOptions<RoommatesContext> options)
         : base(options)
@@ -922,7 +964,7 @@ public class RoommatesContext : DbContext, IUnitofWork
     }
 }
 
-public class SearchRequestsContext : DbContext, IUnitofWork
+public class SearchRequestsContext : DbContext, IUnitOfWork
 {
     public SearchRequestsContext(DbContextOptions<SearchRequestsContext> options)
         : base(options)
@@ -1019,7 +1061,7 @@ public class SearchRequestsContext : DbContext, IUnitofWork
     }
 }
 
-public class SavedSearchesContext : DbContext, IUnitofWork
+public class SavedSearchesContext : DbContext, IUnitOfWork
 {
     public SavedSearchesContext(DbContextOptions<SavedSearchesContext> options)
         : base(options)
@@ -1101,11 +1143,14 @@ public class SavedSearchesContext : DbContext, IUnitofWork
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasIndex(e => e.UserId);
+            // Notification query filter: WHERE IsActive = 1 AND EmailNotificationsEnabled = 1
+            entity.HasIndex(e => new { e.IsActive, e.EmailNotificationsEnabled })
+                  .HasDatabaseName("IX_SavedSearches_IsActive_EmailNotifications");
         });
     }
 }
 
-public class AnalyticsContext : DbContext, IUnitofWork
+public class AnalyticsContext : DbContext, IUnitOfWork
 {
     public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
         : base(options)
