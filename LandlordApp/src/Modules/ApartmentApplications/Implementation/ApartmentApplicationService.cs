@@ -48,9 +48,9 @@ public class ApartmentApplicationService : IApartmentApplicationService
             ApartmentId = apartmentId,
             ApplicationDate = DateTime.UtcNow,
             Status = "Pending",
+            IsPriority = isPriority,
             CreatedDate = DateTime.UtcNow,
-            CreatedByGuid = Guid.NewGuid(), // Placeholder or fetch actual GUID if available
-            IsPriority = isPriority
+            CreatedByGuid = Guid.NewGuid(),
         };
 
         _context.ApartmentApplications.Add(application);
@@ -101,8 +101,8 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 ApartmentId = app.ApartmentId,
                 ApplicationDate = app.ApplicationDate,
                 Status = app.Status,
-                CreatedDate = app.CreatedDate,
                 IsPriority = app.IsPriority,
+                CreatedDate = app.CreatedDate,
                 Apartment = apartment != null ? new ApartmentDetailsDto
                 {
                     ApartmentId = apartment.ApartmentId,

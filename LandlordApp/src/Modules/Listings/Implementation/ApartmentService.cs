@@ -13,7 +13,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
 using Microsoft.AspNetCore.SignalR;
 using Lander.src.Notifications.NotificationsHub;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {

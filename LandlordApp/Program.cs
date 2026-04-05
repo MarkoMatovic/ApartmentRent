@@ -1,13 +1,17 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Serilog;
+using Serilog.Events;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Lander;
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Implementation;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Reviews.Implementation;
@@ -35,7 +39,36 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+// Bootstrap logger — hvata greske pre ucitavanja konfiguracije
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+StartupValidation.ValidateSecrets(builder.Configuration, builder.Environment);
+
+builder.Host.UseSerilog((ctx, svc, cfg) =>
+{
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .ReadFrom.Services(svc)
+       .Enrich.FromLogContext()
+       .Enrich.WithProperty("Application", "Landlander")
+       .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+       .WriteTo.File(
+           path: "logs/landlander-.log",
+           rollingInterval: RollingInterval.Day,
+           retainedFileCountLimit: 14,
+           outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}");
+
+    var aiKey = ctx.Configuration["ApplicationInsights:InstrumentationKey"];
+    if (!string.IsNullOrWhiteSpace(aiKey))
+        cfg.WriteTo.ApplicationInsights(
+            svc.GetRequiredService<Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration>(),
+            TelemetryConverter.Traces);
+});
 
 
 builder.Services.AddDbContext<UsersContext>(options =>
@@ -67,6 +100,8 @@ builder.Services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContex
 builder.Services.AddDbContext<Lander.src.Modules.Payments.PaymentsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
+builder.Services.AddApplicationInsightsTelemetry();
 
 builder.Services.AddCors(options =>
 {
@@ -116,6 +151,29 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
     options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    // Strogi limit za auth endpointe (login, register, change-password)
+    options.AddFixedWindowLimiter("auth", policy =>
+    {
+        policy.PermitLimit = 5;
+        policy.Window = TimeSpan.FromSeconds(30);
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 0;
+    });
+
+    // Globalni limit za sve ostale API pozive
+    options.AddFixedWindowLimiter("global", policy =>
+    {
+        policy.PermitLimit = 100;
+        policy.Window = TimeSpan.FromMinutes(1);
+        policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        policy.QueueLimit = 5;
+    });
+
+    options.RejectionStatusCode = 429;
+});
+
 builder.Services.AddMemoryCache();
 builder.Services.AddOutputCache(options =>
 {
@@ -160,6 +218,8 @@ builder.Services.AddSingleton<NotificationStreamService>();
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
 builder.Services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
+// Payment Integration (Monri)
+builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriService, Lander.src.Modules.Payments.Implementation.MonriService>();
 
 // .NET 10 Feature: Vector Search for semantic apartment search
 builder.Services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();
@@ -171,6 +231,7 @@ builder.Services.AddScoped<Lander.src.Modules.Appointments.Interfaces.IAppointme
 builder.Services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentService, Lander.src.Modules.Payments.Implementation.PaytenPaymentService>();
 
 builder.Services.AddScoped<TokenProvider>();
+builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddHttpContextAccessor();
 
 // RBAC: Authorization Infrastructure
@@ -200,12 +261,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("LandlordPolicy", policy => policy.RequireRole("Landlord"));
-    options.AddPolicy("TenantPolicy", policy => policy.RequireRole("Tenant"));
-    options.AddPolicy("RoommatePolicy", policy => policy.RequireRole("Roommate"));
-    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("BrokerPolicy", policy => policy.RequireRole("Broker"));
-    options.AddPolicy("GuestPolicy", policy => policy.RequireRole("Guest"));
+    options.AddPolicy("LandlordPolicy",  policy => policy.RequireRole(RoleConstants.Landlord));
+    options.AddPolicy("TenantPolicy",    policy => policy.RequireRole(RoleConstants.Tenant));
+    options.AddPolicy("AdminPolicy",     policy => policy.RequireRole(RoleConstants.Admin));
+    options.AddPolicy("BrokerPolicy",    policy => policy.RequireRole(RoleConstants.Broker));
+    options.AddPolicy("GuestPolicy",     policy => policy.RequireRole(RoleConstants.Guest));
+    options.AddPolicy("PremiumPolicy",   policy => policy.RequireRole(RoleConstants.PremiumTenant, RoleConstants.PremiumLandlord));
 });
 
 builder.Services.AddSwaggerGen(c =>
@@ -249,10 +310,60 @@ if (app.Environment.IsDevelopment())
 
 app.UseResponseCompression();
 app.UseOutputCache();
+app.UseRateLimiter();
+app.UseSerilogRequestLogging(opts =>
+{
+    opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0}ms)";
+    opts.EnrichDiagnosticContext = (diagCtx, httpCtx) =>
+    {
+        diagCtx.Set("ClientIP", httpCtx.Connection.RemoteIpAddress?.ToString());
+        diagCtx.Set("UserAgent", httpCtx.Request.Headers.UserAgent.ToString());
+    };
+});
 
 app.UseCors("AllowFrontend");
 
 app.UseStaticFiles(); // Enable static file serving for uploaded images
+
+// ─── Security headers ────────────────────────────────────────────────────────
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers.Append("X-Content-Type-Options", "nosniff");
+    headers.Append("X-Frame-Options", "DENY");
+    headers.Append("X-XSS-Protection", "1; mode=block");
+    headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.Append("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+
+    if (!app.Environment.IsDevelopment())
+    {
+        // HSTS — enforce HTTPS for 2 years including subdomains
+        headers.Append("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+        headers.Append("Content-Security-Policy",
+            "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: blob: https:; " +
+            "connect-src 'self' wss: ws:; " +
+            "frame-ancestors 'none'; " +
+            "base-uri 'self'; " +
+            "form-action 'self'");
+    }
+    else
+    {
+        // Relaxed CSP for development (Vite HMR, SignalR)
+        headers.Append("Content-Security-Policy",
+            "default-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src * data: blob:; " +
+            "connect-src * ws: wss:; " +
+            "frame-ancestors 'none'");
+    }
+
+    await next();
+});
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

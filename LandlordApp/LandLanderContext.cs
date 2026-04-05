@@ -16,7 +16,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Lander;
 
 
-public class ApplicationsContext : DbContext, IUnitofWork
+public class ApplicationsContext : DbContext, IUnitOfWork
 {
     public ApplicationsContext(DbContextOptions<ApplicationsContext> options)
         : base(options)
@@ -96,6 +96,7 @@ public class ApplicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.Status).HasMaxLength(50);
             entity.Property(e => e.ApartmentId).HasColumnName("ApartmentId");
+            entity.Property(e => e.IsPriority).HasDefaultValue(false);
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ApartmentId);
@@ -127,7 +128,7 @@ public class ApplicationsContext : DbContext, IUnitofWork
         modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", "UsersRoles").Metadata.SetIsTableExcludedFromMigrations(true);
     }
 }
-public partial class NotificationContext : DbContext, IUnitofWork
+public partial class NotificationContext : DbContext, IUnitOfWork
 {
     public NotificationContext()
     {
@@ -244,7 +245,7 @@ public partial class NotificationContext : DbContext, IUnitofWork
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
 
-public class CommunicationsContext : DbContext, IUnitofWork
+public class CommunicationsContext : DbContext, IUnitOfWork
 {
     public CommunicationsContext(DbContextOptions<CommunicationsContext> options)
         : base(options)
@@ -332,6 +333,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
             entity.Property(e => e.FileName).HasMaxLength(255);
             entity.Property(e => e.FileSize);
             entity.Property(e => e.FileType).HasMaxLength(50);
+            entity.Property(e => e.IsSuperLike).HasDefaultValue(false);
 
             // Note: Sender and Receiver navigation properties are ignored to avoid cross-schema FK constraints
             // User entities are in UsersRoles schema, not Communication schema
@@ -407,7 +409,7 @@ public class CommunicationsContext : DbContext, IUnitofWork
         });
     }
 }
-public class ListingsContext : DbContext, IUnitofWork
+public class ListingsContext : DbContext, IUnitOfWork
 {
     public ListingsContext(DbContextOptions<ListingsContext> options)
         : base(options)
@@ -551,7 +553,7 @@ public class ListingsContext : DbContext, IUnitofWork
 
     }
 }
-public class ReviewsContext : DbContext, IUnitofWork
+public class ReviewsContext : DbContext, IUnitOfWork
 {
     public ReviewsContext(DbContextOptions<ReviewsContext> options)
         : base(options)
@@ -673,7 +675,7 @@ public class ReviewsContext : DbContext, IUnitofWork
     }
 }
 
-public class UsersContext : DbContext, IUnitofWork
+public class UsersContext : DbContext, IUnitOfWork
 {
     public UsersContext(DbContextOptions<UsersContext> options)
         : base(options)
@@ -683,6 +685,7 @@ public class UsersContext : DbContext, IUnitofWork
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -761,6 +764,12 @@ public class UsersContext : DbContext, IUnitofWork
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.ProfilePicture).HasMaxLength(255);
             entity.Property(e => e.UserGuid).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.TokenBalance).HasDefaultValue(3);
+            entity.Property(e => e.IsIncognito).HasDefaultValue(false);
+            entity.Property(e => e.EmailVerificationToken).HasMaxLength(200);
+            entity.Property(e => e.EmailVerifiedAt).HasColumnType("datetime2");
+            entity.Property(e => e.PasswordResetToken).HasMaxLength(200);
+            entity.Property(e => e.PasswordResetTokenExpiry).HasColumnType("datetime2");
 
             entity.HasOne(d => d.UserRole).WithMany(p => p.Users)
                 .HasForeignKey(d => d.UserRoleId)
@@ -823,10 +832,26 @@ public class UsersContext : DbContext, IUnitofWork
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__RolePerm__PermId");
         });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("RefreshTokens", "UsersRoles");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.Property(e => e.ExpiresAt).HasColumnType("datetime2");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("(getutcdate())");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
 
-public class RoommatesContext : DbContext, IUnitofWork
+public class RoommatesContext : DbContext, IUnitOfWork
 {
     public RoommatesContext(DbContextOptions<RoommatesContext> options)
         : base(options)
@@ -929,7 +954,7 @@ public class RoommatesContext : DbContext, IUnitofWork
     }
 }
 
-public class SearchRequestsContext : DbContext, IUnitofWork
+public class SearchRequestsContext : DbContext, IUnitOfWork
 {
     public SearchRequestsContext(DbContextOptions<SearchRequestsContext> options)
         : base(options)
@@ -1026,7 +1051,7 @@ public class SearchRequestsContext : DbContext, IUnitofWork
     }
 }
 
-public class SavedSearchesContext : DbContext, IUnitofWork
+public class SavedSearchesContext : DbContext, IUnitOfWork
 {
     public SavedSearchesContext(DbContextOptions<SavedSearchesContext> options)
         : base(options)
@@ -1112,7 +1137,7 @@ public class SavedSearchesContext : DbContext, IUnitofWork
     }
 }
 
-public class AnalyticsContext : DbContext, IUnitofWork
+public class AnalyticsContext : DbContext, IUnitOfWork
 {
     public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
         : base(options)

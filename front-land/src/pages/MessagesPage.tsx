@@ -45,14 +45,14 @@ const MessagesPage: React.FC = () => {
     });
 
     const sendMessageMutation = useMutation({
-        mutationFn: ({ content, isSuperLike }: { content: string, isSuperLike?: boolean }) => {
+        mutationFn: ({ content, isSuperLike }: { content: string; isSuperLike?: boolean }) => {
             const selectedConversation = conversations?.find(c => c.otherUserId === selectedConversationId);
             if (!selectedConversation) throw new Error('No conversation selected');
 
             return messagesApi.sendMessage({
                 receiverId: selectedConversation.otherUserId,
                 content,
-                isSuperLike
+                isSuperLike,
             });
         },
         onSuccess: () => {

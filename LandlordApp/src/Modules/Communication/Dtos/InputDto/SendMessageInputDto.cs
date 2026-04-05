@@ -4,5 +4,5 @@ public class SendMessageInputDto
     public int SenderId { get; set; }
     public int ReceiverId { get; set; }
     public string MessageText { get; set; } = string.Empty;
-    public bool IsSuperLike { get; set; }
+    public bool IsSuperLike { get; set; } = false;
 }

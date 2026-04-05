@@ -1,10 +1,10 @@
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-namespace Lander.src.Modules.Communication.Contollers
+namespace Lander.src.Modules.Communication.Controllers
 {
     [Route(ApiActionsV1.Sms)]
     [ApiController]

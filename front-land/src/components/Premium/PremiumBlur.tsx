@@ -20,17 +20,13 @@ const PremiumBlur: React.FC<PremiumBlurProps> = ({ children, requiredFeature }) 
     return <>{children}</>;
   }
 
-  // TEMPORARY: Always show content for testing
-  return <>{children}</>;
+  const hasAccess = requiredFeature === 'personalAnalytics'
+    ? user?.hasPersonalAnalytics
+    : user?.hasLandlordAnalytics;
 
-  // Original logic (commented out for testing):
-  // const hasAccess = feature === 'personalAnalytics' 
-  //   ? user?.hasPersonalAnalytics 
-  //   : user?.hasLandlordAnalytics;
-
-  // if (hasAccess) {
-  //   return <>{children}</>;
-  // }
+  if (hasAccess) {
+    return <>{children}</>;
+  }
 
   return (
     <Box sx={{ position: 'relative' }}>

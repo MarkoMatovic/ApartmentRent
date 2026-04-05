@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
-using Lander.src.Modules.Communication.Intefaces;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
@@ -39,11 +39,23 @@ public class MessageService : IMessageService
     public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // Super-Like: validate sender has tokens
+        if (isSuperLike)
+        {
+            var senderUser = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserId == senderId);
+            if (senderUser == null || senderUser.TokenBalance < 1)
+                throw new InvalidOperationException("Nemate dovoljno tokena za Super-Like.");
+            senderUser.TokenBalance -= 1;
+            await _usersContext.SaveChangesAsync();
+        }
+
         var message = new Message
         {
             SenderId = senderId,
             ReceiverId = receiverId,
             MessageText = messageText,
+            IsSuperLike = isSuperLike,
             SentAt = DateTime.UtcNow,
             IsRead = false,
             IsSuperLike = isSuperLike,
@@ -89,6 +101,7 @@ public class MessageService : IMessageService
             SenderId = senderId,
             ReceiverId = receiverId,
             MessageText = messageText,
+            IsSuperLike = isSuperLike,
             SentAt = message.SentAt ?? DateTime.UtcNow,
             IsRead = message.IsRead ?? false,
             IsSuperLike = message.IsSuperLike,
@@ -126,6 +139,7 @@ public class MessageService : IMessageService
                 SenderId = m.SenderId ?? 0,
                 ReceiverId = m.ReceiverId ?? 0,
                 MessageText = m.MessageText,
+                IsSuperLike = m.IsSuperLike,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
                 IsRead = m.IsRead ?? false,
                 IsSuperLike = m.IsSuperLike
@@ -211,6 +225,7 @@ public class MessageService : IMessageService
                         SenderId = conv.LastMessage.SenderId ?? 0,
                         ReceiverId = conv.LastMessage.ReceiverId ?? 0,
                         MessageText = conv.LastMessage.MessageText,
+                        IsSuperLike = conv.LastMessage.IsSuperLike,
                         SentAt = conv.LastMessage.SentAt ?? DateTime.UtcNow,
                         IsRead = conv.LastMessage.IsRead ?? false,
                         IsSuperLike = conv.LastMessage.IsSuperLike
@@ -446,6 +461,7 @@ public class MessageService : IMessageService
                 SenderId = m.SenderId ?? 0,
                 ReceiverId = m.ReceiverId ?? 0,
                 MessageText = m.MessageText,
+                IsSuperLike = m.IsSuperLike,
                 SentAt = m.SentAt ?? DateTime.UtcNow,
                 IsRead = m.IsRead ?? false,
                 IsSuperLike = m.IsSuperLike

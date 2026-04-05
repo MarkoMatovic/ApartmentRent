@@ -19,25 +19,24 @@ public class AnalyticsService : IAnalyticsService
         _usersContext = usersContext;
     }
     public async Task TrackEventAsync(
-        string eventType, 
-        string category, 
-        int? entityId = null, 
-        string? entityType = null, 
-        string? searchQuery = null, 
-        Dictionary<string, string>? metadata = null, 
-        int? userId = null, 
-        string? ipAddress = null, 
+        string eventType,
+        string category,
+        int? entityId = null,
+        string? entityType = null,
+        string? searchQuery = null,
+        Dictionary<string, string>? metadata = null,
+        int? userId = null,
+        string? ipAddress = null,
         string? userAgent = null)
     {
+        // Incognito Mode: skip tracking for users who have opted out of visibility
         if (userId.HasValue)
         {
             var user = await _usersContext.Users.FindAsync(userId.Value);
-            if (user != null && user.IsIncognito)
-            {
-                return; // Do not track events for incognito users
-            }
+            if (user?.IsIncognito == true) return;
         }
-        
+
+
         var analyticsEvent = new AnalyticsEvent
         {
             EventType = eventType,

@@ -8,11 +8,13 @@ public class GlobalExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
 
-    public GlobalExceptionHandlerMiddleware(RequestDelegate next, IWebHostEnvironment env)
+    public GlobalExceptionHandlerMiddleware(RequestDelegate next, IWebHostEnvironment env, ILogger<GlobalExceptionHandlerMiddleware> logger)
     {
         _next = next;
         _env = env;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -29,6 +31,8 @@ public class GlobalExceptionHandlerMiddleware
 
     private Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        _logger.LogError(exception, "Unhandled exception: {Method} {Path}", context.Request.Method, context.Request.Path);
+
         var statusCode = HttpStatusCode.InternalServerError;
         var message = "An error occurred while processing your request.";
         string? details = null;
@@ -45,11 +49,11 @@ public class GlobalExceptionHandlerMiddleware
                 break;
             case ArgumentException:
                 statusCode = HttpStatusCode.BadRequest;
-                message = exception.Message;
+                message = "Invalid input provided.";
                 break;
             case InvalidOperationException:
                 statusCode = HttpStatusCode.BadRequest;
-                message = exception.Message;
+                message = "Operation could not be completed.";
                 break;
             default:
                 message = "An unexpected error occurred.";

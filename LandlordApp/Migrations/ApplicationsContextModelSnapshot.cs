@@ -49,7 +49,9 @@ namespace Lander.Migrations
                         .HasDefaultValueSql("(getdate())");
 
                     b.Property<bool>("IsPriority")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid?>("ModifiedByGuid")
                         .HasColumnType("uniqueidentifier");
@@ -215,6 +217,27 @@ namespace Lander.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CreatedByGuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermission", "Applications");
                 });
 
             modelBuilder.Entity("Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User", b =>
