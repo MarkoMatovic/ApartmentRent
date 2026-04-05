@@ -69,6 +69,15 @@ namespace Lander.Migrations.Listings
                     b.Property<string>("DescriptionEmbedding")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("FeaturedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Features")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("{}");
+
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -78,6 +87,9 @@ namespace Lander.Migrations.Listings
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsImmediatelyAvailable")
                         .ValueGeneratedOnAdd()
@@ -158,7 +170,16 @@ namespace Lander.Migrations.Listings
 
                     b.HasIndex("Rent");
 
+                    b.HasIndex("IsActive", "IsDeleted")
+                        .HasDatabaseName("IX_Apartments_IsActive_IsDeleted");
+
                     b.HasIndex("Latitude", "Longitude");
+
+                    b.HasIndex("IsActive", "IsDeleted", "City")
+                        .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
+
+                    b.HasIndex("IsActive", "IsDeleted", "CreatedDate")
+                        .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
 
                     b.ToTable("Apartments", "Listings");
                 });
@@ -207,42 +228,6 @@ namespace Lander.Migrations.Listings
                     b.HasIndex("ApartmentId");
 
                     b.ToTable("ApartmentImages", "Listings");
-                });
-
-            modelBuilder.Entity("Lander.src.Modules.Listings.Models.Apartment", b =>
-                {
-                    b.OwnsOne("Lander.src.Modules.Listings.Models.ApartmentFeatures", "Features", b1 =>
-                        {
-                            b1.Property<int>("ApartmentId");
-
-                            b1.Property<bool>("HasAirCondition");
-
-                            b1.Property<bool>("HasBalcony");
-
-                            b1.Property<bool>("HasElevator");
-
-                            b1.Property<bool>("HasInternet");
-
-                            b1.Property<bool>("HasParking");
-
-                            b1.Property<bool>("IsFurnished");
-
-                            b1.Property<bool>("IsPetFriendly");
-
-                            b1.Property<bool>("IsSmokingAllowed");
-
-                            b1.HasKey("ApartmentId");
-
-                            b1.ToTable("Apartments", "Listings");
-
-                            b1.ToJson("Features");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ApartmentId");
-                        });
-
-                    b.Navigation("Features")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Lander.src.Modules.Listings.Models.ApartmentImage", b =>

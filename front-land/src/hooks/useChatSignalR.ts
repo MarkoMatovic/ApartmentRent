@@ -13,10 +13,11 @@ export const useChatSignalR = (userId: number | null) => {
   useEffect(() => {
     if (!userId) return;
 
+    const chatHubUrl = (import.meta.env.VITE_API_URL || 'https://localhost:7092') + '/chatHub';
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl('https://localhost:7092/chatHub', {
+      .withUrl(chatHubUrl, {
         accessTokenFactory: () => {
-          return localStorage.getItem('authToken') || '';
+          return sessionStorage.getItem('authToken') || '';
         }
       })
       .withAutomaticReconnect()

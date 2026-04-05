@@ -35,7 +35,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Učitaj broj nepročitanih poruka
   const refreshUnreadMessagesCount = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (!token) return;
 
       // Parsiraj userId iz JWT tokena
@@ -89,7 +89,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Poveži se na ChatHub za real-time ažuriranje broja nepročitanih poruka
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = sessionStorage.getItem('authToken');
     if (!token) return;
 
     try {
@@ -98,8 +98,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (!userId) return;
 
+      const chatHubUrl = (import.meta.env.VITE_API_URL || 'https://localhost:7092') + '/chatHub';
       const newChatConnection = new signalR.HubConnectionBuilder()
-        .withUrl('https://localhost:7092/chatHub', {
+        .withUrl(chatHubUrl, {
           accessTokenFactory: () => token
         })
         .withAutomaticReconnect()
@@ -136,7 +137,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Učitaj broj nepročitanih poruka kada postoji token (korisnik je ulogovan)
   useEffect(() => {
     const checkAndLoad = async () => {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (!token) {
         setUnreadMessagesCount(0);
         return;
@@ -161,7 +162,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     window.addEventListener('authTokenChanged', handleAuthChange);
     // Takođe osluškuj storage event za promene iz drugih prozora
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken') {
+      if (e.key === 'authToken' && e.storageArea === sessionStorage) {
         checkAndLoad();
       }
     };

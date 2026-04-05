@@ -5,8 +5,8 @@ namespace Lander.src.Modules.Users.Interfaces.UserInterface;
 public interface IUserInterface
 {
     Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto);
-    Task<string?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto);
-    Task LogoutUserAsync();
+    Task<AuthTokenDto?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto);
+    Task LogoutUserAsync(string? rawRefreshToken = null);
     Task DeactivateUserAsync(DeactivateUserInputDto deactivateUserInputDto);
     Task ReactivateUserAsync(ReactivateUserInputDto reactivateUserInputDto);
     Task<bool> DeleteUserAsync(DeleteUserInputDto deleteUserInputDto);
@@ -18,4 +18,8 @@ public interface IUserInterface
     Task<UserProfileDto> UpdatePrivacySettingsAsync(int userId, PrivacySettingsDto privacySettingsDto);
     Task<UserExportDto> ExportUserDataAsync(int userId);
     Task UpgradeUserRoleAsync(int userId, string targetRoleName);
+    Task SendVerificationEmailAsync(int userId);
+    Task<bool> VerifyEmailAsync(string token);
+    Task SendPasswordResetEmailAsync(string email);
+    Task<bool> ResetPasswordAsync(string token, string newPassword);
 }

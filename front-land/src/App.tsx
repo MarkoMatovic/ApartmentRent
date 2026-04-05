@@ -22,10 +22,12 @@ import EditApartmentPage from './pages/EditApartmentPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import SupportPage from './pages/SupportPage';
 import PricingPage from './pages/PricingPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 import UserRoommateAnalyticsPage from './pages/UserRoommateAnalyticsPage';
 import TenantApplicationsPage from './pages/TenantApplicationsPage';
 import LandlordApplicationsPage from './pages/LandlordApplicationsPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentFailurePage from './pages/PaymentFailurePage';
 import MyAppointmentsPage from './pages/MyAppointmentsPage';
 import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
 import LandlordAvailabilityPage from './pages/LandlordAvailabilityPage';
@@ -64,6 +66,7 @@ function App() {
                 <Route path="/admin/reports" element={<ReportsPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/subscription" element={<SubscriptionPage />} />
                 <Route path="/analytics/roommate" element={<UserRoommateAnalyticsPage />} />
                 <Route path="/applications/sent" element={<TenantApplicationsPage />} />
                 <Route path="/applications/received" element={<LandlordApplicationsPage />} />
@@ -71,6 +74,7 @@ function App() {
                 <Route path="/appointments/manage" element={<LandlordAppointmentsPage />} />
                 <Route path="/appointments/availability" element={<LandlordAvailabilityPage />} />
                 <Route path="/payment-success" element={<PaymentSuccessPage />} />
+                <Route path="/payment-failure" element={<PaymentFailurePage />} />
                 <Route path="/saved-searches" element={<SavedSearchesPage />} />
                 <Route path="/search-requests" element={<SearchRequestsPage />} />
                 <Route path="/price-predictor" element={<PricePredictorPage />} />

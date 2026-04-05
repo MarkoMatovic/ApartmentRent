@@ -10,23 +10,33 @@ public class AnalyticsService : IAnalyticsService
     private readonly AnalyticsContext _context;
     private readonly ListingsContext _listingsContext;
     private readonly RoommatesContext _roommatesContext;
-    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext, RoommatesContext roommatesContext)
+    private readonly UsersContext _usersContext;
+    public AnalyticsService(AnalyticsContext context, ListingsContext listingsContext, RoommatesContext roommatesContext, UsersContext usersContext)
     {
         _context = context;
         _listingsContext = listingsContext;
         _roommatesContext = roommatesContext;
+        _usersContext = usersContext;
     }
     public async Task TrackEventAsync(
-        string eventType, 
-        string category, 
-        int? entityId = null, 
-        string? entityType = null, 
-        string? searchQuery = null, 
-        Dictionary<string, string>? metadata = null, 
-        int? userId = null, 
-        string? ipAddress = null, 
+        string eventType,
+        string category,
+        int? entityId = null,
+        string? entityType = null,
+        string? searchQuery = null,
+        Dictionary<string, string>? metadata = null,
+        int? userId = null,
+        string? ipAddress = null,
         string? userAgent = null)
     {
+        // Incognito Mode: skip tracking for users who have opted out of visibility
+        if (userId.HasValue)
+        {
+            var user = await _usersContext.Users.FindAsync(userId.Value);
+            if (user?.IsIncognito == true) return;
+        }
+
+
         var analyticsEvent = new AnalyticsEvent
         {
             EventType = eventType,

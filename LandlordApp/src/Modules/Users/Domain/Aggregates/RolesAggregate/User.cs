@@ -28,6 +28,20 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         // Premium Features
         public bool HasPersonalAnalytics { get; set; } = false;
         public bool HasLandlordAnalytics { get; set; } = false;
+        public int TokenBalance { get; set; } = 3;
+        public bool IsIncognito { get; set; } = false;
+
+        // Login lockout
+        public int FailedLoginAttempts { get; set; } = 0;
+        public DateTime? LockoutUntil { get; set; }
+
+        // Email verification
+        public string? EmailVerificationToken { get; set; }
+        public DateTime? EmailVerifiedAt { get; set; }
+
+        // Password reset
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
 
         public int? UserRoleId { get; set; }
         public Guid? CreatedByGuid { get; set; }

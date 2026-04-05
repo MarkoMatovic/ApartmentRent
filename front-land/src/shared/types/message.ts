@@ -14,6 +14,8 @@ export interface Message {
     fileName?: string;
     fileSize?: number;
     fileType?: string;
+    // Phase 2: Super-Like
+    isSuperLike?: boolean;
 }
 
 export interface Conversation {
@@ -27,6 +29,7 @@ export interface Conversation {
         messageText: string;
         sentAt: string;
         isRead: boolean;
+        isSuperLike?: boolean;
     };
     unreadCount: number;
     // Conversation settings
@@ -38,6 +41,7 @@ export interface Conversation {
 export interface SendMessageRequest {
     receiverId: number;
     content: string;
+    isSuperLike?: boolean;
 }
 
 export interface ReportMessageRequest {

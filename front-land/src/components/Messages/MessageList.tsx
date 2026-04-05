@@ -24,6 +24,7 @@ import {
     Block as BlockIcon,
     Delete as DeleteIcon,
     Report as ReportIcon,
+    Star as StarIcon,
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -131,14 +132,19 @@ export const MessageList: React.FC<MessageListProps> = ({
                                 }
                                 secondary={
                                     <Box>
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            noWrap
-                                            sx={{ maxWidth: 200 }}
-                                        >
-                                            {conversation.lastMessage?.messageText || 'No messages yet'}
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            {conversation.lastMessage?.isSuperLike && (
+                                                <StarIcon sx={{ fontSize: 14, color: 'warning.main', flexShrink: 0 }} />
+                                            )}
+                                            <Typography
+                                                variant="body2"
+                                                color={conversation.lastMessage?.isSuperLike ? 'warning.dark' : 'text.secondary'}
+                                                noWrap
+                                                sx={{ maxWidth: 190 }}
+                                            >
+                                                {conversation.lastMessage?.messageText || 'No messages yet'}
+                                            </Typography>
+                                        </Box>
                                         {conversation.lastMessage?.sentAt && (
                                             <Typography variant="caption" color="text.secondary">
                                                 {format(parseISO(conversation.lastMessage.sentAt), 'MMM d, HH:mm')}
