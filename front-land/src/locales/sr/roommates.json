@@ -36,6 +36,10 @@
   "apartmentType": "Tip stana",
   "lookingFor": "Šta tražim",
   "availability": "Dostupnost",
-  "budgetIncludes": "Budžet uključuje"
+  "budgetIncludes": "Budžet uključuje",
+  "editProfile": "Izmeni profil cimera",
+  "deleteMyCard": "Obriši moju karticu",
+  "deleteCardConfirm": "Da li ste sigurni da želite da obrišete vašu karticu cimera? Ova akcija se ne može poništiti.",
+  "noPicture": "Profilna slika je obavezna za kreiranje kartice cimera. Dodajte sliku na stranici profila."
 }
 

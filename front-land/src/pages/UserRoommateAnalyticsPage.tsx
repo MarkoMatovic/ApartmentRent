@@ -59,17 +59,6 @@ const PersonalAnalyticsPage: React.FC = () => {
         retry: false,
     });
 
-    // Debug logging
-    React.useEffect(() => {
-        console.log('📊 PERSONAL ANALYTICS DATA:', {
-            viewedApartments,
-            myApartmentViews,
-            messagesSent,
-            viewedError,
-            landlordError,
-            messagesError,
-        });
-    }, [viewedApartments, myApartmentViews, messagesSent, viewedError, landlordError, messagesError]);
 
     if (!user) {
         return (

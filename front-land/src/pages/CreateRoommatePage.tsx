@@ -133,6 +133,25 @@ const CreateRoommatePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (
+      formData.budgetMin !== undefined &&
+      formData.budgetMax !== undefined &&
+      formData.budgetMin > formData.budgetMax
+    ) {
+      setError(t('roommates:budgetMinMaxError', { defaultValue: 'Minimum budget cannot be greater than maximum budget.' }));
+      return;
+    }
+
+    if (
+      formData.minimumStayMonths !== undefined &&
+      formData.maximumStayMonths !== undefined &&
+      formData.minimumStayMonths > formData.maximumStayMonths
+    ) {
+      setError(t('roommates:stayMonthsError', { defaultValue: 'Minimum stay months cannot be greater than maximum stay months.' }));
+      return;
+    }
+
     createMutation.mutate(formData);
   };
 
@@ -175,6 +194,15 @@ const CreateRoommatePage: React.FC = () => {
               {t('roommates:editProfileInfo', { 
                 defaultValue: 'You already have a roommate profile. You can update it here. Only one profile per user is allowed.' 
               })}
+            </Alert>
+          )}
+
+          {!user?.profilePicture && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {t('roommates:noPicture')}{' '}
+              <a href="/profile" style={{ color: 'inherit', fontWeight: 600 }}>
+                {t('common:profile')}
+              </a>
             </Alert>
           )}
 
@@ -357,7 +385,7 @@ const CreateRoommatePage: React.FC = () => {
                 variant="contained"
                 color="secondary"
                 size="large"
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || !user?.profilePicture}
               >
                 {createMutation.isPending ? t('loading') : t('common:save')}
               </Button>

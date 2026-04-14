@@ -36,6 +36,10 @@
   "apartmentType": "Wohnungstyp",
   "lookingFor": "Was ich suche",
   "availability": "Verfügbarkeit",
-  "budgetIncludes": "Budget beinhaltet"
+  "budgetIncludes": "Budget beinhaltet",
+  "editProfile": "Mitbewohner-Profil bearbeiten",
+  "deleteMyCard": "Meine Karte löschen",
+  "deleteCardConfirm": "Sind Sie sicher, dass Sie Ihre Mitbewohner-Karte löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+  "noPicture": "Ein Profilbild ist erforderlich, um eine Mitbewohner-Karte zu erstellen. Bitte fügen Sie eines auf Ihrer Profilseite hinzu."
 }
 

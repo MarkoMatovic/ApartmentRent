@@ -8,9 +8,10 @@ import {
   Pets as PetsIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { Roommate } from '../../shared/types/roommate';
 
 interface RoommateCardProps {
-  roommate: any;
+  roommate: Roommate;
   matchScore?: number;
 }
 

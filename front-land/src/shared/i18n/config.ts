@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import srCommon from '../../locales/sr/common.json';
+import srProfile from '../../locales/sr/profile.json';
 import srApartments from '../../locales/sr/apartments.json';
 import srAuth from '../../locales/sr/auth.json';
 import srRoommates from '../../locales/sr/roommates.json';
@@ -22,6 +23,7 @@ import srNotifications from '../../locales/sr/notifications.json';
 import srAppointments from '../../locales/sr/appointments.json';
 
 import enCommon from '../../locales/en/common.json';
+import enProfile from '../../locales/en/profile.json';
 import enApartments from '../../locales/en/apartments.json';
 import enAuth from '../../locales/en/auth.json';
 import enRoommates from '../../locales/en/roommates.json';
@@ -41,6 +43,7 @@ import enNotifications from '../../locales/en/notifications.json';
 import enAppointments from '../../locales/en/appointments.json';
 
 import ruCommon from '../../locales/ru/common.json';
+import ruProfile from '../../locales/ru/profile.json';
 import ruApartments from '../../locales/ru/apartments.json';
 import ruAuth from '../../locales/ru/auth.json';
 import ruRoommates from '../../locales/ru/roommates.json';
@@ -60,6 +63,7 @@ import ruNotifications from '../../locales/ru/notifications.json';
 import ruAppointments from '../../locales/ru/appointments.json';
 
 import deCommon from '../../locales/de/common.json';
+import deProfile from '../../locales/de/profile.json';
 import deApartments from '../../locales/de/apartments.json';
 import deAuth from '../../locales/de/auth.json';
 import deRoommates from '../../locales/de/roommates.json';
@@ -85,6 +89,7 @@ i18n
     resources: {
       sr: {
         common: srCommon,
+        profile: srProfile,
         apartments: srApartments,
         auth: srAuth,
         roommates: srRoommates,
@@ -105,6 +110,7 @@ i18n
       },
       en: {
         common: enCommon,
+        profile: enProfile,
         apartments: enApartments,
         auth: enAuth,
         roommates: enRoommates,
@@ -125,6 +131,7 @@ i18n
       },
       ru: {
         common: ruCommon,
+        profile: ruProfile,
         apartments: ruApartments,
         auth: ruAuth,
         roommates: ruRoommates,
@@ -145,6 +152,7 @@ i18n
       },
       de: {
         common: deCommon,
+        profile: deProfile,
         apartments: deApartments,
         auth: deAuth,
         roommates: deRoommates,
@@ -166,7 +174,7 @@ i18n
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications'],
+    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications'],
     interpolation: {
       escapeValue: false,
     },

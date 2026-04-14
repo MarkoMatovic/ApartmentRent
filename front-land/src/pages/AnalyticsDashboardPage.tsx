@@ -41,21 +41,14 @@ const AnalyticsDashboardPage: React.FC = () => {
     const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery({
         queryKey: ['analytics-summary', dateRange.from, dateRange.to],
         queryFn: async () => {
-            console.log('📊 Fetching analytics summary...', { from: dateRange.from, to: dateRange.to });
             const result = await analyticsApi.getSummary(dateRange.from, dateRange.to);
-            console.log('📊 Summary result:', result);
             return result;
         },
     });
 
     const { data: topApartments, isLoading: apartmentsLoading } = useQuery({
         queryKey: ['top-apartments', dateRange.from, dateRange.to],
-        queryFn: async () => {
-            console.log('🏠 Fetching top apartments...');
-            const result = await analyticsApi.getTopApartments(10, dateRange.from, dateRange.to);
-            console.log('🏠 Top apartments result:', result);
-            return result;
-        },
+        queryFn: () => analyticsApi.getTopApartments(10, dateRange.from, dateRange.to),
     });
 
     const { data: topRoommates, isLoading: roommatesLoading } = useQuery({

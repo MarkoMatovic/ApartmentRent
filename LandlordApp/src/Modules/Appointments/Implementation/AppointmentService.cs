@@ -5,6 +5,7 @@ using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Security.Claims;
 
 namespace Lander.src.Modules.Appointments.Implementation
@@ -84,39 +85,48 @@ namespace Lander.src.Modules.Appointments.Implementation
             }
 
             // Check if appointment time is in the future
-            if (dto.AppointmentDate <= DateTime.Now)
+            if (dto.AppointmentDate <= DateTime.UtcNow)
             {
                 throw new ArgumentException("Appointment date must be in the future");
             }
 
-            // Check for conflicts
-            var hasConflict = await _context.Appointments
-                .AnyAsync(a => a.ApartmentId == dto.ApartmentId &&
-                              a.Status != AppointmentStatus.Cancelled &&
-                              a.Status != AppointmentStatus.Rejected &&
-                              a.AppointmentDate == dto.AppointmentDate);
-
-            if (hasConflict)
+            // Check for conflicts and insert atomically to prevent double-booking race condition
+            var transaction = await _context.BeginTransactionAsync(IsolationLevel.Serializable);
+            Appointment appointment;
+            try
             {
-                throw new InvalidOperationException("This time slot is already booked");
+                var hasConflict = await _context.Appointments
+                    .AnyAsync(a => a.ApartmentId == dto.ApartmentId &&
+                                  a.Status != AppointmentStatus.Cancelled &&
+                                  a.Status != AppointmentStatus.Rejected &&
+                                  a.AppointmentDate == dto.AppointmentDate);
+
+                if (hasConflict)
+                    throw new InvalidOperationException("This time slot is already booked");
+
+                appointment = new Appointment
+                {
+                    AppointmentGuid = Guid.NewGuid(),
+                    ApartmentId = dto.ApartmentId,
+                    TenantId = tenantId,
+                    LandlordId = apartment.LandlordId.Value,
+                    AppointmentDate = dto.AppointmentDate,
+                    Duration = TimeSpan.FromMinutes(30),
+                    Status = AppointmentStatus.Pending,
+                    TenantNotes = dto.TenantNotes,
+                    CreatedByGuid = tenantGuid,
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                _context.Appointments.Add(appointment);
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
             }
-
-            var appointment = new Appointment
+            catch
             {
-                AppointmentGuid = Guid.NewGuid(),
-                ApartmentId = dto.ApartmentId,
-                TenantId = tenantId,
-                LandlordId = apartment.LandlordId.Value,
-                AppointmentDate = dto.AppointmentDate,
-                Duration = TimeSpan.FromMinutes(30),
-                Status = AppointmentStatus.Pending,
-                TenantNotes = dto.TenantNotes,
-                CreatedByGuid = tenantGuid,
-                CreatedDate = DateTime.UtcNow
-            };
-
-            _context.Appointments.Add(appointment);
-            await _context.SaveEntitiesAsync();
+                _context.RollBackTransaction();
+                throw;
+            }
 
             // Get tenant and landlord info for email
             var tenant = await _usersContext.Users.FindAsync(tenantId);
@@ -230,7 +240,7 @@ namespace Lander.src.Modules.Appointments.Implementation
                     .Select(a => a.AppointmentDate)
                     .ToListAsync();
 
-                var now = DateTime.Now;
+                var now = DateTime.UtcNow;
                 var today = now.Date;
 
                 foreach (var (winStart, winEnd) in availabilityWindows)
@@ -239,7 +249,7 @@ namespace Lander.src.Modules.Appointments.Implementation
                     while (currentTime.Add(TimeSpan.FromMinutes(slotDuration)) <= winEnd)
                     {
                         var slotTime = new DateTime(date.Year, date.Month, date.Day,
-                            currentTime.Hours, currentTime.Minutes, 0, DateTimeKind.Local);
+                            currentTime.Hours, currentTime.Minutes, 0, DateTimeKind.Utc);
 
                         // Skip past slots when date is today
                         if (date.Date == today && slotTime <= now)
