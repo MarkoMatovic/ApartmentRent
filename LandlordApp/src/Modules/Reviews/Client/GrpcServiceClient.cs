@@ -1,7 +1,7 @@
 using Grpc.Net.Client;
 using Lander.src.Modules.Reviews.proto;
 namespace Lander.src.Modules.Reviews.Client;
-public class GrpcServiceClient
+public class GrpcServiceClient : IGrpcServiceClient
 {
     private readonly GrpcChannel _channel;
     private readonly ReviewFavoriteGrpcService.ReviewFavoriteGrpcServiceClient _client;

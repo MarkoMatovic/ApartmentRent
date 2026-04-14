@@ -3,6 +3,7 @@ import { AuthProvider } from './shared/context/AuthContext';
 import { ThemeProvider } from './shared/context/ThemeContext';
 import { NotificationProvider } from './shared/context/NotificationContext';
 import Layout from './components/Layout/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import ApartmentListPage from './pages/ApartmentListPage';
@@ -36,15 +37,17 @@ import ReportsPage from './pages/ReportsPage';
 import { SavedSearchesPage } from './pages/SavedSearches';
 import { SearchRequestsPage } from './pages/SearchRequests';
 import { PricePredictorPage } from './pages/PricePredictor';
+import { AdminRoute } from './shared/components/AdminRoute';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <Router>
-            <ScrollToTop />
-            <Layout>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <Router>
+              <ScrollToTop />
+              <Layout>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/apartments" element={<ApartmentListPage />} />
@@ -62,8 +65,8 @@ function App() {
                 <Route path="/roommates/create" element={<CreateRoommatePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-apartments" element={<MyApartmentsPage />} />
-                <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
-                <Route path="/admin/reports" element={<ReportsPage />} />
+                <Route path="/admin/analytics" element={<AdminRoute><AnalyticsDashboardPage /></AdminRoute>} />
+                <Route path="/admin/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/subscription" element={<SubscriptionPage />} />
@@ -80,11 +83,12 @@ function App() {
                 <Route path="/price-predictor" element={<PricePredictorPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </Layout>
-          </Router>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+              </Layout>
+            </Router>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

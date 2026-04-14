@@ -11,7 +11,7 @@ namespace Lander.src.Modules.Users.Infrastructure.Repository
         public IUnitOfWork UnitOfWork => _context;
         public Role Add(Role entity)
         {
-            throw new NotImplementedException();
+            return _context.Roles.Add(entity).Entity;
         }
         public async Task<Role?> GetRoleById(int RoleId)
         {

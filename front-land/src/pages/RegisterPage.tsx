@@ -37,13 +37,28 @@ const RegisterPage: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError(t('passwordsDoNotMatch'));
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setError(t('nameRequired'));
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError(t('invalidEmail'));
+      return;
+    }
+
+    if (formData.phoneNumber && !/^\+?[\d\s\-()]{6,20}$/.test(formData.phoneNumber)) {
+      setError(t('invalidPhone'));
       return;
     }
 
     if (formData.password.length < 8) {
       setError(t('passwordRequirements'));
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError(t('passwordsDoNotMatch'));
       return;
     }
 

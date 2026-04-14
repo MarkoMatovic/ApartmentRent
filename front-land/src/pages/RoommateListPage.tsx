@@ -47,6 +47,13 @@ const RoommateListPage: React.FC = () => {
     queryFn: () => roommatesApi.getAll(filters),
   });
 
+  const { data: myRoommateCard } = useQuery({
+    queryKey: ['roommate', user?.userId],
+    queryFn: () => roommatesApi.getByUserId(user!.userId),
+    enabled: isAuthenticated && !!user?.userId,
+    retry: false,
+  });
+
   // Fetch match scores if user is authenticated and has a roommate profile
   const { data: matchScores, isLoading: matchesLoading } = useQuery({
     queryKey: ['roommate-matches', user?.userId],
@@ -86,10 +93,10 @@ const RoommateListPage: React.FC = () => {
           <Button
             variant="contained"
             color="secondary"
-            startIcon={<AddIcon />}
+            startIcon={myRoommateCard ? undefined : <AddIcon />}
             onClick={() => navigate('/roommates/create')}
           >
-            {t('roommates:createProfile')}
+            {myRoommateCard ? t('roommates:editProfile') : t('roommates:createProfile')}
           </Button>
         )}
       </Box>

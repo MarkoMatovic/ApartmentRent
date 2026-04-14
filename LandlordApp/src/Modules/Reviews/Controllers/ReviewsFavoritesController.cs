@@ -10,12 +10,20 @@ namespace Lander.src.Modules.Reviews.Controllers
     [ApiController]
     public class ReviewsFavoritesController : ControllerBase
     {
-        private readonly GrpcServiceClient _grpcClient;
-        public ReviewsFavoritesController(IConfiguration configuration)
+        private readonly IGrpcServiceClient _grpcClient;
+
+        // Primarni konstruktor za DI (prima interfejs — testabilan)
+        public ReviewsFavoritesController(IGrpcServiceClient grpcClient)
         {
-            string grpcServerUrl = configuration["GrpcServerUrl"];
-            _grpcClient = new GrpcServiceClient(grpcServerUrl);
+            _grpcClient = grpcClient;
         }
+
+        // Sekundarni konstruktor za backward-compatibility sa IConfiguration
+        public ReviewsFavoritesController(IConfiguration configuration)
+            : this(new GrpcServiceClient(configuration["GrpcServerUrl"] ?? "http://localhost:5001"))
+        {
+        }
+
         [HttpPost(ApiActionsV1.CreateFavorite, Name = nameof(ApiActionsV1.CreateFavorite))]
         public async Task<IActionResult> CreateFavorite([FromBody] CreateFavoriteRequest request)
         {

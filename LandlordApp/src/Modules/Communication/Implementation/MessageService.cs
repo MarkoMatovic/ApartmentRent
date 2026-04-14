@@ -234,6 +234,12 @@ public class MessageService : IMessageService
 
         return result.OrderByDescending(c => c.LastMessage?.SentAt).ToList();
     }
+    public async Task<bool> IsMessageRecipientAsync(int messageId, int userId)
+    {
+        return await _context.Messages
+            .AnyAsync(m => m.MessageId == messageId && m.ReceiverId == userId);
+    }
+
     public async Task MarkAsReadAsync(int messageId)
     {
         var message = await _context.Messages.FindAsync(messageId);
