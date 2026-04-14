@@ -185,7 +185,6 @@ const HomePage: React.FC = () => {
                     color="secondary"
                     size="large"
                     onClick={handleSearch}
-                    startIcon={<SearchIcon />}
                     sx={{
                       height: { xs: '48px', md: '56px' },
                       fontWeight: 600,

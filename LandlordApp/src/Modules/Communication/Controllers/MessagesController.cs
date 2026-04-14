@@ -100,10 +100,15 @@ public class MessagesController : ControllerBase
         return Ok(message);
     }
 
-    /// <summary>PUT mark a message as read.</summary>
+    /// <summary>PUT mark a message as read. Only the recipient of the message may mark it as read.</summary>
     [HttpPut(ApiActionsV1.MarkMessageAsRead, Name = nameof(ApiActionsV1.MarkMessageAsRead))]
     public async Task<IActionResult> MarkAsRead([FromRoute] int messageId)
     {
+        var currentUserId = GetCurrentUserId();
+        var isRecipient = await _messageService.IsMessageRecipientAsync(messageId, currentUserId);
+        if (!isRecipient)
+            return Forbid();
+
         await _messageService.MarkAsReadAsync(messageId);
         return Ok();
     }

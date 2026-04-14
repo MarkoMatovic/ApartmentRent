@@ -11,12 +11,20 @@ import {
   InputLabel,
   Skeleton,
   Button,
+  Chip,
   Drawer,
   IconButton,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import { FilterList as FilterListIcon, Close as CloseIcon } from '@mui/icons-material';
+import {
+  FilterList as FilterListIcon,
+  Close as CloseIcon,
+  FlashOn as FlashOnIcon,
+  Chair as ChairIcon,
+  Pets as PetsIcon,
+  LocalParking as LocalParkingIcon,
+} from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -220,37 +228,38 @@ const ApartmentListPage: React.FC = () => {
             />
 
             <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {[
-                { key: 'isImmediatelyAvailable', label: t('apartments:immediatelyAvailable'), type: 'boolean' },
-                { key: 'isFurnished', label: t('apartments:furnished'), type: 'select' },
-                { key: 'isPetFriendly', label: t('apartments:petFriendly'), type: 'select' },
-                { key: 'hasParking', label: t('apartments:parking'), type: 'select' },
-              ].map((filter) => {
-                if (filter.type === 'boolean') {
-                  return (
-                    <Button
-                      key={filter.key}
-                      variant={filters.isImmediatelyAvailable ? "contained" : "outlined"}
-                      size="small"
-                      onClick={() => handleFilterChange('isImmediatelyAvailable', !filters.isImmediatelyAvailable)}
-                      sx={{ borderRadius: 4, minWidth: 'auto', px: 1.5, fontSize: '0.75rem' }}
-                    >
-                      {filter.label}
-                    </Button>
-                  );
-                }
-                return (
-                  <Button
-                    key={filter.key}
-                    variant={(filters as any)[filter.key] === 'true' ? "contained" : "outlined"}
-                    size="small"
-                    onClick={() => handleFilterChange(filter.key, (filters as any)[filter.key] === 'true' ? '' : 'true')}
-                    sx={{ borderRadius: 4, minWidth: 'auto', px: 1.5, fontSize: '0.75rem' }}
-                  >
-                    {filter.label}
-                  </Button>
-                );
-              })}
+              <Chip
+                icon={<FlashOnIcon />}
+                label={t('apartments:immediatelyAvailable')}
+                onClick={() => handleFilterChange('isImmediatelyAvailable', !filters.isImmediatelyAvailable)}
+                color={filters.isImmediatelyAvailable ? 'primary' : 'default'}
+                variant={filters.isImmediatelyAvailable ? 'filled' : 'outlined'}
+                sx={{ borderRadius: 4 }}
+              />
+              <Chip
+                icon={<ChairIcon />}
+                label={t('apartments:furnished')}
+                onClick={() => handleFilterChange('isFurnished', filters.isFurnished === 'true' ? '' : 'true')}
+                color={filters.isFurnished === 'true' ? 'primary' : 'default'}
+                variant={filters.isFurnished === 'true' ? 'filled' : 'outlined'}
+                sx={{ borderRadius: 4 }}
+              />
+              <Chip
+                icon={<PetsIcon />}
+                label={t('apartments:petFriendly')}
+                onClick={() => handleFilterChange('isPetFriendly', filters.isPetFriendly === 'true' ? '' : 'true')}
+                color={filters.isPetFriendly === 'true' ? 'primary' : 'default'}
+                variant={filters.isPetFriendly === 'true' ? 'filled' : 'outlined'}
+                sx={{ borderRadius: 4 }}
+              />
+              <Chip
+                icon={<LocalParkingIcon />}
+                label={t('apartments:parking')}
+                onClick={() => handleFilterChange('hasParking', filters.hasParking === 'true' ? '' : 'true')}
+                color={filters.hasParking === 'true' ? 'primary' : 'default'}
+                variant={filters.hasParking === 'true' ? 'filled' : 'outlined'}
+                sx={{ borderRadius: 4 }}
+              />
             </Box>
           </Box>
         </Grid>

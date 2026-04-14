@@ -8,6 +8,7 @@ public interface IMessageService
     Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50);
     Task<List<ConversationDto>> GetUserConversationsAsync(int userId);
     Task MarkAsReadAsync(int messageId);
+    Task<bool> IsMessageRecipientAsync(int messageId, int userId);
     Task<int> GetUnreadCountAsync(int userId);
     Task<MessageDto?> GetMessageByIdAsync(int messageId);
     

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Stack } from '@mui/material';
+import { Alert, Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Stack } from '@mui/material';
 import { ApartmentApplication } from '../shared/types/application';
 import { applicationsApi } from '../shared/api/applicationsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 const LandlordApplicationsPage: React.FC = () => {
     const { t } = useTranslation('common');
     const [applications, setApplications] = useState<ApartmentApplication[]>([]);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [updatingId, setUpdatingId] = useState<number | null>(null);
     const { addNotification } = useNotifications();
 
     useEffect(() => {
@@ -17,14 +19,17 @@ const LandlordApplicationsPage: React.FC = () => {
 
     const loadApplications = async () => {
         try {
+            setLoadError(null);
             const data = await applicationsApi.getLandlordApplications();
             setApplications(data);
         } catch (error) {
             console.error('Failed to load applications', error);
+            setLoadError(t('errorLoadingApplications', { defaultValue: 'Failed to load applications. Please try again.' }));
         }
     };
 
     const handleStatusUpdate = async (id: number, status: string) => {
+        setUpdatingId(id);
         try {
             await applicationsApi.updateStatus(id, { status });
             addNotification({
@@ -39,6 +44,8 @@ const LandlordApplicationsPage: React.FC = () => {
                 message: 'Failed to update status',
                 type: 'error'
             });
+        } finally {
+            setUpdatingId(null);
         }
     };
 
@@ -53,6 +60,9 @@ const LandlordApplicationsPage: React.FC = () => {
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h4" gutterBottom>{t('receivedApplications')}</Typography>
+            {loadError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>
+            )}
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
@@ -83,6 +93,7 @@ const LandlordApplicationsPage: React.FC = () => {
                                                 variant="contained"
                                                 color="success"
                                                 size="small"
+                                                disabled={updatingId !== null}
                                                 onClick={() => handleStatusUpdate(app.applicationId, 'Approved')}
                                             >
                                                 {t('approve')}
@@ -91,6 +102,7 @@ const LandlordApplicationsPage: React.FC = () => {
                                                 variant="outlined"
                                                 color="error"
                                                 size="small"
+                                                disabled={updatingId !== null}
                                                 onClick={() => handleStatusUpdate(app.applicationId, 'Rejected')}
                                             >
                                                 {t('reject')}

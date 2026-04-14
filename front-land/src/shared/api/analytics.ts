@@ -38,42 +38,16 @@ export const analyticsApi = {
         const params = new URLSearchParams();
         if (from) params.append('from', from);
         if (to) params.append('to', to);
-        const url = `/api/v1/analytics/summary?${params}`;
-        console.log('🔍 API Call:', url);
-        try {
-            const response = await apiClient.get(url);
-            console.log('✅ API Response:', response.data);
-            return response.data;
-        } catch (error: any) {
-            console.error('❌ API Error:', {
-                url,
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data,
-                message: error.message
-            });
-            throw error;
-        }
+        const response = await apiClient.get(`/api/v1/analytics/summary?${params}`);
+        return response.data;
     },
 
     getTopApartments: async (count: number = 10, from?: string, to?: string): Promise<TopEntity[]> => {
         const params = new URLSearchParams({ count: count.toString() });
         if (from) params.append('from', from);
         if (to) params.append('to', to);
-        const url = `/api/v1/analytics/top-apartments?${params}`;
-        console.log('🔍 API Call:', url);
-        try {
-            const response = await apiClient.get(url);
-            console.log('✅ API Response:', response.data);
-            return response.data;
-        } catch (error: any) {
-            console.error('❌ API Error:', {
-                url,
-                status: error.response?.status,
-                data: error.response?.data
-            });
-            throw error;
-        }
+        const response = await apiClient.get(`/api/v1/analytics/top-apartments?${params}`);
+        return response.data;
     },
 
     getTopRoommates: async (count: number = 10, from?: string, to?: string): Promise<TopEntity[]> => {
@@ -204,38 +178,16 @@ export const analyticsApi = {
         const params = new URLSearchParams({ userId: userId.toString(), count: count.toString() });
         if (from) params.append('from', from);
         if (to) params.append('to', to);
-        const url = `/api/v1/analytics/user-top-apartments?${params}`;
-        console.log('🔍 USER TOP APARTMENTS - URL:', url);
-        try {
-            const response = await apiClient.get(url);
-            console.log('✅ USER TOP APARTMENTS - Response:', response.data);
-            return response.data;
-        } catch (error: any) {
-            console.error('❌ USER TOP APARTMENTS - Error:', error);
-            throw error;
-        }
+        const response = await apiClient.get(`/api/v1/analytics/user-top-apartments?${params}`);
+        return response.data;
     },
 
     getUserCompleteAnalytics: async (userId: number, from?: string, to?: string): Promise<AnalyticsSummary> => {
         const params = new URLSearchParams({ userId: userId.toString() });
         if (from) params.append('from', from);
         if (to) params.append('to', to);
-        const url = `/api/v1/analytics/user-complete-analytics?${params}`;
-        console.log('🔍 USER COMPLETE ANALYTICS - URL:', url);
-        console.log('🔍 USER COMPLETE ANALYTICS - Params:', { userId, from, to });
-        try {
-            const response = await apiClient.get(url);
-            console.log('✅ USER COMPLETE ANALYTICS - Response:', response.data);
-            return response.data;
-        } catch (error: any) {
-            console.error('❌ USER COMPLETE ANALYTICS - Error:', {
-                url,
-                status: error.response?.status,
-                data: error.response?.data,
-                message: error.message
-            });
-            throw error;
-        }
+        const response = await apiClient.get(`/api/v1/analytics/user-complete-analytics?${params}`);
+        return response.data;
     },
 };
 
