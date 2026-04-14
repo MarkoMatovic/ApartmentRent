@@ -22,6 +22,13 @@ public class SavedSearchesController : ControllerBase
     [Authorize]
     public async Task<ActionResult<IEnumerable<SavedSearchDto>>> GetSavedSearchesByUserId([FromQuery] int userId)
     {
+        var userGuid = User.FindFirstValue("sub");
+        if (string.IsNullOrEmpty(userGuid))
+            return Unauthorized();
+        var currentUser = await _userInterface.GetUserByGuidAsync(Guid.Parse(userGuid));
+        if (currentUser == null || currentUser.UserId != userId)
+            return Forbid();
+
         var savedSearches = await _savedSearchService.GetSavedSearchesByUserIdAsync(userId);
         return Ok(savedSearches);
     }

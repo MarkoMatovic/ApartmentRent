@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
+import { Alert, Container, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
 import { ApartmentApplication } from '../shared/types/application';
 import { applicationsApi } from '../shared/api/applicationsApi';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 const TenantApplicationsPage: React.FC = () => {
     const { t } = useTranslation('common');
     const [applications, setApplications] = useState<ApartmentApplication[]>([]);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -16,10 +17,12 @@ const TenantApplicationsPage: React.FC = () => {
 
     const loadApplications = async () => {
         try {
+            setLoadError(null);
             const data = await applicationsApi.getTenantApplications();
             setApplications(data);
         } catch (error) {
             console.error('Failed to load applications', error);
+            setLoadError(t('errorLoadingApplications', { defaultValue: 'Failed to load applications. Please try again.' }));
         }
     };
 
@@ -34,6 +37,9 @@ const TenantApplicationsPage: React.FC = () => {
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h4" gutterBottom>{t('myApplications')}</Typography>
+            {loadError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>
+            )}
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>

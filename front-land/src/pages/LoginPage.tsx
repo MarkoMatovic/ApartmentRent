@@ -25,6 +25,16 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError(t('invalidEmail'));
+      return;
+    }
+    if (password.length < 1) {
+      setError(t('passwordRequired'));
+      return;
+    }
+
     setLoading(true);
 
     try {

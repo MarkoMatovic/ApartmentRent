@@ -31,7 +31,7 @@ import { authApi } from '../shared/api/auth';
 import { apiClient } from '../shared/api/client';
 
 const ProfilePage: React.FC = () => {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'profile']);
   const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -114,7 +114,7 @@ const ProfilePage: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('Image size must be less than 5MB');
+        setError(t('profile:imageSizeError'));
         return;
       }
 
@@ -253,14 +253,14 @@ const ProfilePage: React.FC = () => {
 
       <Paper sx={{ p: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6">Personal Information</Typography>
+          <Typography variant="h6">{t('profile:personalInfo')}</Typography>
           {!isEditing ? (
             <Button
               startIcon={<EditIcon />}
               variant="outlined"
               onClick={() => setIsEditing(true)}
             >
-              Edit Profile
+              {t('profile:editProfile')}
             </Button>
           ) : (
             <Box>
@@ -271,7 +271,7 @@ const ProfilePage: React.FC = () => {
                 disabled={isUpdating}
                 sx={{ mr: 1 }}
               >
-                Save
+                {t('common:save')}
               </Button>
               <Button
                 startIcon={<CancelIcon />}
@@ -290,7 +290,7 @@ const ProfilePage: React.FC = () => {
                 }}
                 disabled={isUpdating}
               >
-                Cancel
+                {t('common:cancel')}
               </Button>
             </Box>
           )}
@@ -329,7 +329,7 @@ const ProfilePage: React.FC = () => {
               )}
             </Box>
             <Typography variant="body2" color="text.secondary">
-              {isEditing ? 'Click camera to change photo' : ''}
+              {isEditing ? t('profile:clickToChangePhoto') : ''}
             </Typography>
           </Grid>
 
@@ -338,7 +338,7 @@ const ProfilePage: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="First Name"
+                  label={t('profile:firstName')}
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleInputChange}
@@ -348,7 +348,7 @@ const ProfilePage: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Last Name"
+                  label={t('profile:lastName')}
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleInputChange}
@@ -358,7 +358,7 @@ const ProfilePage: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label={t('profile:email')}
                   name="email"
                   type="email"
                   value={formData.email}
@@ -369,7 +369,7 @@ const ProfilePage: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Phone Number"
+                  label={t('profile:phoneNumber')}
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleInputChange}
@@ -379,7 +379,7 @@ const ProfilePage: React.FC = () => {
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Date of Birth"
+                  label={t('profile:dateOfBirth')}
                   name="dateOfBirth"
                   type="date"
                   value={formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString().split('T')[0] : ''}
@@ -397,13 +397,13 @@ const ProfilePage: React.FC = () => {
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Privacy & Data</Typography>
+            <Typography variant="h6">{t('profile:privacyData')}</Typography>
             <Button
               variant="outlined"
               startIcon={<DownloadIcon />}
               onClick={handleExportData}
             >
-              Export My Data
+              {t('profile:exportData')}
             </Button>
           </Box>
           <Grid container spacing={2}>
@@ -416,7 +416,7 @@ const ProfilePage: React.FC = () => {
                     name="analyticsConsent"
                   />
                 }
-                label="Allow Analytics (Help us improve the app)"
+                label={t('profile:allowAnalytics')}
               />
             </Grid>
             <Grid item xs={12}>
@@ -428,7 +428,7 @@ const ProfilePage: React.FC = () => {
                     name="chatHistoryConsent"
                   />
                 }
-                label="Save Chat History (Keep messages for 30 days)"
+                label={t('profile:saveChatHistory')}
               />
             </Grid>
             <Grid item xs={12}>
@@ -440,7 +440,7 @@ const ProfilePage: React.FC = () => {
                     name="profileVisibility"
                   />
                 }
-                label="Profile Visibility (Allow others to find you)"
+                label={t('profile:profileVisibility')}
               />
             </Grid>
             <Grid item xs={12}>
@@ -464,7 +464,7 @@ const ProfilePage: React.FC = () => {
                         <VisibilityOffIcon fontSize="small" sx={{ color: privacySettings.isIncognito ? 'text.primary' : 'text.disabled' }} />
                         <Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <span>Incognito Mode</span>
+                            <span>{t('profile:incognitoMode')}</span>
                             {!(user?.hasPersonalAnalytics || user?.hasLandlordAnalytics) && (
                               <Box component="span" sx={{ fontSize: 11, color: 'warning.main', fontWeight: 600, ml: 0.5 }}>
                                 PREMIUM
@@ -472,7 +472,7 @@ const ProfilePage: React.FC = () => {
                             )}
                           </Box>
                           <Box component="span" sx={{ fontSize: 12, color: 'text.secondary', display: 'block' }}>
-                            Browse listings without appearing in landlord's view analytics
+                            {t('profile:incognitoDesc')}
                           </Box>
                         </Box>
                       </Box>
@@ -488,7 +488,7 @@ const ProfilePage: React.FC = () => {
                 disabled={privacyUpdating}
                 startIcon={<SaveIcon />}
               >
-                {privacyUpdating ? 'Saving...' : 'Save Privacy Settings'}
+                {privacyUpdating ? t('common:loading') : t('profile:savePrivacy')}
               </Button>
             </Grid>
           </Grid>
@@ -496,51 +496,51 @@ const ProfilePage: React.FC = () => {
 
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" gutterBottom color="error">Danger Zone</Typography>
+          <Typography variant="h6" gutterBottom color="error">{t('profile:dangerZone')}</Typography>
           <Button
             variant="outlined"
             color="error"
             onClick={() => setDeactivateDialogOpen(true)}
             sx={{ mr: 2 }}
           >
-            Deactivate Account
+            {t('profile:deactivateAccount')}
           </Button>
           <Button
             variant="contained"
             color="error"
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete Account (Permanent)
+            {t('profile:deleteAccount')}
           </Button>
         </Box>
       </Paper>
 
       <Dialog open={deactivateDialogOpen} onClose={() => setDeactivateDialogOpen(false)}>
-        <DialogTitle>Deactivate Account</DialogTitle>
+        <DialogTitle>{t('profile:deactivateConfirmTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to deactivate your account? You won't be able to log in until you contact support to reactivate it.
+            {t('profile:deactivateConfirmMsg')}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeactivateDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeactivateDialogOpen(false)}>{t('common:cancel')}</Button>
           <Button onClick={handleDeactivateAccount} color="error" variant="contained" disabled={isUpdating}>
-            {isUpdating ? <CircularProgress size={24} /> : 'Deactivate'}
+            {isUpdating ? <CircularProgress size={24} /> : t('profile:deactivate')}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Account</DialogTitle>
+        <DialogTitle>{t('profile:deleteConfirmTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to PERMANENTLY delete your account? This action cannot be undone. All your data, including apartments and roommate profiles, will be erased.
+            {t('profile:deleteConfirmMsg')}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common:cancel')}</Button>
           <Button onClick={handleDeleteAccount} color="error" variant="contained" disabled={isUpdating}>
-            {isUpdating ? <CircularProgress size={24} /> : 'DELETE FOREVER'}
+            {isUpdating ? <CircularProgress size={24} /> : t('profile:deleteForever')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,10 +1,13 @@
 using Lander.src.Modules.Appointments.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Data;
 
 namespace Lander.src.Modules.Appointments
 {
     public class AppointmentsContext : DbContext
     {
+        private IDbContextTransaction? _currentTransaction;
         public AppointmentsContext(DbContextOptions<AppointmentsContext> options) : base(options)
         {
         }
@@ -50,6 +53,40 @@ namespace Lander.src.Modules.Appointments
         {
             await base.SaveChangesAsync(cancellationToken);
             return true;
+        }
+
+        public async Task<IDbContextTransaction?> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
+        {
+            if (_currentTransaction is not null) return null;
+            _currentTransaction = await Database.BeginTransactionAsync(isolationLevel);
+            return _currentTransaction;
+        }
+
+        public async Task CommitTransactionAsync(IDbContextTransaction? transaction)
+        {
+            if (transaction == null || transaction != _currentTransaction) return;
+            try
+            {
+                await _currentTransaction.CommitAsync();
+            }
+            finally
+            {
+                _currentTransaction.Dispose();
+                _currentTransaction = null;
+            }
+        }
+
+        public void RollBackTransaction()
+        {
+            try
+            {
+                _currentTransaction?.Rollback();
+            }
+            finally
+            {
+                _currentTransaction?.Dispose();
+                _currentTransaction = null;
+            }
         }
     }
 }

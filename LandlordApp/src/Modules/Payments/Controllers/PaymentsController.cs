@@ -17,13 +17,15 @@ public class PaymentsController : ControllerBase
     private readonly IUserInterface _userService;
     private readonly IConfiguration _configuration;
     private readonly IdempotencyService _idempotencyService;
+    private readonly ILogger<PaymentsController> _logger;
 
-    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration, IdempotencyService idempotencyService)
+    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration, IdempotencyService idempotencyService, ILogger<PaymentsController> logger)
     {
         _monriService = monriService;
         _userService = userService;
         _configuration = configuration;
         _idempotencyService = idempotencyService;
+        _logger = logger;
     }
 
     [HttpGet("plans")]
@@ -89,9 +91,10 @@ public class PaymentsController : ControllerBase
         {
             return BadRequest();
         }
-        catch
+        catch (Exception ex)
         {
             // Always return 200 to Monri to prevent retries on internal errors
+            _logger.LogError(ex, "Unhandled error processing Monri payment callback.");
             return Ok();
         }
     }

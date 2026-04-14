@@ -36,6 +36,10 @@
   "apartmentType": "Apartment Type",
   "lookingFor": "What I'm looking for",
   "availability": "Availability",
-  "budgetIncludes": "Budget Includes"
+  "budgetIncludes": "Budget Includes",
+  "editProfile": "Edit Roommate Profile",
+  "deleteMyCard": "Delete My Card",
+  "deleteCardConfirm": "Are you sure you want to delete your roommate card? This action cannot be undone.",
+  "noPicture": "A profile picture is required to create a roommate card. Please add one on your profile page."
 }
 

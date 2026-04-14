@@ -20,6 +20,7 @@ public class SavedSearchService : ISavedSearchService
         var savedSearches = await _context.SavedSearches
             .Where(ss => ss.UserId == userId && ss.IsActive)
             .OrderByDescending(ss => ss.CreatedDate)
+            .AsNoTracking()
             .ToListAsync();
         return savedSearches.Select(ss => new SavedSearchDto
         {

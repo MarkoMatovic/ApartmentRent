@@ -21,9 +21,7 @@ export const messagesApi = {
     getConversations: async (): Promise<Conversation[]> => {
         try {
             const userId = getUserId();
-            console.log('Fetching conversations for userId:', userId);
             const response = await apiClient.get(`/api/v1/messages/user/${userId}`);
-            console.log('Conversations response:', response.data);
             return response.data;
         } catch (error: any) {
             console.error('Error fetching conversations:', error);

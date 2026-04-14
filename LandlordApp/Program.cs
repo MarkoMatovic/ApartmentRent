@@ -36,6 +36,8 @@ using Lander.src.Notifications.Services; // .NET 10: SSE Support
 using Lander.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer; // SqlServerDbContextOptionsBuilder
+using Microsoft.EntityFrameworkCore.Infrastructure; // EnableRetryOnFailure
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -71,34 +73,47 @@ builder.Host.UseSerilog((ctx, svc, cfg) =>
 });
 
 
+static Action<SqlServerDbContextOptionsBuilder> DbResilience() =>
+    sql => sql.EnableRetryOnFailure(
+        maxRetryCount: 3,
+        maxRetryDelay: TimeSpan.FromSeconds(5),
+        errorNumbersToAdd: null);
+
 builder.Services.AddDbContext<UsersContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
 
 builder.Services.AddDbContext<ApplicationsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
 
 builder.Services.AddDbContext<ListingsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
 
 builder.Services.AddDbContext<NotificationContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<ReviewsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<CommunicationsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<RoommatesContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<SearchRequestsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<SavedSearchesContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<AnalyticsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+
 builder.Services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
 
 builder.Services.AddDbContext<Lander.src.Modules.Payments.PaymentsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), DbResilience()));
 
 
 builder.Services.AddApplicationInsightsTelemetry();
@@ -225,6 +240,7 @@ builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 builder.Services.AddScoped<IApartmentService, ApartmentService>();
+builder.Services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
 builder.Services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IRoommateService, RoommateService>();

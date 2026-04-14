@@ -14,6 +14,7 @@ using Lander.src.Modules.MachineLearning.Services; // .NET 10: Vector Search
 using Microsoft.AspNetCore.SignalR;
 using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Communication.Interfaces;
+using Lander.src.Modules.Listings.Helpers;
 namespace Lander.src.Modules.Listings.Implementation;
 public class ApartmentService : IApartmentService
 {
@@ -155,6 +156,11 @@ public class ApartmentService : IApartmentService
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
             ModifiedDate = DateTime.UtcNow
         };
+        // Serijalizacija features u JSON kolonu (NotMapped properties se ne čuvaju direktno)
+        apartment.Features = ApartmentFeaturesHelper.Serialize(
+            apartment.IsFurnished, apartment.HasBalcony, apartment.HasElevator,
+            apartment.HasParking, apartment.HasInternet, apartment.HasAirCondition,
+            apartment.IsPetFriendly, apartment.IsSmokingAllowed);
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -450,7 +456,7 @@ public class ApartmentService : IApartmentService
             SizeSquareMeters = a.SizeSquareMeters,
             ApartmentType = a.ApartmentType,
             ListingType = a.ListingType,
-            IsFurnished = false, // TODO: Map from Features JSON
+            IsFurnished = ApartmentFeaturesHelper.Deserialize(a.Features).IsFurnished,
             IsImmediatelyAvailable = a.IsImmediatelyAvailable,
             IsLookingForRoommate = a.IsLookingForRoommate,
             AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
@@ -542,7 +548,7 @@ public class ApartmentService : IApartmentService
             SizeSquareMeters = a.SizeSquareMeters,
             ApartmentType = a.ApartmentType,
             ListingType = a.ListingType,
-            IsFurnished = false, // TODO: Map from Features JSON
+            IsFurnished = ApartmentFeaturesHelper.Deserialize(a.Features).IsFurnished,
             IsImmediatelyAvailable = a.IsImmediatelyAvailable,
             IsLookingForRoommate = a.IsLookingForRoommate,
             AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
@@ -594,6 +600,7 @@ public class ApartmentService : IApartmentService
             })
             .FirstOrDefaultAsync();
 
+        var features = ApartmentFeaturesHelper.Deserialize(apartment.Features);
         return new GetApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
@@ -613,14 +620,14 @@ public class ApartmentService : IApartmentService
             SizeSquareMeters = apartment.SizeSquareMeters,
             ApartmentType = apartment.ApartmentType,
             ListingType = apartment.ListingType,
-            IsFurnished = false, // TODO: Map from Features JSON
-            HasBalcony = false,
-            HasElevator = false,
-            HasParking = false,
-            HasInternet = false,
-            HasAirCondition = false,
-            IsPetFriendly = false,
-            IsSmokingAllowed = false,
+            IsFurnished = features.IsFurnished,
+            HasBalcony = features.HasBalcony,
+            HasElevator = features.HasElevator,
+            HasParking = features.HasParking,
+            HasInternet = features.HasInternet,
+            HasAirCondition = features.HasAirCondition,
+            IsPetFriendly = features.IsPetFriendly,
+            IsSmokingAllowed = features.IsSmokingAllowed,
             DepositAmount = apartment.DepositAmount,
             MinimumStayMonths = apartment.MinimumStayMonths,
             MaximumStayMonths = apartment.MaximumStayMonths,
@@ -761,6 +768,11 @@ public class ApartmentService : IApartmentService
         if (updateDto.HasAirCondition.HasValue) apartment.HasAirCondition = updateDto.HasAirCondition.Value;
         if (updateDto.IsPetFriendly.HasValue) apartment.IsPetFriendly = updateDto.IsPetFriendly.Value;
         if (updateDto.IsSmokingAllowed.HasValue) apartment.IsSmokingAllowed = updateDto.IsSmokingAllowed.Value;
+        // Re-serijalizacija features u JSON kolonu nakon update-a
+        apartment.Features = ApartmentFeaturesHelper.Serialize(
+            apartment.IsFurnished, apartment.HasBalcony, apartment.HasElevator,
+            apartment.HasParking, apartment.HasInternet, apartment.HasAirCondition,
+            apartment.IsPetFriendly, apartment.IsSmokingAllowed);
         if (updateDto.DepositAmount.HasValue) apartment.DepositAmount = updateDto.DepositAmount.Value;
         if (updateDto.MinimumStayMonths.HasValue) apartment.MinimumStayMonths = updateDto.MinimumStayMonths.Value;
         if (updateDto.MaximumStayMonths.HasValue) apartment.MaximumStayMonths = updateDto.MaximumStayMonths.Value;

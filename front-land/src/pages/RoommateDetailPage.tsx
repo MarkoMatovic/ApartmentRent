@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   Typography,
@@ -9,23 +9,32 @@ import {
   Avatar,
   Card,
   CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roommatesApi } from '../shared/api/roommates';
 import { analyticsApi } from '../shared/api/analytics';
+import { useAuth } from '../shared/context/AuthContext';
 import {
   Person as PersonIcon,
   LocationOn as LocationIcon,
   Euro as EuroIcon,
   CalendarToday as CalendarIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 
 const RoommateDetailPage: React.FC = () => {
   const { t } = useTranslation(['common', 'roommates']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: roommate, isLoading } = useQuery({
     queryKey: ['roommate', id],
@@ -36,6 +45,15 @@ const RoommateDetailPage: React.FC = () => {
       );
     },
     enabled: !!id,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => roommatesApi.delete(roommate!.roommateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roommates'] });
+      queryClient.invalidateQueries({ queryKey: ['roommate', user?.userId] });
+      navigate('/roommates');
+    },
   });
 
   // Track roommate view when component mounts and roommate data is loaded
@@ -262,13 +280,44 @@ const RoommateDetailPage: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 size="large"
+                sx={{ mb: 2 }}
               >
                 {t('favorites')}
               </Button>
+              {user?.userId === roommate.userId && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="error"
+                  size="large"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  {t('roommates:deleteMyCard')}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>{t('roommates:deleteMyCard')}</DialogTitle>
+        <DialogContent>
+          <Typography>{t('roommates:deleteCardConfirm')}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>{t('common:cancel')}</Button>
+          <Button
+            onClick={() => deleteMutation.mutate()}
+            color="error"
+            variant="contained"
+            disabled={deleteMutation.isPending}
+          >
+            {t('common:delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
