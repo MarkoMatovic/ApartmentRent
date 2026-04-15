@@ -110,7 +110,6 @@
     <Folder Include="src\Modules\ApartmentApplications\Dtos\InputDto\" />
     <Folder Include="src\Modules\ApartmentApplications\Interfaces\" />
     <Folder Include="src\Modules\ApartmentApplications\Implementation\" />
-    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>
