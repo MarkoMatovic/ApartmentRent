@@ -2,6 +2,7 @@ using Grpc.Core;
 using Lander.Helpers;
 using Lander.src.Modules.Reviews.Client;
 using Lander.src.Modules.Reviews.proto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 namespace Lander.src.Modules.Reviews.Controllers
@@ -25,12 +26,14 @@ namespace Lander.src.Modules.Reviews.Controllers
         }
 
         [HttpPost(ApiActionsV1.CreateFavorite, Name = nameof(ApiActionsV1.CreateFavorite))]
+        [Authorize]
         public async Task<IActionResult> CreateFavorite([FromBody] CreateFavoriteRequest request)
         {
             var response = await _grpcClient.CreateFavoriteAsync(request);
             return Ok(response);
         }
         [HttpPost(ApiActionsV1.CreateReview, Name = nameof(ApiActionsV1.CreateReview))]
+        [Authorize]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest request)
         {
             var response = await _grpcClient.CreateReviewAsync(request);
@@ -49,12 +52,14 @@ namespace Lander.src.Modules.Reviews.Controllers
             return Ok(response.Reviews);
         }
         [HttpDelete(ApiActionsV1.DeleteReview, Name = nameof(ApiActionsV1.DeleteReview))]
+        [Authorize]
         public async Task<IActionResult> DeleteReview([FromRoute] int id)
         {
             var response = await _grpcClient.DeleteReviewAsync(id);
             return Ok(response);
         }
         [HttpDelete(ApiActionsV1.DeleteFavorite, Name = nameof(ApiActionsV1.DeleteFavorite))]
+        [Authorize]
         public async Task<IActionResult> DeleteFavorite([FromRoute] int id)
         {
             var response = await _grpcClient.DeleteFavoriteAsync(id);

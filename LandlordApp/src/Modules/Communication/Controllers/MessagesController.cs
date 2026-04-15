@@ -83,7 +83,7 @@ public class MessagesController : ControllerBase
             return Forbid();
 
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(idempotencyKey) && _idempotencyService.IsDuplicate($"msg:{currentId}:{idempotencyKey}"))
+        if (!string.IsNullOrEmpty(idempotencyKey) && await _idempotencyService.IsDuplicateAsync($"msg:{currentId}:{idempotencyKey}"))
             return Conflict(new { message = "Duplicate request." });
 
         var message = await _messageService.SendMessageAsync(
