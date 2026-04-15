@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lander;
 using Lander.src.Common;
+using Lander.src.Common.Exceptions;
 using Lander.src.Modules.SearchRequests.Dtos.Dto;
 using Lander.src.Modules.SearchRequests.Dtos.InputDto;
 using Lander.src.Modules.SearchRequests.Interfaces;
@@ -308,7 +309,7 @@ public class SearchRequestService : ISearchRequestService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to create search request");
+        return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new InvalidOperationException("Failed to create search request");
     }
     public async Task<SearchRequestDto> UpdateSearchRequestAsync(int id, int userId, SearchRequestInputDto input)
     {
@@ -316,7 +317,7 @@ public class SearchRequestService : ISearchRequestService
         var searchRequest = await _context.SearchRequests
             .FirstOrDefaultAsync(sr => sr.SearchRequestId == id && sr.UserId == userId);
         if (searchRequest == null)
-            throw new Exception("Search request not found or you don't have permission to update it");
+            throw new NotFoundException("Search request not found or you don't have permission to update it");
         searchRequest.RequestType = input.RequestType;
         searchRequest.Title = input.Title;
         searchRequest.Description = input.Description;
@@ -350,7 +351,7 @@ public class SearchRequestService : ISearchRequestService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new Exception("Failed to update search request");
+        return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new InvalidOperationException("Failed to update search request");
     }
     public async Task<bool> DeleteSearchRequestAsync(int id, int userId)
     {

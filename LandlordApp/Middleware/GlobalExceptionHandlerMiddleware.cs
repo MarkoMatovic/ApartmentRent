@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Lander.Helpers;
+using Lander.src.Common.Exceptions;
 
 namespace Lander.Middleware;
 
@@ -39,6 +40,18 @@ public class GlobalExceptionHandlerMiddleware
 
         switch (exception)
         {
+            case NotFoundException notFoundEx:
+                statusCode = HttpStatusCode.NotFound;
+                message = notFoundEx.Message;
+                break;
+            case ConflictException conflictEx:
+                statusCode = HttpStatusCode.Conflict;
+                message = conflictEx.Message;
+                break;
+            case ForbiddenException forbiddenEx:
+                statusCode = HttpStatusCode.Forbidden;
+                message = forbiddenEx.Message;
+                break;
             case UnauthorizedAccessException:
                 statusCode = HttpStatusCode.Unauthorized;
                 message = "Unauthorized access.";
