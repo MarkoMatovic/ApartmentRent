@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lander;
 using Lander.src.Common;
+using Lander.src.Common.Exceptions;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -302,7 +303,7 @@ public class RoommateService : IRoommateService
         var existingRoommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
-        if (user == null) throw new Exception("User not found");
+        if (user == null) throw new NotFoundException("User", userId);
         Roommate roommate;
         var transaction = await _context.BeginTransactionAsync();
         try
@@ -409,9 +410,11 @@ public class RoommateService : IRoommateService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
         var roommate = await _context.Roommates
-            .FirstOrDefaultAsync(r => r.RoommateId == id && r.UserId == userId);
+            .FirstOrDefaultAsync(r => r.RoommateId == id);
         if (roommate == null)
-            throw new Exception("Roommate not found or you don't have permission to update it");
+            throw new NotFoundException("Roommate", id);
+        if (roommate.UserId != userId)
+            throw new ForbiddenException("You don't have permission to update this roommate profile.");
         roommate.Bio = input.Bio;
         roommate.Hobbies = input.Hobbies;
         roommate.Profession = input.Profession;
@@ -443,7 +446,7 @@ public class RoommateService : IRoommateService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new Exception("Failed to update roommate");
+        return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new InvalidOperationException("Failed to update roommate");
     }
     public async Task<bool> DeleteRoommateAsync(int id, int userId)
     {

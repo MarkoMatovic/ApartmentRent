@@ -1,4 +1,5 @@
 using Lander.Helpers;
+using Lander.src.Common;
 using Lander.src.Modules.Analytics.Interfaces;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
@@ -30,46 +31,43 @@ public partial class ApartmentsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<ApartmentDto>> CreateApartment([FromBody] ApartmentInputDto apartmentInputDto)
     {
-        try
-        {
-            var result = await _apartmentService.CreateApartmentAsync(apartmentInputDto);
-            await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
-                .EvictByTagAsync("apartments", default);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Error creating apartment", error = ex.Message, innerError = ex.InnerException?.Message, stackTrace = ex.StackTrace });
-        }
+        var result = await _apartmentService.CreateApartmentAsync(apartmentInputDto);
+        await HttpContext.RequestServices.GetRequiredService<IOutputCacheStore>()
+            .EvictByTagAsync("apartments", default);
+        return Ok(result);
     }
+
     [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
     [AllowAnonymous]
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
-        try
+        filters ??= new ApartmentFilterDto();
+
+        if (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue || filters.ListingType.HasValue)
         {
-            if (filters == null)
-            {
-                filters = new ApartmentFilterDto();
-            }
-            if (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue || filters.ListingType.HasValue)
-            {
-                var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent},ListingType:{filters.ListingType}";
-                _ = _analyticsService.TrackEventAsync(
-                    "ApartmentSearch",
-                    "Listings",
-                    searchQuery: searchQuery,
-                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
-                    userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
-                );
-            }
-            return Ok(await _apartmentService.GetAllApartmentsAsync(filters));
+            var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent},ListingType:{filters.ListingType}";
+            _ = _analyticsService.TrackEventAsync(
+                "ApartmentSearch",
+                "Listings",
+                searchQuery: searchQuery,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
+            );
         }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Error loading apartments", error = ex.Message, stackTrace = ex.StackTrace });
-        }
+
+        return Ok(await _apartmentService.GetAllApartmentsAsync(filters));
     }
+    [HttpGet(ApiActionsV1.GetAllApartmentsCursor, Name = nameof(ApiActionsV1.GetAllApartmentsCursor))]
+    [AllowAnonymous]
+    public async Task<ActionResult<CursorPagedResult<ApartmentDto>>> GetAllApartmentsCursor(
+        [FromQuery] ApartmentFilterDto? filters,
+        [FromQuery] int? afterId = null,
+        [FromQuery] int pageSize = 20)
+    {
+        filters ??= new ApartmentFilterDto();
+        return Ok(await _apartmentService.GetAllApartmentsCursorAsync(filters, afterId, pageSize));
+    }
+
     [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]
     [Authorize]
     public async Task<ActionResult> GetMyApartments()
