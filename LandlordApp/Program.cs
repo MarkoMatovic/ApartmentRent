@@ -17,7 +17,11 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = Path.GetTempPath()
+});
 
 StartupValidation.ValidateSecrets(builder.Configuration, builder.Environment);
 
@@ -142,8 +146,6 @@ app.UseSerilogRequestLogging(opts =>
 });
 
 app.UseCors("AllowFrontend");
-
-app.UseStaticFiles(); // Enable static file serving for uploaded images
 
 // ─── Security headers ────────────────────────────────────────────────────────
 app.Use(async (context, next) =>
