@@ -58,7 +58,7 @@ public class PaymentsController : ControllerBase
         if (user == null) return Unauthorized();
 
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(idempotencyKey) && _idempotencyService.IsDuplicate($"payment:{user.UserId}:{idempotencyKey}"))
+        if (!string.IsNullOrEmpty(idempotencyKey) && await _idempotencyService.IsDuplicateAsync($"payment:{user.UserId}:{idempotencyKey}"))
             return Conflict(new { message = "Duplicate request — this payment was already initiated." });
 
         var userProfile = await _userService.GetUserProfileAsync(user.UserId);

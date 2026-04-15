@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Lander;
+using Lander.src.Common.Exceptions;
 using Lander.src.Modules.SavedSearches.Dtos.Dto;
 using Lander.src.Modules.SavedSearches.Dtos.InputDto;
 using Lander.src.Modules.SavedSearches.Interfaces;
@@ -81,7 +82,7 @@ public class SavedSearchService : ISavedSearchService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new Exception("Failed to create saved search");
+        return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new InvalidOperationException("Failed to create saved search");
     }
     public async Task<SavedSearchDto> UpdateSavedSearchAsync(int id, int userId, SavedSearchInputDto input)
     {
@@ -89,7 +90,7 @@ public class SavedSearchService : ISavedSearchService
         var savedSearch = await _context.SavedSearches
             .FirstOrDefaultAsync(ss => ss.SavedSearchId == id && ss.UserId == userId);
         if (savedSearch == null)
-            throw new Exception("Saved search not found or you don't have permission to update it");
+            throw new NotFoundException("Saved search not found or you don't have permission to update it");
         savedSearch.Name = input.Name;
         savedSearch.SearchType = input.SearchType;
         savedSearch.FiltersJson = input.FiltersJson;
@@ -107,7 +108,7 @@ public class SavedSearchService : ISavedSearchService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new Exception("Failed to update saved search");
+        return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new InvalidOperationException("Failed to update saved search");
     }
     public async Task<bool> DeleteSavedSearchAsync(int id, int userId)
     {
