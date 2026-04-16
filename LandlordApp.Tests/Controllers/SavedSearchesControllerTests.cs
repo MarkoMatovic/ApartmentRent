@@ -62,6 +62,32 @@ public class SavedSearchesControllerTests
     }
 
     [Fact]
+    public async Task GetSavedSearchesByUserId_MissingSubClaim_ReturnsUnauthorized()
+    {
+        // Controller without "sub" claim → Unauthorized
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity()) // no claims
+            }
+        };
+
+        var result = await _controller.GetSavedSearchesByUserId(1);
+
+        result.Result.Should().BeOfType<UnauthorizedResult>();
+    }
+
+    [Fact]
+    public async Task GetSavedSearchesByUserId_DifferentUser_ReturnsForbid()
+    {
+        // GetUserByGuidAsync returns user with UserId=1, but request asks for userId=99 → Forbid
+        var result = await _controller.GetSavedSearchesByUserId(99);
+
+        result.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
     public async Task GetSavedSearchesByUserId_ServiceThrows_Returns500()
     {
         _mockService.Setup(s => s.GetSavedSearchesByUserIdAsync(1))

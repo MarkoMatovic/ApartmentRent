@@ -113,6 +113,16 @@ public class ApartmentApplicationsControllerTests
         result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task GetTenantApplications_NoUser_ReturnsUnauthorized()
+    {
+        _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync((User?)null);
+
+        var result = await _controller.GetTenantApplications();
+
+        result.Should().BeOfType<UnauthorizedResult>();
+    }
+
     // ─── UpdateStatus ─────────────────────────────────────────────────────────
 
     [Fact]
