@@ -10,6 +10,8 @@ using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Lander.Helpers;
 
 namespace LandlordApp.Tests.Controllers;
@@ -125,6 +127,28 @@ public class MessagesControllerTests
         var result = await _controller.SendMessage(input);
 
         result.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    [Fact]
+    public async Task SendMessage_DuplicateIdempotencyKey_ReturnsConflict()
+    {
+        // Arrange: create a controller with a real IdempotencyService backed by a real distributed cache
+        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        var idempotencyService = new IdempotencyService(cache);
+        var controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object, idempotencyService);
+        controller.ControllerContext = MakeAuthContext(CurrentUserId);
+
+        // Pre-register the key so the second call sees a duplicate
+        await idempotencyService.IsDuplicateAsync($"msg:{CurrentUserId}:key-abc");
+
+        // Set the same Idempotency-Key header
+        controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "key-abc";
+
+        var input = new SendMessageInputDto { SenderId = CurrentUserId, ReceiverId = 20, MessageText = "Hello" };
+
+        var result = await controller.SendMessage(input);
+
+        result.Result.Should().BeOfType<ConflictObjectResult>();
     }
 
     // ─── MarkAsRead ───────────────────────────────────────────────────────────

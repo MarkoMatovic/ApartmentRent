@@ -37,6 +37,23 @@ public class SubscriptionsControllerTests
     // ─── Checkout ─────────────────────────────────────────────────────────────
 
     [Fact]
+    public async Task Checkout_NoUserIdClaim_ReturnsUnauthorized()
+    {
+        var controller = new SubscriptionsController(_mockPaymentService.Object);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity()) // no claims
+            }
+        };
+
+        var result = await controller.Checkout(new CheckoutRequest { PlanType = "Monthly", Amount = 9.99m });
+
+        result.Should().BeOfType<UnauthorizedObjectResult>();
+    }
+
+    [Fact]
     public async Task Checkout_ReturnsOkWithCheckoutUrl()
     {
         var request = new CheckoutRequest { PlanType = "Monthly", Amount = 9.99m };
@@ -102,6 +119,15 @@ public class SubscriptionsControllerTests
     }
 
     // ─── GetStatus ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetStatus_DifferentUser_ReturnsForbid()
+    {
+        // Auth context has userId=1, but request asks for userId=99 → Forbid
+        var result = await _controller.GetStatus(99);
+
+        result.Should().BeOfType<ForbidResult>();
+    }
 
     [Fact]
     public async Task GetStatus_ActiveSubscription_ReturnsOk()

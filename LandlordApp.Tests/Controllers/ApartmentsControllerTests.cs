@@ -126,6 +126,17 @@ public class ApartmentsControllerTests
         result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task GetMyApartments_ServiceThrows_PropagatesException()
+    {
+        _mockApartmentService.Setup(s => s.GetMyApartmentsAsync())
+            .ThrowsAsync(new Exception("DB error"));
+
+        Func<Task> act = async () => await _controller.GetMyApartments();
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
+    }
+
     // ─── GetApartment ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -137,6 +148,17 @@ public class ApartmentsControllerTests
         var result = await _controller.GetApartment(5);
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(detail);
+    }
+
+    [Fact]
+    public async Task GetApartment_ServiceThrows_PropagatesException()
+    {
+        _mockApartmentService.Setup(s => s.GetApartmentByIdAsync(99))
+            .ThrowsAsync(new Exception("Not found"));
+
+        Func<Task> act = async () => await _controller.GetApartment(99);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Not found");
     }
 
     // ─── UpdateApartment ──────────────────────────────────────────────────────
@@ -152,6 +174,18 @@ public class ApartmentsControllerTests
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(SampleApartment);
     }
 
+    [Fact]
+    public async Task UpdateApartment_ServiceThrows_PropagatesException()
+    {
+        var dto = new ApartmentUpdateInputDto();
+        _mockApartmentService.Setup(s => s.UpdateApartmentAsync(3, dto))
+            .ThrowsAsync(new Exception("Update failed"));
+
+        Func<Task> act = async () => await _controller.UpdateApartment(3, dto);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Update failed");
+    }
+
     // ─── DeleteApartment ──────────────────────────────────────────────────────
 
     [Fact]
@@ -164,6 +198,27 @@ public class ApartmentsControllerTests
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(true);
     }
 
+    [Fact]
+    public async Task DeleteApartment_ReturnsFalse_ReturnsOkFalse()
+    {
+        _mockApartmentService.Setup(s => s.DeleteApartmentAsync(7)).ReturnsAsync(false);
+
+        var result = await _controller.DeleteApartment(7);
+
+        result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(false);
+    }
+
+    [Fact]
+    public async Task DeleteApartment_ServiceThrows_PropagatesException()
+    {
+        _mockApartmentService.Setup(s => s.DeleteApartmentAsync(7))
+            .ThrowsAsync(new Exception("Delete failed"));
+
+        Func<Task> act = async () => await _controller.DeleteApartment(7);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Delete failed");
+    }
+
     // ─── ActivateApartment ────────────────────────────────────────────────────
 
     [Fact]
@@ -174,6 +229,27 @@ public class ApartmentsControllerTests
         var result = await _controller.ActivateApartment(8);
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(true);
+    }
+
+    [Fact]
+    public async Task ActivateApartment_ReturnsFalse_ReturnsOkFalse()
+    {
+        _mockApartmentService.Setup(s => s.ActivateApartmentAsync(8)).ReturnsAsync(false);
+
+        var result = await _controller.ActivateApartment(8);
+
+        result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(false);
+    }
+
+    [Fact]
+    public async Task ActivateApartment_ServiceThrows_PropagatesException()
+    {
+        _mockApartmentService.Setup(s => s.ActivateApartmentAsync(8))
+            .ThrowsAsync(new Exception("Activate failed"));
+
+        Func<Task> act = async () => await _controller.ActivateApartment(8);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Activate failed");
     }
 
     // ─── GetAllApartmentsCursor ───────────────────────────────────────────────
