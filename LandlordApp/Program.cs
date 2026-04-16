@@ -49,15 +49,14 @@ builder.Services.AddDatabaseContexts(builder.Configuration);
 
 builder.Services.AddApplicationInsightsTelemetry();
 
+var allowedOrigins = builder.Configuration.GetSection("App:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173", "https://localhost:5173"];
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://localhost:5173"
-              )
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -100,7 +99,21 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
 builder.Services.AddApiRateLimiting();
 
 builder.Services.AddMemoryCache();
-builder.Services.AddDistributedMemoryCache(); // fallback; swap for AddStackExchangeRedisCache in production
+
+var redisConnectionString = builder.Configuration["Redis:Configuration"];
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddStackExchangeRedisCache(opts =>
+    {
+        opts.Configuration = redisConnectionString;
+        opts.InstanceName = "Landlander:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 builder.Services.AddSingleton<IdempotencyService>();
 builder.Services.AddOutputCache(options =>
 {
@@ -120,6 +133,15 @@ builder.Services.AddOutputCache(options =>
 
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddJwtAuthentication(builder.Configuration);
+
+var hcBuilder = builder.Services.AddHealthChecks()
+    .AddDbContextCheck<Lander.ListingsContext>("db-listings")
+    .AddDbContextCheck<Lander.UsersContext>("db-users");
+
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    hcBuilder.AddRedis(redisConnectionString, name: "redis");
+}
 
 var app = builder.Build();
 
@@ -195,5 +217,6 @@ app.MapGrpcService<ReviewFavoriteService>();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<ChatHub>("/chatHub");
+app.MapHealthChecks("/health");
 
 app.Run();

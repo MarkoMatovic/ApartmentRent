@@ -34,6 +34,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IPermissionService, PermissionService>();
 
+        services.AddSingleton<Lander.src.Modules.Listings.Services.ApartmentCacheVersionService>();
+        services.AddScoped<Lander.src.Infrastructure.Services.IAuditLogService, Lander.src.Infrastructure.Services.AuditLogService>();
         services.AddScoped<IApartmentService, ApartmentService>();
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
         services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();

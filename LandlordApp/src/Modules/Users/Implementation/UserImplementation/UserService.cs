@@ -1,4 +1,5 @@
 using Lander.Helpers;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -25,6 +26,7 @@ public partial class UserService : IUserInterface
     private readonly RefreshTokenService _refreshTokenService;
     private readonly ILogger<UserService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IAuditLogService _auditLog;
     public UserService(
         UsersContext context,
         ReviewsContext reviewsContext,
@@ -36,7 +38,8 @@ public partial class UserService : IUserInterface
         IEnumerable<IUserDeletedHandler> deletionHandlers,
         RefreshTokenService refreshTokenService,
         ILogger<UserService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IAuditLogService auditLog)
     {
         _context = context;
         _reviewsContext = reviewsContext;
@@ -49,5 +52,6 @@ public partial class UserService : IUserInterface
         _refreshTokenService = refreshTokenService;
         _logger = logger;
         _configuration = configuration;
+        _auditLog = auditLog;
     }
 }

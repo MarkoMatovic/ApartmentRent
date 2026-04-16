@@ -5,6 +5,7 @@ using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 
 namespace Lander.src.Modules.Listings.Implementation;
 
@@ -199,8 +200,9 @@ public partial class ApartmentService
         };
 
         var cacheEntryOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(TimeSpan.FromMinutes(2)) // Keep in cache for 2 mins if accessed
-            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)); // Remove after 5 mins regardless
+            .SetSlidingExpiration(TimeSpan.FromMinutes(2))
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+            .AddExpirationToken(_cacheVersion.GetChangeToken());
 
         _cache.Set(cacheKey, result, cacheEntryOptions);
 
@@ -248,14 +250,13 @@ public partial class ApartmentService
             .Include(a => a.ApartmentImages)
             .OrderBy(a => a.ApartmentId);
 
-        var apartmentIds = await orderedQuery
+        // Single query: take pageSize+1 (for HasNextPage detection) with images in split query
+        var apartments = await orderedQuery
+            .AsSplitQuery()
             .Take(pageSize + 1)
-            .Select(a => a.ApartmentId)
             .ToListAsync();
 
-        var apartments = await orderedQuery
-            .Where(a => apartmentIds.Contains(a.ApartmentId))
-            .ToListAsync();
+        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
 
         var reviewStats = await _reviewsContext.Reviews
             .AsNoTracking()

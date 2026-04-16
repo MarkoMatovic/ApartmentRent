@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.src.Common;
 using Lander.src.Common.Exceptions;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
@@ -49,6 +50,7 @@ public partial class ApartmentService
             _context.RollBackTransaction();
             throw;
         }
+        _cacheVersion.Invalidate();
         return true;
     }
 
@@ -84,8 +86,8 @@ public partial class ApartmentService
         var apartment = new Apartment
         {
             LandlordId = landlordId,
-            Title = apartmentInputDto.Title,
-            Description = apartmentInputDto.Description,
+            Title = HtmlSanitizationHelper.SanitizePlainText(apartmentInputDto.Title)!,
+            Description = HtmlSanitizationHelper.SanitizeRichText(apartmentInputDto.Description),
             Rent = apartmentInputDto.Rent,
             Price = apartmentInputDto.Price,
             Address = apartmentInputDto.Address,
@@ -154,6 +156,7 @@ public partial class ApartmentService
             _context.RollBackTransaction();
             throw;
         }
+        _cacheVersion.Invalidate();
 
         // Broadcast new listing notification
         if (apartment.IsActive)
@@ -260,6 +263,8 @@ public partial class ApartmentService
             _context.RollBackTransaction();
             throw;
         }
+        _cacheVersion.Invalidate();
+        _auditLog.Log("DeleteApartment", "Apartment", apartmentId, currentUserGuid);
         return true;
     }
 
@@ -316,8 +321,8 @@ public partial class ApartmentService
         {
             throw new UnauthorizedAccessException("Authentication required.");
         }
-        if (updateDto.Title != null) apartment.Title = updateDto.Title;
-        if (updateDto.Description != null) apartment.Description = updateDto.Description;
+        if (updateDto.Title != null) apartment.Title = HtmlSanitizationHelper.SanitizePlainText(updateDto.Title)!;
+        if (updateDto.Description != null) apartment.Description = HtmlSanitizationHelper.SanitizeRichText(updateDto.Description);
         if (updateDto.Rent.HasValue) apartment.Rent = updateDto.Rent.Value;
         if (updateDto.Price.HasValue) apartment.Price = updateDto.Price.Value;
         if (updateDto.Address != null) apartment.Address = updateDto.Address;
@@ -386,6 +391,7 @@ public partial class ApartmentService
             _context.RollBackTransaction();
             throw;
         }
+        _cacheVersion.Invalidate();
         return new ApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
