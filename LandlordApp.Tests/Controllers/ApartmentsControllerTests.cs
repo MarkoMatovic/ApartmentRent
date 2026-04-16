@@ -61,16 +61,15 @@ public class ApartmentsControllerTests
     }
 
     [Fact]
-    public async Task CreateApartment_ServiceThrows_Returns500()
+    public async Task CreateApartment_ServiceThrows_PropagatesException()
     {
         var input = new ApartmentInputDto { Title = "T", Address = "A", City = "C" };
         _mockApartmentService.Setup(s => s.CreateApartmentAsync(input))
             .ThrowsAsync(new Exception("DB error"));
 
-        var result = await _controller.CreateApartment(input);
+        Func<Task> act = async () => await _controller.CreateApartment(input);
 
-        result.Result.Should().BeOfType<ObjectResult>()
-            .Which.StatusCode.Should().Be(500);
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
 
     // ─── GetAllApartments ─────────────────────────────────────────────────────
@@ -104,14 +103,14 @@ public class ApartmentsControllerTests
     }
 
     [Fact]
-    public async Task GetAllApartments_ServiceThrows_Returns500()
+    public async Task GetAllApartments_ServiceThrows_PropagatesException()
     {
         _mockApartmentService.Setup(s => s.GetAllApartmentsAsync(It.IsAny<ApartmentFilterDto>()))
             .ThrowsAsync(new Exception("fail"));
 
-        var result = await _controller.GetAllApartments(null);
+        Func<Task> act = async () => await _controller.GetAllApartments(null);
 
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(500);
+        await act.Should().ThrowAsync<Exception>().WithMessage("fail");
     }
 
     // ─── GetMyApartments ──────────────────────────────────────────────────────
@@ -175,6 +174,76 @@ public class ApartmentsControllerTests
         var result = await _controller.ActivateApartment(8);
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(true);
+    }
+
+    // ─── GetAllApartmentsCursor ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAllApartmentsCursor_NoFilters_ReturnsOkWithFirstPage()
+    {
+        var cursorResult = new CursorPagedResult<ApartmentDto>
+        {
+            Items = new List<ApartmentDto> { SampleApartment },
+            NextCursor = "1"
+        };
+        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+                It.IsAny<ApartmentFilterDto>(), null, 20))
+            .ReturnsAsync(cursorResult);
+
+        var result = await _controller.GetAllApartmentsCursor(null, null, 20);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(cursorResult);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsCursor_WithAfterId_PassesCursorToService()
+    {
+        var cursorResult = new CursorPagedResult<ApartmentDto>
+        {
+            Items = new List<ApartmentDto>(),
+            NextCursor = null
+        };
+        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+                It.IsAny<ApartmentFilterDto>(), 10, 20))
+            .ReturnsAsync(cursorResult);
+
+        var result = await _controller.GetAllApartmentsCursor(null, afterId: 10, pageSize: 20);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockApartmentService.Verify(s => s.GetAllApartmentsCursorAsync(
+            It.IsAny<ApartmentFilterDto>(), 10, 20), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsCursor_LastPage_HasMoreIsFalse()
+    {
+        var cursorResult = new CursorPagedResult<ApartmentDto>
+        {
+            Items = new List<ApartmentDto> { SampleApartment },
+            NextCursor = null   // no next page
+        };
+        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+                It.IsAny<ApartmentFilterDto>(), It.IsAny<int?>(), It.IsAny<int>()))
+            .ReturnsAsync(cursorResult);
+
+        var result = await _controller.GetAllApartmentsCursor(null, null, 20);
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returned = ok.Value.Should().BeOfType<CursorPagedResult<ApartmentDto>>().Subject;
+        returned.HasMore.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetAllApartmentsCursor_ServiceThrows_PropagatesException()
+    {
+        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+                It.IsAny<ApartmentFilterDto>(), It.IsAny<int?>(), It.IsAny<int>()))
+            .ThrowsAsync(new Exception("DB error"));
+
+        Func<Task> act = async () => await _controller.GetAllApartmentsCursor(null, null, 20);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

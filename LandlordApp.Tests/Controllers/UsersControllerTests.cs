@@ -329,6 +329,113 @@ public class UsersControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
     }
 
+    // ─── RefreshToken (POST refresh-token, requires valid Bearer) ────────────
+
+    [Fact]
+    public async Task RefreshToken_MissingSubClaim_ReturnsUnauthorized()
+    {
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity())
+            }
+        };
+
+        var result = await _controller.RefreshToken();
+
+        result.Result.Should().BeOfType<UnauthorizedResult>();
+    }
+
+    [Fact]
+    public async Task RefreshToken_UserNotFoundInDb_ReturnsUnauthorized()
+    {
+        // Sub GUID that has no matching user in the in-memory DB
+        var unknownGuid = Guid.NewGuid();
+        _controller.ControllerContext = MakeAuthContext(99, unknownGuid);
+
+        var result = await _controller.RefreshToken();
+
+        result.Result.Should().BeOfType<UnauthorizedResult>();
+    }
+
+    [Fact]
+    public async Task RefreshToken_ValidUser_ReturnsNewAccessToken()
+    {
+        _usersContext.Roles.Add(new Role { RoleId = 1, RoleName = "Tenant", Description = "t", CreatedDate = DateTime.UtcNow });
+        _usersContext.Users.Add(new User
+        {
+            UserId = TestUserId, FirstName = "T", LastName = "U",
+            Email = "t@u.com", Password = "hash", IsActive = true,
+            UserRoleId = 1, UserGuid = TestGuid
+        });
+        await _usersContext.SaveChangesAsync();
+
+        // TestGuid is already set as the "sub" claim in the default controller context
+        var result = await _controller.RefreshToken();
+
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeOfType<string>().Which.Should().NotBeNullOrEmpty();
+    }
+
+    // ─── SendVerificationEmail ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SendVerificationEmail_SameUser_ReturnsOk()
+    {
+        _mockUserService.Setup(s => s.SendVerificationEmailAsync(TestUserId)).Returns(Task.CompletedTask);
+
+        var result = await _controller.SendVerificationEmail(TestUserId);
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task SendVerificationEmail_DifferentUser_ReturnsForbid()
+    {
+        // Current user is TestUserId (42), trying to send email for user 99
+        var result = await _controller.SendVerificationEmail(99);
+
+        result.Should().BeOfType<ForbidResult>();
+        _mockUserService.Verify(s => s.SendVerificationEmailAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendVerificationEmail_ServiceThrows_PropagatesException()
+    {
+        _mockUserService.Setup(s => s.SendVerificationEmailAsync(TestUserId))
+            .ThrowsAsync(new Exception("Email error"));
+
+        Func<Task> act = async () => await _controller.SendVerificationEmail(TestUserId);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Email error");
+    }
+
+    // ─── UpdateRoommateStatus ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateRoommateStatus_ReturnsOk()
+    {
+        var dto = new UpdateRoommateStatusInputDto { UserGuid = TestGuid, IsLookingForRoommate = true };
+        _mockUserService.Setup(s => s.UpdateRoommateStatusAsync(dto)).Returns(Task.CompletedTask);
+
+        var result = await _controller.UpdateRoommateStatus(dto);
+
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task UpdateRoommateStatus_ServiceThrows_PropagatesException()
+    {
+        var dto = new UpdateRoommateStatusInputDto { UserGuid = TestGuid, IsLookingForRoommate = false };
+        _mockUserService.Setup(s => s.UpdateRoommateStatusAsync(dto))
+            .ThrowsAsync(new Exception("Status error"));
+
+        Func<Task> act = async () => await _controller.UpdateRoommateStatus(dto);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Status error");
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private static ControllerContext MakeAuthContext(int userId, Guid userGuid)
