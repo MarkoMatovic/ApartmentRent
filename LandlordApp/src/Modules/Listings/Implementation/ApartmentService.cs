@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.SignalR;
 using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings.Helpers;
+using Lander.src.Modules.Listings.Services;
+using Lander.src.Infrastructure.Services;
 
 namespace Lander.src.Modules.Listings.Implementation;
 
@@ -30,6 +32,8 @@ public partial class ApartmentService : IApartmentService
     private readonly IHubContext<NotificationHub> _notificationHubContext;
     private readonly ReviewsContext _reviewsContext;
     private readonly ILogger<ApartmentService> _logger;
+    private readonly ApartmentCacheVersionService _cacheVersion;
+    private readonly IAuditLogService _auditLog;
 
     public ApartmentService(
         ListingsContext context,
@@ -40,7 +44,9 @@ public partial class ApartmentService : IApartmentService
         IMemoryCache cache,
         IHubContext<NotificationHub> notificationHubContext,
         ReviewsContext reviewsContext,
-        ILogger<ApartmentService> logger)
+        ILogger<ApartmentService> logger,
+        ApartmentCacheVersionService cacheVersion,
+        IAuditLogService auditLog)
     {
         _context = context;
         _usersContext = usersContext;
@@ -51,5 +57,7 @@ public partial class ApartmentService : IApartmentService
         _notificationHubContext = notificationHubContext;
         _reviewsContext = reviewsContext;
         _logger = logger;
+        _cacheVersion = cacheVersion;
+        _auditLog = auditLog;
     }
 }

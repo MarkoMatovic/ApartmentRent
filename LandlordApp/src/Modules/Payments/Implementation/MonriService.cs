@@ -6,11 +6,32 @@ using Lander.Helpers;
 using Lander.src.Modules.Payments.Dtos;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Retry;
 
 namespace Lander.src.Modules.Payments.Implementation;
 
 public class MonriService : IMonriService
 {
+    private static readonly ResiliencePipeline _pipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new RetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            Delay = TimeSpan.FromSeconds(2),
+            BackoffType = DelayBackoffType.Exponential,
+            ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>().Handle<TimeoutException>()
+        })
+        .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+        {
+            FailureRatio = 0.5,
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            MinimumThroughput = 5,
+            BreakDuration = TimeSpan.FromMinutes(1),
+            ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>().Handle<TimeoutException>()
+        })
+        .Build();
+
     // Idempotency: track recently processed order numbers (order_number → processed-at)
     private static readonly ConcurrentDictionary<string, DateTimeOffset> _processedOrders = new();
 
@@ -71,6 +92,11 @@ public class MonriService : IMonriService
     }
 
     public async Task HandleCallbackAsync(string json)
+    {
+        await _pipeline.ExecuteAsync(async ct => await HandleCallbackInternalAsync(json, ct));
+    }
+
+    private async Task HandleCallbackInternalAsync(string json, CancellationToken ct)
     {
         _logger.LogInformation("Monri callback received");
         JsonDocument doc;
