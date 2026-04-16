@@ -118,10 +118,11 @@ public class SubscriptionsControllerTests
     [Fact]
     public async Task GetStatus_NoSubscription_ReturnsNotFound()
     {
-        _mockPaymentService.Setup(s => s.GetActiveSubscriptionAsync(99))
+        // userId=1 matches the auth context (currentUserId=1 == userId=1 → no Forbid)
+        _mockPaymentService.Setup(s => s.GetActiveSubscriptionAsync(1))
             .ReturnsAsync((Subscription?)null);
 
-        var result = await _controller.GetStatus(99);
+        var result = await _controller.GetStatus(1);
 
         result.Should().BeOfType<NotFoundObjectResult>();
     }

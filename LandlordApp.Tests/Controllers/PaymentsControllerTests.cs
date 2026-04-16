@@ -12,7 +12,8 @@ using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Lander.Helpers;
 
 namespace LandlordApp.Tests.Controllers;
@@ -52,7 +53,8 @@ public class PaymentsControllerTests
             .Build();
 
         _controller = new PaymentsController(_mockMonri.Object, _mockUserService.Object, _config,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object),
+            new Mock<ILogger<PaymentsController>>().Object);
         _controller.ControllerContext = MakeAuthContext(TestGuid);
     }
 
@@ -118,7 +120,8 @@ public class PaymentsControllerTests
     public async Task CreatePayment_NoSubClaim_ReturnsUnauthorized()
     {
         var controller = new PaymentsController(_mockMonri.Object, _mockUserService.Object, _config,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object),
+            new Mock<ILogger<PaymentsController>>().Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext

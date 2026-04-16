@@ -9,7 +9,7 @@ using Lander.src.Modules.Communication.Controllers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Lander.Helpers;
 
 namespace LandlordApp.Tests.Controllers;
@@ -34,7 +34,7 @@ public class MessagesControllerTests
             .Returns(Task.CompletedTask);
 
         _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object));
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 
@@ -130,13 +130,24 @@ public class MessagesControllerTests
     // ─── MarkAsRead ───────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task MarkAsRead_ReturnsOk()
+    public async Task MarkAsRead_AsRecipient_ReturnsOk()
     {
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(5, CurrentUserId)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(5)).Returns(Task.CompletedTask);
 
         var result = await _controller.MarkAsRead(5);
 
         result.Should().BeOfType<OkResult>();
+    }
+
+    [Fact]
+    public async Task MarkAsRead_NotRecipient_ReturnsForbid()
+    {
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(5, CurrentUserId)).ReturnsAsync(false);
+
+        var result = await _controller.MarkAsRead(5);
+
+        result.Should().BeOfType<ForbidResult>();
     }
 
     // ─── GetUnreadCount ───────────────────────────────────────────────────────
