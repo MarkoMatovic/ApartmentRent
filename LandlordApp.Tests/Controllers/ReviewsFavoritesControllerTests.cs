@@ -60,6 +60,17 @@ public class ReviewsFavoritesControllerTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(response);
     }
 
+    [Fact]
+    public async Task CreateReview_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.CreateReviewAsync(It.IsAny<CreateReviewRequest>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.CreateReview(new CreateReviewRequest());
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
+    }
+
     // ─── GetReviewById ────────────────────────────────────────────────────────
 
     [Fact]
@@ -71,6 +82,17 @@ public class ReviewsFavoritesControllerTests
         var result = await _controller.GetReviewById(3);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(response);
+    }
+
+    [Fact]
+    public async Task GetReviewById_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.GetReviewByIdAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.GetReviewById(99);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
     }
 
     // ─── GetReviewsByApartmentId ──────────────────────────────────────────────
@@ -86,6 +108,17 @@ public class ReviewsFavoritesControllerTests
         result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task GetReviewsByApartmentId_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.GetReviewsByApartmentIdAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.GetReviewsByApartmentId(7);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
+    }
+
     // ─── DeleteReview ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -97,6 +130,17 @@ public class ReviewsFavoritesControllerTests
         var result = await _controller.DeleteReview(4);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(response);
+    }
+
+    [Fact]
+    public async Task DeleteReview_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.DeleteReviewAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.DeleteReview(4);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
     }
 
     // ─── DeleteFavorite ───────────────────────────────────────────────────────
@@ -112,6 +156,17 @@ public class ReviewsFavoritesControllerTests
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(response);
     }
 
+    [Fact]
+    public async Task DeleteFavorite_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.DeleteFavorite(9);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
+    }
+
     // ─── GetUserFavorites ─────────────────────────────────────────────────────
 
     [Fact]
@@ -123,6 +178,17 @@ public class ReviewsFavoritesControllerTests
         var result = await _controller.GetUserFavorites(2);
 
         result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetUserFavorites_GrpcThrows_Propagates()
+    {
+        _mockGrpc.Setup(g => g.GetUserFavoritesAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("gRPC unavailable"));
+
+        Func<Task> act = () => _controller.GetUserFavorites(2);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

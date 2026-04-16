@@ -56,6 +56,17 @@ public class NotificationsControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task GetUserNotifications_ServiceThrows_PropagatesException()
+    {
+        _mockService.Setup(s => s.GetUserNotificationsAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("DB error"));
+
+        Func<Task> act = async () => await _controller.GetUserNotifications(5);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
+    }
+
     // ─── SendNotification ─────────────────────────────────────────────────────
 
     [Fact]
@@ -70,6 +81,18 @@ public class NotificationsControllerTests
             .Which.Value.Should().Be(SampleNotification);
     }
 
+    [Fact]
+    public async Task SendNotification_ServiceThrows_PropagatesException()
+    {
+        var input = new CreateNotificationInputDto { RecipientUserId = 5, Message = "Hello" };
+        _mockService.Setup(s => s.SendNotificationAsync(input))
+            .ThrowsAsync(new Exception("Send error"));
+
+        Func<Task> act = async () => await _controller.SendNotification(input);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Send error");
+    }
+
     // ─── MarkRead ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -80,6 +103,17 @@ public class NotificationsControllerTests
         var result = await _controller.MarkRead(1);
 
         result.Should().BeOfType<OkResult>();
+    }
+
+    [Fact]
+    public async Task MarkRead_ServiceThrows_PropagatesException()
+    {
+        _mockService.Setup(s => s.MarkAsReadAsync(It.IsAny<int>()))
+            .ThrowsAsync(new Exception("Mark error"));
+
+        Func<Task> act = async () => await _controller.MarkRead(1);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Mark error");
     }
 
     // ─── DeleteNotification ───────────────────────────────────────────────────
@@ -114,5 +148,15 @@ public class NotificationsControllerTests
         var result = await _controller.MarkAllAsRead(5);
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(true);
+    }
+
+    [Fact]
+    public async Task MarkAllAsRead_ReturnsFalse_ReturnsOkFalse()
+    {
+        _mockService.Setup(s => s.MarkAllAsReadAsync(5)).ReturnsAsync(false);
+
+        var result = await _controller.MarkAllAsRead(5);
+
+        result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(false);
     }
 }

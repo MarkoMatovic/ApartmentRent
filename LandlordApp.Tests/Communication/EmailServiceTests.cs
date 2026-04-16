@@ -157,6 +157,72 @@ public class EmailServiceTests
     }
 
     [Fact]
+    public async System.Threading.Tasks.Task SendNewApplicationEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendNewApplicationEmailAsync("landlord@example.com", "Petar", "Trosoban u Zemunu");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("New Application for Your Apartment");
+        log.RecipientEmail.Should().Be("landlord@example.com");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendListingUnavailableEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendListingUnavailableEmailAsync("user@example.com", "Jovana", "Jednosoban u Dorćolu", "Iznajmljen");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Contain("Jednosoban u Dorćolu");
+        log.RecipientEmail.Should().Be("user@example.com");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendEmailVerificationAsync_WithInvalidApiKey_SetsCorrectSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendEmailVerificationAsync("new@example.com", "Mirna", "https://app.example.com/verify?token=abc");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("Verifikacija email adrese");
+        log.RecipientEmail.Should().Be("new@example.com");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendPasswordResetEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendPasswordResetEmailAsync("reset@example.com", "Dragan", "https://app.example.com/reset?token=xyz");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("Reset lozinke");
+        log.RecipientEmail.Should().Be("reset@example.com");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendTemplatedEmailAsync_WithInvalidApiKey_DelegatesToSendEmailAsync()
+    {
+        var service = CreateService("invalid-key");
+
+        var result = await service.SendTemplatedEmailAsync(
+            "user@example.com", "Custom Subject", "WelcomeEmail", new { UserName = "TestUser" });
+
+        result.Should().BeFalse();
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("Custom Subject");
+    }
+
+    [Fact]
     public void BrevoSettings_DefaultValues_AreEmptyStrings()
     {
         var settings = new BrevoSettings();
