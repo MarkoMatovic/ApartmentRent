@@ -226,6 +226,7 @@ public partial class UserService
                 _context.RollBackTransaction();
                 throw;
             }
+            _auditLog.Log("DeleteUser", "User", user.UserId, deleteUserInputDto.UserGuid.ToString());
         }
         return true;
     }
@@ -287,5 +288,6 @@ public partial class UserService
         user.ModifiedDate = DateTime.UtcNow;
 
         await _context.SaveEntitiesAsync();
+        _auditLog.Log("UpgradeUserRole", "User", userId, details: $"NewRole={targetRoleName}");
     }
 }
