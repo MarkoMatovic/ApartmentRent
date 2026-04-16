@@ -272,8 +272,8 @@ public class SearchRequestService : ISearchRequestService
         {
             UserId = userId,
             RequestType = input.RequestType,
-            Title = input.Title,
-            Description = input.Description,
+            Title = HtmlSanitizationHelper.SanitizePlainText(input.Title)!,
+            Description = HtmlSanitizationHelper.SanitizePlainText(input.Description),
             City = input.City,
             PostalCode = input.PostalCode,
             PreferredLocation = input.PreferredLocation,
@@ -319,8 +319,8 @@ public class SearchRequestService : ISearchRequestService
         if (searchRequest == null)
             throw new NotFoundException("Search request not found or you don't have permission to update it");
         searchRequest.RequestType = input.RequestType;
-        searchRequest.Title = input.Title;
-        searchRequest.Description = input.Description;
+        searchRequest.Title = HtmlSanitizationHelper.SanitizePlainText(input.Title)!;
+        searchRequest.Description = HtmlSanitizationHelper.SanitizePlainText(input.Description);
         searchRequest.City = input.City;
         searchRequest.PostalCode = input.PostalCode;
         searchRequest.PreferredLocation = input.PreferredLocation;

@@ -26,18 +26,12 @@ public class SearchRequestsController : ControllerBase
         [FromQuery] string? city = null,
         [FromQuery] decimal? minBudget = null,
         [FromQuery] decimal? maxBudget = null,
-        [FromQuery] int? page = null,
-        [FromQuery] int? pageSize = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        if (page.HasValue && pageSize.HasValue)
-        {
-            var pagedResult = await _searchRequestService.GetAllSearchRequestsAsync(
-                requestType, city, minBudget, maxBudget, page.Value, pageSize.Value);
-            return Ok(pagedResult);
-        }
-        var searchRequests = await _searchRequestService.GetAllSearchRequestsAsync(
-            requestType, city, minBudget, maxBudget);
-        return Ok(searchRequests);
+        var pagedResult = await _searchRequestService.GetAllSearchRequestsAsync(
+            requestType, city, minBudget, maxBudget, page, pageSize);
+        return Ok(pagedResult);
     }
     [HttpGet(ApiActionsV1.GetSearchRequest, Name = nameof(ApiActionsV1.GetSearchRequest))]
     [AllowAnonymous]

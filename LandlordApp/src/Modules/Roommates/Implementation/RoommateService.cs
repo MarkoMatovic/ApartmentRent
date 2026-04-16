@@ -311,8 +311,8 @@ public class RoommateService : IRoommateService
             if (existingRoommate != null)
             {
                 roommate = existingRoommate;
-                roommate.Bio = input.Bio;
-                roommate.Hobbies = input.Hobbies;
+                roommate.Bio = HtmlSanitizationHelper.SanitizePlainText(input.Bio);
+                roommate.Hobbies = HtmlSanitizationHelper.SanitizePlainText(input.Hobbies);
                 roommate.Profession = input.Profession;
                 roommate.SmokingAllowed = input.SmokingAllowed;
                 roommate.PetFriendly = input.PetFriendly;
@@ -340,8 +340,8 @@ public class RoommateService : IRoommateService
                 roommate = new Roommate
                 {
                     UserId = userId,
-                    Bio = input.Bio,
-                    Hobbies = input.Hobbies,
+                    Bio = HtmlSanitizationHelper.SanitizePlainText(input.Bio),
+                    Hobbies = HtmlSanitizationHelper.SanitizePlainText(input.Hobbies),
                     Profession = input.Profession,
                     SmokingAllowed = input.SmokingAllowed,
                     PetFriendly = input.PetFriendly,
@@ -415,8 +415,8 @@ public class RoommateService : IRoommateService
             throw new NotFoundException("Roommate", id);
         if (roommate.UserId != userId)
             throw new ForbiddenException("You don't have permission to update this roommate profile.");
-        roommate.Bio = input.Bio;
-        roommate.Hobbies = input.Hobbies;
+        roommate.Bio = HtmlSanitizationHelper.SanitizePlainText(input.Bio);
+        roommate.Hobbies = HtmlSanitizationHelper.SanitizePlainText(input.Hobbies);
         roommate.Profession = input.Profession;
         roommate.SmokingAllowed = input.SmokingAllowed;
         roommate.PetFriendly = input.PetFriendly;
