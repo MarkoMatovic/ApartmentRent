@@ -117,6 +117,18 @@ public class AppointmentsControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
     }
 
+    [Fact]
+    public async Task GetLandlordAppointments_ServiceThrows_Returns500()
+    {
+        _mockService.Setup(s => s.GetLandlordAppointmentsAsync())
+            .ThrowsAsync(new Exception("DB error"));
+
+        var result = await _controller.GetLandlordAppointments();
+
+        result.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(500);
+    }
+
     // ─── GetAvailableSlots ────────────────────────────────────────────────────
 
     [Fact]

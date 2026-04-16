@@ -1,82 +1,83 @@
 using FluentAssertions;
 using Lander.Helpers;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace LandlordApp.Tests.Infrastructure;
 
 public class IdempotencyServiceTests
 {
-    private static (IdempotencyService service, IMemoryCache cache) CreateService()
+    private static IdempotencyService CreateService()
     {
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var service = new IdempotencyService(cache);
-        return (service, cache);
+        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        return new IdempotencyService(cache);
     }
 
     [Fact]
-    public void IsDuplicate_NewKey_ReturnsFalse()
+    public async Task IsDuplicateAsync_NewKey_ReturnsFalse()
     {
-        var (service, _) = CreateService();
+        var service = CreateService();
 
-        var result = service.IsDuplicate("key-1");
+        var result = await service.IsDuplicateAsync("key-1");
 
         result.Should().BeFalse();
     }
 
     [Fact]
-    public void IsDuplicate_SameKey_ReturnsTrue()
+    public async Task IsDuplicateAsync_SameKey_ReturnsTrue()
     {
-        var (service, _) = CreateService();
-        service.IsDuplicate("key-1");
+        var service = CreateService();
+        await service.IsDuplicateAsync("key-1");
 
-        var result = service.IsDuplicate("key-1");
+        var result = await service.IsDuplicateAsync("key-1");
 
         result.Should().BeTrue();
     }
 
     [Fact]
-    public void IsDuplicate_DifferentKeys_BothReturnFalse()
+    public async Task IsDuplicateAsync_DifferentKeys_BothReturnFalse()
     {
-        var (service, _) = CreateService();
+        var service = CreateService();
 
-        var result1 = service.IsDuplicate("key-a");
-        var result2 = service.IsDuplicate("key-b");
+        var result1 = await service.IsDuplicateAsync("key-a");
+        var result2 = await service.IsDuplicateAsync("key-b");
 
         result1.Should().BeFalse();
         result2.Should().BeFalse();
     }
 
     [Fact]
-    public void IsDuplicate_KeyRegisteredOnFirstCall()
+    public async Task IsDuplicateAsync_KeyRegisteredOnFirstCall()
     {
-        var (service, _) = CreateService();
-        service.IsDuplicate("reg-key");
+        var service = CreateService();
+        await service.IsDuplicateAsync("reg-key");
 
-        var secondCall = service.IsDuplicate("reg-key");
+        var secondCall = await service.IsDuplicateAsync("reg-key");
 
         secondCall.Should().BeTrue();
     }
 
     [Fact]
-    public void IsDuplicate_EmptyString_Works()
+    public async Task IsDuplicateAsync_EmptyString_Works()
     {
-        var (service, _) = CreateService();
+        var service = CreateService();
 
-        var firstCall = service.IsDuplicate(string.Empty);
-        var secondCall = service.IsDuplicate(string.Empty);
+        var firstCall = await service.IsDuplicateAsync(string.Empty);
+        var secondCall = await service.IsDuplicateAsync(string.Empty);
 
         firstCall.Should().BeFalse();
         secondCall.Should().BeTrue();
     }
 
     [Fact]
-    public void IsDuplicate_MultipleKeys_EachTrackedIndependently()
+    public async Task IsDuplicateAsync_MultipleKeys_EachTrackedIndependently()
     {
-        var (service, _) = CreateService();
+        var service = CreateService();
 
-        var result1 = service.IsDuplicate("multi-1");
-        var result2 = service.IsDuplicate("multi-2");
-        var result3 = service.IsDuplicate("multi-3");
+        var result1 = await service.IsDuplicateAsync("multi-1");
+        var result2 = await service.IsDuplicateAsync("multi-2");
+        var result3 = await service.IsDuplicateAsync("multi-3");
 
         result1.Should().BeFalse();
         result2.Should().BeFalse();
@@ -84,16 +85,16 @@ public class IdempotencyServiceTests
     }
 
     [Fact]
-    public void IsDuplicate_CachePrefix_DoesNotCollideWithOtherCacheKeys()
+    public async Task IsDuplicateAsync_CachePrefix_DoesNotCollideWithOtherCacheKeys()
     {
-        var cache = new MemoryCache(new MemoryCacheOptions());
+        IDistributedCache cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
         var service = new IdempotencyService(cache);
 
-        // Manually set a cache entry WITHOUT the "idempotency:" prefix
-        cache.Set("some-key", true);
+        // Manually set a raw entry WITHOUT the "idempotency:" prefix
+        await cache.SetStringAsync("some-key", "1");
 
-        // IsDuplicate checks "idempotency:some-key", not "some-key"
-        var result = service.IsDuplicate("some-key");
+        // IsDuplicateAsync checks "idempotency:some-key", not "some-key"
+        var result = await service.IsDuplicateAsync("some-key");
 
         result.Should().BeFalse();
     }

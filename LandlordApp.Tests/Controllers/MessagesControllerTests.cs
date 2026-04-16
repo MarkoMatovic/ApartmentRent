@@ -9,7 +9,9 @@ using Lander.src.Modules.Communication.Controllers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Lander.Helpers;
 
 namespace LandlordApp.Tests.Controllers;
@@ -34,7 +36,7 @@ public class MessagesControllerTests
             .Returns(Task.CompletedTask);
 
         _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object));
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 
@@ -127,16 +129,49 @@ public class MessagesControllerTests
         result.Result.Should().BeOfType<ForbidResult>();
     }
 
+    [Fact]
+    public async Task SendMessage_DuplicateIdempotencyKey_ReturnsConflict()
+    {
+        // Arrange: create a controller with a real IdempotencyService backed by a real distributed cache
+        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        var idempotencyService = new IdempotencyService(cache);
+        var controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object, idempotencyService);
+        controller.ControllerContext = MakeAuthContext(CurrentUserId);
+
+        // Pre-register the key so the second call sees a duplicate
+        await idempotencyService.IsDuplicateAsync($"msg:{CurrentUserId}:key-abc");
+
+        // Set the same Idempotency-Key header
+        controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "key-abc";
+
+        var input = new SendMessageInputDto { SenderId = CurrentUserId, ReceiverId = 20, MessageText = "Hello" };
+
+        var result = await controller.SendMessage(input);
+
+        result.Result.Should().BeOfType<ConflictObjectResult>();
+    }
+
     // ─── MarkAsRead ───────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task MarkAsRead_ReturnsOk()
+    public async Task MarkAsRead_AsRecipient_ReturnsOk()
     {
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(5, CurrentUserId)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(5)).Returns(Task.CompletedTask);
 
         var result = await _controller.MarkAsRead(5);
 
         result.Should().BeOfType<OkResult>();
+    }
+
+    [Fact]
+    public async Task MarkAsRead_NotRecipient_ReturnsForbid()
+    {
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(5, CurrentUserId)).ReturnsAsync(false);
+
+        var result = await _controller.MarkAsRead(5);
+
+        result.Should().BeOfType<ForbidResult>();
     }
 
     // ─── GetUnreadCount ───────────────────────────────────────────────────────

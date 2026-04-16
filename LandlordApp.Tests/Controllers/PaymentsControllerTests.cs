@@ -12,7 +12,10 @@ using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Lander.Helpers;
 
 namespace LandlordApp.Tests.Controllers;
@@ -52,7 +55,8 @@ public class PaymentsControllerTests
             .Build();
 
         _controller = new PaymentsController(_mockMonri.Object, _mockUserService.Object, _config,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object),
+            new Mock<ILogger<PaymentsController>>().Object);
         _controller.ControllerContext = MakeAuthContext(TestGuid);
     }
 
@@ -115,10 +119,36 @@ public class PaymentsControllerTests
     }
 
     [Fact]
+    public async Task CreatePayment_DuplicateIdempotencyKey_ReturnsConflict()
+    {
+        // Arrange: real IdempotencyService with real in-memory distributed cache
+        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        var idempotencyService = new IdempotencyService(cache);
+        var controller = new PaymentsController(
+            _mockMonri.Object, _mockUserService.Object, _config,
+            idempotencyService,
+            new Mock<ILogger<PaymentsController>>().Object);
+        controller.ControllerContext = MakeAuthContext(TestGuid);
+
+        _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync(TestUser);
+
+        // Pre-register the key as seen
+        await idempotencyService.IsDuplicateAsync($"payment:{TestUser.UserId}:idem-xyz");
+
+        // Set the same header
+        controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "idem-xyz";
+
+        var result = await controller.CreatePayment(new CreateMonriPaymentRequest { PlanId = "basic" });
+
+        result.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Fact]
     public async Task CreatePayment_NoSubClaim_ReturnsUnauthorized()
     {
         var controller = new PaymentsController(_mockMonri.Object, _mockUserService.Object, _config,
-            new IdempotencyService(new MemoryCache(new MemoryCacheOptions())));
+            new IdempotencyService(new Mock<IDistributedCache>().Object),
+            new Mock<ILogger<PaymentsController>>().Object);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext

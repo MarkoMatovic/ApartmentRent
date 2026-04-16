@@ -306,6 +306,403 @@ public class AnalyticsControllerTests
         result.Result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
+    // ─── GetTopViewedRoommates ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetTopViewedRoommates_DefaultCount_ReturnsOkWithList()
+    {
+        var roommates = new List<TopEntityDto>
+        {
+            new() { EntityId = 1, EntityType = "Roommate", ViewCount = 7 },
+            new() { EntityId = 2, EntityType = "Roommate", ViewCount = 4 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(10, null, null))
+            .ReturnsAsync(roommates);
+
+        var result = await _controller.GetTopViewedRoommates();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(roommates);
+    }
+
+    [Fact]
+    public async Task GetTopViewedRoommates_CustomCount_ReturnsOk()
+    {
+        _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(5, null, null))
+            .ReturnsAsync(new List<TopEntityDto> { new() { EntityId = 3, EntityType = "Roommate", ViewCount = 2 } });
+
+        var result = await _controller.GetTopViewedRoommates(5);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetTopViewedRoommates_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetTopViewedRoommates();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
+            .Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTopViewedRoommates_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Service error"));
+
+        Func<Task> act = async () => await _controller.GetTopViewedRoommates();
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetEventTrends ───────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetEventTrends_WithRequiredDates_ReturnsOkWithTrends()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 1, 31);
+        var trends = new List<EventTrendDto>
+        {
+            new() { Date = new DateTime(2025, 1, 10), EventType = "view", Count = 15 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetEventTrendsAsync(from, to, null))
+            .ReturnsAsync(trends);
+
+        var result = await _controller.GetEventTrends(from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(trends);
+    }
+
+    [Fact]
+    public async Task GetEventTrends_WithEventTypeFilter_PassesFilterToService()
+    {
+        var from = new DateTime(2025, 3, 1);
+        var to = new DateTime(2025, 3, 31);
+        _mockAnalyticsService.Setup(s => s.GetEventTrendsAsync(from, to, "search"))
+            .ReturnsAsync(new List<EventTrendDto>());
+
+        var result = await _controller.GetEventTrends(from, to, "search");
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockAnalyticsService.Verify(s => s.GetEventTrendsAsync(from, to, "search"), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEventTrends_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetEventTrendsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<string?>()))
+            .ThrowsAsync(new Exception("Trend error"));
+
+        Func<Task> act = async () => await _controller.GetEventTrends(DateTime.UtcNow.AddDays(-7), DateTime.UtcNow);
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Trend error");
+    }
+
+    // ─── GetUserRoommateSummary ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserRoommateSummary_ValidUserId_ReturnsOk()
+    {
+        var summary = new UserRoommateAnalyticsSummaryDto
+        {
+            RoommateViews = 5, MessagesSent = 3, ApplicationsSent = 1, Searches = 10
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(CurrentUserId, null, null))
+            .ReturnsAsync(summary);
+
+        var result = await _controller.GetUserRoommateSummary(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(summary);
+    }
+
+    [Fact]
+    public async Task GetUserRoommateSummary_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 6, 30);
+        var summary = new UserRoommateAnalyticsSummaryDto { Searches = 8 };
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(CurrentUserId, from, to))
+            .ReturnsAsync(summary);
+
+        var result = await _controller.GetUserRoommateSummary(CurrentUserId, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(summary);
+    }
+
+    [Fact]
+    public async Task GetUserRoommateSummary_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Summary error"));
+
+        Func<Task> act = async () => await _controller.GetUserRoommateSummary(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetUserTopRoommates ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserTopRoommates_ValidUserId_ReturnsOkWithList()
+    {
+        var roommates = new List<TopEntityDto>
+        {
+            new() { EntityId = 10, EntityType = "Roommate", ViewCount = 6 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(CurrentUserId, 10, null, null))
+            .ReturnsAsync(roommates);
+
+        var result = await _controller.GetUserTopRoommates(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(roommates);
+    }
+
+    [Fact]
+    public async Task GetUserTopRoommates_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetUserTopRoommates(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
+            .Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserTopRoommates_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Roommate error"));
+
+        Func<Task> act = async () => await _controller.GetUserTopRoommates(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetUserSearches ──────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserSearches_ValidUserId_ReturnsOkWithList()
+    {
+        var searches = new List<SearchTermDto>
+        {
+            new() { SearchTerm = "garsonjera Sarajevo", SearchCount = 4 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(CurrentUserId, 10, null, null))
+            .ReturnsAsync(searches);
+
+        var result = await _controller.GetUserSearches(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(searches);
+    }
+
+    [Fact]
+    public async Task GetUserSearches_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ReturnsAsync(new List<SearchTermDto>());
+
+        var result = await _controller.GetUserSearches(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeAssignableTo<IEnumerable<SearchTermDto>>()
+            .Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserSearches_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Search error"));
+
+        Func<Task> act = async () => await _controller.GetUserSearches(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetUserRoommateTrends ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserRoommateTrends_ValidUserId_ReturnsOk()
+    {
+        var trends = new UserRoommateTrendsDto
+        {
+            PopularCities = new List<PopularCityDto> { new() { City = "Sarajevo", ViewCount = 12 } },
+            AveragePrices = new List<AveragePriceDto> { new() { City = "Sarajevo", AveragePrice = 450m } }
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(CurrentUserId, null, null))
+            .ReturnsAsync(trends);
+
+        var result = await _controller.GetUserRoommateTrends(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(trends);
+    }
+
+    [Fact]
+    public async Task GetUserRoommateTrends_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 12, 31);
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(CurrentUserId, from, to))
+            .ReturnsAsync(new UserRoommateTrendsDto());
+
+        var result = await _controller.GetUserRoommateTrends(CurrentUserId, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetUserRoommateTrends_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Trends error"));
+
+        Func<Task> act = async () => await _controller.GetUserRoommateTrends(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetUserTopApartments ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserTopApartments_ValidUserId_ReturnsOkWithList()
+    {
+        var apartments = new List<TopEntityDto>
+        {
+            new() { EntityId = 5, EntityType = "Apartment", ViewCount = 9 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 10, null, null))
+            .ReturnsAsync(apartments);
+
+        var result = await _controller.GetUserTopApartments(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(apartments);
+    }
+
+    [Fact]
+    public async Task GetUserTopApartments_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetUserTopApartments(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
+            .Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetUserTopApartments_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Apartment error"));
+
+        Func<Task> act = async () => await _controller.GetUserTopApartments(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetUserCompleteAnalytics ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserCompleteAnalytics_ValidUserId_ReturnsOk()
+    {
+        var summary = new AnalyticsSummaryDto { TotalEvents = 42, TotalApartmentViews = 18 };
+        _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(CurrentUserId, null, null))
+            .ReturnsAsync(summary);
+
+        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(summary);
+    }
+
+    [Fact]
+    public async Task GetUserCompleteAnalytics_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 6, 30);
+        _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(CurrentUserId, from, to))
+            .ReturnsAsync(new AnalyticsSummaryDto { TotalEvents = 15 });
+
+        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetUserCompleteAnalytics_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Analytics error"));
+
+        Func<Task> act = async () => await _controller.GetUserCompleteAnalytics(CurrentUserId);
+
+        await act.Should().ThrowAsync<Exception>();
+    }
+
+    // ─── GetMyViewedApartments ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetMyViewedApartments_ValidClaims_ReturnsOk()
+    {
+        var apartments = new List<TopEntityDto>
+        {
+            new() { EntityId = 3, EntityType = "Apartment", ViewCount = 2 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 10, null, null))
+            .ReturnsAsync(apartments);
+
+        var result = await _controller.GetMyViewedApartments();
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(apartments);
+    }
+
+    [Fact]
+    public async Task GetMyViewedApartments_MissingUserIdClaim_ReturnsUnauthorized()
+    {
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity())
+            }
+        };
+
+        var result = await _controller.GetMyViewedApartments();
+
+        result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMyViewedApartments_WithCustomCount_PassesCountToService()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetMyViewedApartments(5);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockAnalyticsService.Verify(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null), Times.Once);
+    }
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private static ControllerContext MakeAuthContext(int userId = 1, Guid? userGuid = null)
