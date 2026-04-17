@@ -65,5 +65,8 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         [NotMapped]
         public virtual ICollection<SearchPreference> SearchPreferences { get; set; } = new List<SearchPreference>();
         public virtual Role? UserRole { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Timestamp]
+        public byte[] RowVersion { get; set; } = null!;
     }
 }

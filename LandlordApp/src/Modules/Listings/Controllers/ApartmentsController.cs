@@ -57,15 +57,15 @@ public partial class ApartmentsController : ControllerBase
 
         return Ok(await _apartmentService.GetAllApartmentsAsync(filters));
     }
-    [HttpGet(ApiActionsV1.GetAllApartmentsCursor, Name = nameof(ApiActionsV1.GetAllApartmentsCursor))]
+    [HttpGet(ApiActionsV1.GetAllApartmentsKeyset, Name = nameof(ApiActionsV1.GetAllApartmentsKeyset))]
     [AllowAnonymous]
-    public async Task<ActionResult<CursorPagedResult<ApartmentDto>>> GetAllApartmentsCursor(
+    public async Task<ActionResult<KeysetPagedResult<ApartmentDto>>> GetAllApartmentsKeyset(
         [FromQuery] ApartmentFilterDto? filters,
         [FromQuery] int? afterId = null,
         [FromQuery] int pageSize = 20)
     {
         filters ??= new ApartmentFilterDto();
-        return Ok(await _apartmentService.GetAllApartmentsCursorAsync(filters, afterId, pageSize));
+        return Ok(await _apartmentService.GetAllApartmentsKeysetAsync(filters, afterId, pageSize));
     }
 
     [HttpGet(ApiActionsV1.GetMyApartments, Name = nameof(ApiActionsV1.GetMyApartments))]

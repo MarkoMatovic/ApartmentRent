@@ -9,7 +9,8 @@
       "Bash(xargs wc:*)",
       "Bash(find /c/Users/38161/Desktop/Landlord/.claude/worktrees/goofy-clarke/LandlordApp/Helpers -type f -name *.cs)",
       "Bash(dir \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\.claude\\\\worktrees\\\\goofy-clarke\\\\LandlordApp\\\\Helpers\"\" /b)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(dotnet add *)"
     ]
   }
 }

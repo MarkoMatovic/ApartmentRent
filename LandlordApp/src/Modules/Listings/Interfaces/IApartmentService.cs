@@ -16,7 +16,7 @@ public interface IApartmentService
     Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId);
     Task DeleteApartmentsByLandlordIdAsync(int landlordId);
     
-    Task<CursorPagedResult<ApartmentDto>> GetAllApartmentsCursorAsync(ApartmentFilterDto filters, int? afterId, int pageSize = 20);
+    Task<KeysetPagedResult<ApartmentDto>> GetAllApartmentsKeysetAsync(ApartmentFilterDto filters, int? afterId, int pageSize = 20);
 
     // .NET 10 Feature: Vector Search methods
     Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync();
