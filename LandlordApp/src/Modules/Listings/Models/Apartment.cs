@@ -67,4 +67,7 @@ public partial class Apartment
     // Premium feature: Featured listing
     public bool IsFeatured { get; set; } = false;
     public DateTime? FeaturedUntil { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Timestamp]
+    public byte[] RowVersion { get; set; } = null!;
 }
