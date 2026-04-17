@@ -1,9 +1,13 @@
 using Lander.Helpers;
 using Lander.src.Infrastructure.Authorization;
+using Lander.src.Infrastructure.Services;
+using Microsoft.Extensions.Caching.Hybrid;
 using Lander.src.Modules.Communication.Implementation;
 using Lander.src.Modules.Communication.Interfaces;
+using Lander.src.Modules.Communication.Services;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
+using Lander.src.Modules.Listings.Services;
 using Lander.src.Modules.Reviews.Implementation;
 using Lander.src.Modules.Roommates.Implementation;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -17,6 +21,7 @@ using Lander.src.Modules.Users.Implementation.PermissionImplementation;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
 using Lander.src.Modules.Users.Infrastructure.Repository;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Lander.src.Modules.Users.Services;
 using Lander.src.Notifications.Implementation;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.Services;
@@ -28,13 +33,31 @@ public static class ApplicationServiceExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // --- Password hashing ---
+        services.AddScoped<IPasswordHashingService, PasswordHashingService>();
+
+        // --- User sub-services (registered before UserService facade) ---
+        services.AddScoped<IUserRoleUpgradeService, UserRoleUpgradeService>();
+        services.AddScoped<IPasswordService, PasswordService>();
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
+
+        // --- UserService facade (depends on the three sub-services above) ---
         services.AddScoped<IUserInterface, UserService>();
 
-        // RBAC: Permission Repository and Service
+        // --- RBAC ---
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IPermissionService, PermissionService>();
 
+        // --- Email template renderer + email service ---
+        services.AddScoped<IEmailTemplateRenderer, EmailTemplateRenderer>();
+        services.Configure<BrevoSettings>(configuration.GetSection("Brevo"));
+        services.AddScoped<IEmailService, EmailService>();
+
+        // --- Apartment notification service ---
+        services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();
         services.AddScoped<IApartmentService, ApartmentService>();
+
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
         services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
         services.AddHostedService<Lander.src.Modules.Communication.Services.OutboxProcessorService>();
@@ -45,8 +68,6 @@ public static class ApplicationServiceExtensions
         services.Configure<TwilioSettings>(configuration.GetSection("Twilio"));
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IMessageService, MessageService>();
-        services.Configure<BrevoSettings>(configuration.GetSection("Brevo"));
-        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
         services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
@@ -58,8 +79,13 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
         services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
-        // Payment Integration (Monri)
-        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriService, Lander.src.Modules.Payments.Implementation.MonriService>();
+        // --- Payment integration (Monri) ---
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriPaymentFormService,
+                           Lander.src.Modules.Payments.Implementation.MonriPaymentFormService>();
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriCallbackHandler,
+                           Lander.src.Modules.Payments.Implementation.MonriCallbackHandler>();
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriService,
+                           Lander.src.Modules.Payments.Implementation.MonriService>();
 
         // User deletion handlers (decoupled cleanup via IUserDeletedHandler)
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();
@@ -81,6 +107,13 @@ public static class ApplicationServiceExtensions
         // RBAC: Authorization Infrastructure
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+        services.AddSingleton<IAuthorizationHandler, ApartmentOwnerHandler>();
+
+        // Testable time abstraction — use FakeTimeProvider from Microsoft.Extensions.TimeProvider.Testing in tests
+        services.AddSingleton(TimeProvider.System);
+
+        // HybridCache: stampede-safe L1 cache with Redis-ready L2 support
+        services.AddHybridCache();
 
         return services;
     }

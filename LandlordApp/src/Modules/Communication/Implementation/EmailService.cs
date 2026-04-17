@@ -1,6 +1,7 @@
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
+using Lander.src.Modules.Communication.Services;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
@@ -37,17 +38,20 @@ public class EmailService : IEmailService
     private readonly BrevoSettings _settings;
     private readonly CommunicationsContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailTemplateRenderer _templateRenderer;
     private readonly ILogger<EmailService> _logger;
 
     public EmailService(
         IOptions<BrevoSettings> settings,
         CommunicationsContext context,
         IHttpContextAccessor httpContextAccessor,
+        IEmailTemplateRenderer templateRenderer,
         ILogger<EmailService> logger)
     {
         _settings = settings.Value;
         _context = context;
         _httpContextAccessor = httpContextAccessor;
+        _templateRenderer = templateRenderer;
         _logger = logger;
         Configuration.Default.AddApiKey("api-key", _settings.ApiKey);
     }
@@ -85,7 +89,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendTemplatedEmailAsync(string to, string subject, string templateName, object templateData)
     {
-        var htmlContent = RenderTemplate(templateName, templateData);
+        var htmlContent = _templateRenderer.Render(templateName, templateData);
         return await SendEmailAsync(to, subject, htmlContent);
     }
 
@@ -216,22 +220,6 @@ public class EmailService : IEmailService
         }
     }
 
-    private string RenderTemplate(string templateName, object templateData)
-    {
-        var templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "src", "Modules", "Communication", "EmailTemplates", $"{templateName}.html");
-        if (!File.Exists(templatePath))
-        {
-            _logger.LogWarning("Template {TemplateName} not found at {Path}", templateName, templatePath);
-            return $"<h1>Template {templateName} not found</h1>";
-        }
-        var template = File.ReadAllText(templatePath);
-        foreach (var prop in templateData.GetType().GetProperties())
-        {
-            var placeholder = $"{{{{{prop.Name}}}}}";
-            var value = prop.GetValue(templateData)?.ToString() ?? "";
-            template = template.Replace(placeholder, value);
-        }
-        return template;
-    }
 }
+
 
