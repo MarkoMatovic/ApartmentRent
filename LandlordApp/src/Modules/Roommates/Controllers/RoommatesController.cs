@@ -32,8 +32,8 @@ public class RoommatesController : ControllerBase
         [FromQuery] DateOnly? availableFrom = null,
         [FromQuery] int? stayDuration = null,
         [FromQuery] int? apartmentId = null,
-        [FromQuery] int? page = null,
-        [FromQuery] int? pageSize = null)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         if (location != null || minBudget.HasValue || maxBudget.HasValue || smokingAllowed.HasValue || petFriendly.HasValue || lifestyle != null || profession != null)
         {
@@ -46,15 +46,9 @@ public class RoommatesController : ControllerBase
                 userAgent: HttpContext.Request.Headers["User-Agent"].ToString()
             );
         }
-        if (page.HasValue && pageSize.HasValue)
-        {
-            var pagedResult = await _roommateService.GetAllRoommatesAsync(
-                location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, profession, availableFrom, stayDuration, apartmentId, page.Value, pageSize.Value);
-            return Ok(pagedResult);
-        }
-        var roommates = await _roommateService.GetAllRoommatesAsync(
-            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, profession, availableFrom, stayDuration, apartmentId);
-        return Ok(roommates);
+        var pagedResult = await _roommateService.GetAllRoommatesAsync(
+            location, minBudget, maxBudget, smokingAllowed, petFriendly, lifestyle, profession, availableFrom, stayDuration, apartmentId, page, pageSize);
+        return Ok(pagedResult);
     }
     [HttpGet(ApiActionsV1.GetRoommate, Name = nameof(ApiActionsV1.GetRoommate))]
     [AllowAnonymous]

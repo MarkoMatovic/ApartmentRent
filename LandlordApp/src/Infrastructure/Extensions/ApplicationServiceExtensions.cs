@@ -56,6 +56,9 @@ public static class ApplicationServiceExtensions
 
         // --- Apartment notification service ---
         services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();
+
+        services.AddSingleton<Lander.src.Modules.Listings.Services.ApartmentCacheVersionService>();
+        services.AddScoped<Lander.src.Infrastructure.Services.IAuditLogService, Lander.src.Infrastructure.Services.AuditLogService>();
         services.AddScoped<IApartmentService, ApartmentService>();
 
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();

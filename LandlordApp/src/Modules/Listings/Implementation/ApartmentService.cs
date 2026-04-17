@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
@@ -21,6 +22,8 @@ public partial class ApartmentService : IApartmentService
     private readonly ILogger<ApartmentService> _logger;
     private readonly IAuthorizationService _authorizationService;
     private readonly TimeProvider _timeProvider;
+    private readonly ApartmentCacheVersionService _cacheVersion;
+    private readonly IAuditLogService _auditLog;
 
     public ApartmentService(
         ListingsContext context,
@@ -32,7 +35,9 @@ public partial class ApartmentService : IApartmentService
         IHttpContextAccessor httpContextAccessor,
         ILogger<ApartmentService> logger,
         IAuthorizationService authorizationService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ApartmentCacheVersionService cacheVersion,
+        IAuditLogService auditLog)
     {
         _context = context;
         _usersContext = usersContext;
@@ -44,5 +49,7 @@ public partial class ApartmentService : IApartmentService
         _logger = logger;
         _authorizationService = authorizationService;
         _timeProvider = timeProvider;
+        _cacheVersion = cacheVersion;
+        _auditLog = auditLog;
     }
 }
