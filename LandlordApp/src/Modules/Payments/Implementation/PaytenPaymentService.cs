@@ -4,11 +4,32 @@ using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Payments.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Retry;
 
 namespace Lander.src.Modules.Payments.Implementation
 {
     public class PaytenPaymentService : IPaymentService
     {
+        private static readonly ResiliencePipeline _pipeline = new ResiliencePipelineBuilder()
+            .AddRetry(new RetryStrategyOptions
+            {
+                MaxRetryAttempts = 3,
+                Delay = TimeSpan.FromSeconds(2),
+                BackoffType = DelayBackoffType.Exponential,
+                ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>().Handle<TimeoutException>()
+            })
+            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+            {
+                FailureRatio = 0.5,
+                SamplingDuration = TimeSpan.FromSeconds(30),
+                MinimumThroughput = 5,
+                BreakDuration = TimeSpan.FromMinutes(1),
+                ShouldHandle = new PredicateBuilder().Handle<HttpRequestException>().Handle<TimeoutException>()
+            })
+            .Build();
+
         private readonly PaymentsContext _context;
         private readonly IConfiguration _configuration;
 

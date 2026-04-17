@@ -110,14 +110,13 @@ public partial class ApartmentService
             .Include(a => a.ApartmentImages)
             .OrderBy(a => a.ApartmentId);
 
-        var apartmentIds = await orderedQuery
+        // Single query: take pageSize+1 (for HasNextPage detection) with images in split query
+        var apartments = await orderedQuery
+            .AsSplitQuery()
             .Take(pageSize + 1)
-            .Select(a => a.ApartmentId)
             .ToListAsync();
 
-        var apartments = await orderedQuery
-            .Where(a => apartmentIds.Contains(a.ApartmentId))
-            .ToListAsync();
+        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
 
         var reviewStats = await _reviewsContext.Reviews
             .AsNoTracking()
