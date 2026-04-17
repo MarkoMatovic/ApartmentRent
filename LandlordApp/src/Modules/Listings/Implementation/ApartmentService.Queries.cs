@@ -4,8 +4,7 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Lander.src.Modules.Listings.Implementation;
 
@@ -21,42 +20,9 @@ public partial class ApartmentService
             .OrderByDescending(a => a.IsFeatured)
             .ThenBy(a => a.Rent)
             .Take(100)
-            .Select(a => new
-            {
-                Apartment = a,
-                LandlordId = a.LandlordId
-            })
             .ToListAsync();
-        var apartmentDtos = apartments.Select(a => new ApartmentDto
-        {
-            ApartmentId = a.Apartment.ApartmentId,
-            Title = a.Apartment.Title,
-            Rent = a.Apartment.Rent,
-            Price = a.Apartment.Price,
-            Address = a.Apartment.Address,
-            City = a.Apartment.City ?? string.Empty,
-            Latitude = a.Apartment.Latitude,
-            Longitude = a.Apartment.Longitude,
-            SizeSquareMeters = a.Apartment.SizeSquareMeters,
-            ApartmentType = a.Apartment.ApartmentType,
-            ListingType = a.Apartment.ListingType,
-            IsFurnished = a.Apartment.IsFurnished,
-            IsImmediatelyAvailable = a.Apartment.IsImmediatelyAvailable,
-            IsLookingForRoommate = a.Apartment.IsLookingForRoommate,
-            IsFeatured = a.Apartment.IsFeatured,
-            FeaturedUntil = a.Apartment.FeaturedUntil,
-            ApartmentImages = a.Apartment.ApartmentImages
-                .Where(img => !img.IsDeleted)
-                .OrderBy(img => img.DisplayOrder)
-                .Take(5)
-                .Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList()
-        }).ToList();
+
+        var apartmentDtos = apartments.Select(a => a.ToDto()).ToList();
         return new PagedResult<ApartmentDto>
         {
             Items = apartmentDtos,
@@ -74,173 +40,67 @@ public partial class ApartmentService
                        $"_at{(int?)filters.ApartmentType}_nr{filters.NumberOfRooms}" +
                        $"_lt{(int?)filters.ListingType}_ia{filters.IsImmediatelyAvailable}";
 
-        if (_cache.TryGetValue(cacheKey, out PagedResult<ApartmentDto>? cachedResult) && cachedResult != null)
-        {
-            return cachedResult;
-        }
-
-        var query = _context.Apartments
-            // Named query filter automatically applies: !a.IsDeleted && a.IsActive
-            .AsNoTracking();
-        if (filters.ListingType.HasValue)
-        {
-            query = query.Where(a => a.ListingType == filters.ListingType.Value);
-        }
-        if (!string.IsNullOrEmpty(filters.City))
-        {
-            // EF.Functions.Like with suffix wildcard → SQL LIKE 'value%' which uses the City index.
-            // Contains() would produce LIKE '%value%' and skip the index entirely.
-            query = query.Where(a => EF.Functions.Like(a.City!, filters.City + "%"));
-        }
-        if (filters.MinRent.HasValue)
-        {
-            query = query.Where(a => a.Rent >= filters.MinRent.Value);
-        }
-        if (filters.MaxRent.HasValue)
-        {
-            query = query.Where(a => a.Rent <= filters.MaxRent.Value);
-        }
-        if (filters.NumberOfRooms.HasValue)
-        {
-            query = query.Where(a => a.NumberOfRooms == filters.NumberOfRooms.Value);
-        }
-        if (filters.ApartmentType.HasValue)
-        {
-            query = query.Where(a => a.ApartmentType == filters.ApartmentType.Value);
-        }
-        // Note: Boolean filters (IsFurnished, etc.) are temporarily disabled
-        // until JSON-based filtering for the Features column is implemented.
-
-        if (filters.IsImmediatelyAvailable.HasValue)
-        {
-            query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
-        }
-        if (filters.AvailableFrom.HasValue)
-        {
-            query = query.Where(a => a.AvailableFrom >= filters.AvailableFrom.Value);
-        }
-        var sortBy = filters.SortBy?.ToLower() ?? "date";
-        var sortOrder = filters.SortOrder?.ToLower() ?? "desc";
-
-        var baseOrderedQuery = query.OrderByDescending(a => a.IsFeatured);
-
-        IOrderedQueryable<Lander.src.Modules.Listings.Models.Apartment> orderedQuery = (sortBy, sortOrder) switch
-        {
-            ("rent" or "price", "asc")  => baseOrderedQuery.ThenBy(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
-            ("rent" or "price", "desc") => baseOrderedQuery.ThenByDescending(a => a.Rent > 0 ? a.Rent : a.Price ?? 0),
-            ("size",  "asc")  => baseOrderedQuery.ThenBy(a => a.SizeSquareMeters),
-            ("size",  "desc") => baseOrderedQuery.ThenByDescending(a => a.SizeSquareMeters),
-            ("date",  "asc")  => baseOrderedQuery.ThenBy(a => a.CreatedDate),
-            _                 => baseOrderedQuery.ThenByDescending(a => a.CreatedDate)
-        };
-
-        var totalCount = await query.CountAsync();
-        var apartments = await orderedQuery
-            .Include(a => a.ApartmentImages)
-            .Skip((filters.Page - 1) * filters.PageSize)
-            .Take(filters.PageSize)
-            .ToListAsync();
-
-        _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}",
-            filters.Page, filters.PageSize, totalCount);
-
-        // Fetch review stats in parallel with count+data (different DbContext → no concurrency issue).
-        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
-        var reviewStats = await _reviewsContext.Reviews
-            .AsNoTracking()
-            .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
-            .GroupBy(r => r.ApartmentId)
-            .Select(g => new
+        // HybridCache: built-in stampede protection + Redis-ready L2 cache.
+        return await _hybridCache.GetOrCreateAsync(
+            cacheKey,
+            async ct =>
             {
-                ApartmentId = g.Key,
-                AverageRating = g.Average(r => (decimal?)r.Rating),
-                ReviewCount = g.Count()
-            })
-            .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
+                // Note: Boolean filters (IsFurnished, etc.) temporarily disabled pending JSON column support.
+                var query = _context.Apartments.AsNoTracking().ApplyFilters(filters);
+                var orderedQuery = query.ApplySort(filters.SortBy, filters.SortOrder);
 
-        var items = apartments.Select(a => new ApartmentDto
-        {
-            ApartmentId = a.ApartmentId,
-            Title = a.Title,
-            Rent = a.Rent,
-            Price = a.Price,
-            Address = a.Address,
-            City = a.City ?? string.Empty,
-            Latitude = a.Latitude,
-            Longitude = a.Longitude,
-            SizeSquareMeters = a.SizeSquareMeters,
-            ApartmentType = a.ApartmentType,
-            ListingType = a.ListingType,
-            IsFurnished = ApartmentFeaturesHelper.Deserialize(a.Features).IsFurnished,
-            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-            IsLookingForRoommate = a.IsLookingForRoommate,
-            AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
-            ReviewCount = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].ReviewCount : 0,
-            ApartmentImages = a.ApartmentImages
-                .Where(img => !img.IsDeleted)
-                .OrderBy(img => img.DisplayOrder)
-                .Take(5)
-                .Select(img => new ApartmentImageDto
+                var totalCount = await query.CountAsync(ct);
+                var apartments = await orderedQuery
+                    .Include(a => a.ApartmentImages)
+                    .Skip((filters.Page - 1) * filters.PageSize)
+                    .Take(filters.PageSize)
+                    .ToListAsync(ct);
+
+                _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}",
+                    filters.Page, filters.PageSize, totalCount);
+
+                var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
+                var reviewStats = await _reviewsContext.Reviews
+                    .AsNoTracking()
+                    .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
+                    .GroupBy(r => r.ApartmentId)
+                    .Select(g => new
+                    {
+                        ApartmentId = g.Key,
+                        AverageRating = g.Average(r => (decimal?)r.Rating),
+                        ReviewCount = g.Count()
+                    })
+                    .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x, ct);
+
+                var items = apartments
+                    .Select(a =>
+                    {
+                        var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
+                        return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0);
+                    })
+                    .ToList();
+
+                return new PagedResult<ApartmentDto>
                 {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList(),
-            IsFeatured = a.IsFeatured,
-            FeaturedUntil = a.FeaturedUntil
-        }).ToList();
-
-        var result = new PagedResult<ApartmentDto>
-        {
-            Items = items,
-            TotalCount = totalCount,
-            Page = filters.Page,
-            PageSize = filters.PageSize
-        };
-
-        var cacheEntryOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(TimeSpan.FromMinutes(2))
-            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
-            .AddExpirationToken(_cacheVersion.GetChangeToken());
-
-        _cache.Set(cacheKey, result, cacheEntryOptions);
-
-        return result;
+                    Items = items,
+                    TotalCount = totalCount,
+                    Page = filters.Page,
+                    PageSize = filters.PageSize
+                };
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(5),
+                LocalCacheExpiration = TimeSpan.FromMinutes(2)
+            });
     }
 
-    public async Task<CursorPagedResult<ApartmentDto>> GetAllApartmentsCursorAsync(
+    public async Task<KeysetPagedResult<ApartmentDto>> GetAllApartmentsKeysetAsync(
         ApartmentFilterDto filters,
         int? afterId,
         int pageSize = 20)
     {
-        var query = _context.Apartments
-            // Named query filter automatically applies: !a.IsDeleted && a.IsActive
-            .AsNoTracking();
-
-        if (filters.ListingType.HasValue)
-            query = query.Where(a => a.ListingType == filters.ListingType.Value);
-
-        if (!string.IsNullOrEmpty(filters.City))
-            query = query.Where(a => EF.Functions.Like(a.City!, filters.City + "%"));
-
-        if (filters.MinRent.HasValue)
-            query = query.Where(a => a.Rent >= filters.MinRent.Value);
-
-        if (filters.MaxRent.HasValue)
-            query = query.Where(a => a.Rent <= filters.MaxRent.Value);
-
-        if (filters.NumberOfRooms.HasValue)
-            query = query.Where(a => a.NumberOfRooms == filters.NumberOfRooms.Value);
-
-        if (filters.ApartmentType.HasValue)
-            query = query.Where(a => a.ApartmentType == filters.ApartmentType.Value);
-
-        if (filters.IsImmediatelyAvailable.HasValue)
-            query = query.Where(a => a.IsImmediatelyAvailable == filters.IsImmediatelyAvailable.Value);
-
-        if (filters.AvailableFrom.HasValue)
-            query = query.Where(a => a.AvailableFrom >= filters.AvailableFrom.Value);
+        var query = _context.Apartments.AsNoTracking().ApplyFilters(filters);
 
         // Keyset: apply cursor BEFORE ordering so the DB can use an index seek.
         if (afterId.HasValue)
@@ -272,41 +132,14 @@ public partial class ApartmentService
 
         var dtoQuery = apartments
             .OrderBy(a => a.ApartmentId)
-            .Select(a => new ApartmentDto
+            .Select(a =>
             {
-                ApartmentId = a.ApartmentId,
-                Title = a.Title,
-                Rent = a.Rent,
-                Price = a.Price,
-                Address = a.Address,
-                City = a.City ?? string.Empty,
-                Latitude = a.Latitude,
-                Longitude = a.Longitude,
-                SizeSquareMeters = a.SizeSquareMeters,
-                ApartmentType = a.ApartmentType,
-                ListingType = a.ListingType,
-                IsFurnished = ApartmentFeaturesHelper.Deserialize(a.Features).IsFurnished,
-                IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-                IsLookingForRoommate = a.IsLookingForRoommate,
-                AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
-                ReviewCount = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].ReviewCount : 0,
-                ApartmentImages = a.ApartmentImages
-                    .Where(img => !img.IsDeleted)
-                    .OrderBy(img => img.DisplayOrder)
-                    .Take(5)
-                    .Select(img => new ApartmentImageDto
-                    {
-                        ImageId = img.ImageId,
-                        ApartmentId = img.ApartmentId,
-                        ImageUrl = img.ImageUrl,
-                        IsPrimary = img.IsPrimary
-                    }).ToList(),
-                IsFeatured = a.IsFeatured,
-                FeaturedUntil = a.FeaturedUntil
+                var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
+                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0);
             })
             .AsQueryable();
 
-        return await dtoQuery.ToCursorPagedResultAsync(afterId, pageSize, dto => dto.ApartmentId);
+        return await dtoQuery.ToKeysetPagedResultAsync(afterId, pageSize, dto => dto.ApartmentId);
     }
 
     public async Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync()
@@ -318,9 +151,7 @@ public partial class ApartmentService
         {
             var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
             if (user != null)
-            {
                 landlordId = user.UserId;
-            }
         }
         if (!landlordId.HasValue)
         {
@@ -352,35 +183,14 @@ public partial class ApartmentService
             })
             .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
 
-        var items = apartments.Select(a => new ApartmentDto
-        {
-            ApartmentId = a.ApartmentId,
-            Title = a.Title,
-            Rent = a.Rent,
-            Price = a.Price,
-            Address = a.Address,
-            City = a.City ?? string.Empty,
-            Latitude = a.Latitude,
-            Longitude = a.Longitude,
-            SizeSquareMeters = a.SizeSquareMeters,
-            ApartmentType = a.ApartmentType,
-            ListingType = a.ListingType,
-            IsFurnished = ApartmentFeaturesHelper.Deserialize(a.Features).IsFurnished,
-            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-            IsLookingForRoommate = a.IsLookingForRoommate,
-            AverageRating = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].AverageRating : 0,
-            ReviewCount = reviewStats.ContainsKey(a.ApartmentId) ? reviewStats[a.ApartmentId].ReviewCount : 0,
-            ApartmentImages = a.ApartmentImages
-                .Where(img => !img.IsDeleted)
-                .OrderBy(img => img.DisplayOrder)
-                .Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList()
-        }).ToList();
+        var items = apartments
+            .Select(a =>
+            {
+                var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
+                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0, imageLimit: 0);
+            })
+            .ToList();
+
         return new PagedResult<ApartmentDto>
         {
             Items = items,
@@ -398,9 +208,8 @@ public partial class ApartmentService
             .Where(a => a.ApartmentId == apartmentId && !a.IsDeleted)
             .FirstOrDefaultAsync();
         if (apartment == null)
-        {
             return null;
-        }
+
         Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User? landlord = null;
         if (apartment.LandlordId.HasValue)
         {
@@ -461,12 +270,12 @@ public partial class ApartmentService
                 .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
                 .Select(img => new ApartmentImageDto
-            {
-                ImageId = img.ImageId,
-                ApartmentId = img.ApartmentId,
-                ImageUrl = img.ImageUrl,
-                IsPrimary = img.IsPrimary
-            }).ToList(),
+                {
+                    ImageId = img.ImageId,
+                    ApartmentId = img.ApartmentId,
+                    ImageUrl = img.ImageUrl,
+                    IsPrimary = img.IsPrimary
+                }).ToList(),
             IsFeatured = apartment.IsFeatured,
             FeaturedUntil = apartment.FeaturedUntil
         };
@@ -481,33 +290,7 @@ public partial class ApartmentService
             .OrderByDescending(a => a.CreatedDate)
             .ToListAsync();
 
-        return apartments.Select(a => new ApartmentDto
-        {
-            ApartmentId = a.ApartmentId,
-            Title = a.Title,
-            Rent = a.Rent,
-            Price = a.Price,
-            Address = a.Address,
-            City = a.City ?? string.Empty,
-            Latitude = a.Latitude,
-            Longitude = a.Longitude,
-            SizeSquareMeters = a.SizeSquareMeters,
-            ApartmentType = a.ApartmentType,
-            ListingType = a.ListingType,
-            IsFurnished = a.IsFurnished,
-            IsImmediatelyAvailable = a.IsImmediatelyAvailable,
-            IsLookingForRoommate = a.IsLookingForRoommate,
-            ApartmentImages = a.ApartmentImages
-                .Where(img => !img.IsDeleted)
-                .OrderBy(img => img.DisplayOrder)
-                .Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList()
-        }).ToList();
+        return apartments.Select(a => a.ToDto(imageLimit: 0)).ToList();
     }
 
     // .NET 10 Feature: Vector Search implementation

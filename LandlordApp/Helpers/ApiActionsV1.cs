@@ -25,7 +25,7 @@ public static class ApiActionsV1
     public const string CreateApartment = "create-apartment";
     public const string GetApartment = "get-apartment";
     public const string GetAllApartments = "get-all-apartments";
-    public const string GetAllApartmentsCursor = "cursor";
+    public const string GetAllApartmentsKeyset = "keyset";
     public const string GetMyApartments = "get-my-apartments";
     public const string UpdateApartment = "update-apartment/{id}";
     public const string DeleteApartment = "delete-apartment/{id}";

@@ -9,7 +9,17 @@
       "Bash(xargs wc:*)",
       "Bash(find /c/Users/38161/Desktop/Landlord/.claude/worktrees/goofy-clarke/LandlordApp/Helpers -type f -name *.cs)",
       "Bash(dir \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\.claude\\\\worktrees\\\\goofy-clarke\\\\LandlordApp\\\\Helpers\"\" /b)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(dotnet add *)",
+      "Bash(k6 version *)",
+      "Bash(winget install *)",
+      "Bash(cmd /c \"k6 version\")",
+      "Bash(cmd /c \"where k6\")",
+      "Bash(\"/c/Program Files/k6/k6.exe\" version)",
+      "Bash(dotnet run *)",
+      "Bash(echo \"API PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5197/api/v1/rent/get-all-apartments?page=1)",
+      "Bash(\"/c/Program Files/k6/k6.exe\" run -e BASE_URL=http://localhost:5197 \"C:\\\\Users\\\\38161\\\\Desktop\\\\Landlord\\\\tests\\\\k6\\\\scenarios\\\\01_cache_stampede.js\")"
     ]
   }
 }

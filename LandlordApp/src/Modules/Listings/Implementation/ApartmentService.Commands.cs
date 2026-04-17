@@ -1,12 +1,13 @@
 using System.Security.Claims;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
+using Lander.src.Infrastructure.Authorization;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.MachineLearning.Services;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.Listings.Implementation;
@@ -21,24 +22,12 @@ public partial class ApartmentService
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId);
         if (apartment == null) return false;
 
-        // Ownership check
-        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
-        {
-            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-            if (user == null || apartment.LandlordId != user.UserId)
-            {
-                throw new UnauthorizedAccessException("You do not have permission to activate this apartment.");
-            }
-        }
-        else
-        {
-            throw new UnauthorizedAccessException("Authentication required.");
-        }
+        await RequireOwnerAsync(apartment);
 
         apartment.IsDeleted = false;
         apartment.IsActive = true;
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuidMod) ? parsedGuidMod : null;
-        apartment.ModifiedDate = DateTime.UtcNow;
+        apartment.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -62,27 +51,15 @@ public partial class ApartmentService
         if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
         {
             var user = await _usersContext.Users
-                .Include(u => u.UserRole)
                 .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
 
             if (user != null)
             {
                 landlordId = user.UserId;
-
-                // Auto-upgrade: If user is Tenant, upgrade to TenantLandlord when creating first apartment
-                if (user.UserRole?.RoleName == "Tenant")
-                {
-                    var tenantLandlordRole = await _usersContext.Roles
-                        .FirstOrDefaultAsync(r => r.RoleName == "TenantLandlord");
-
-                    if (tenantLandlordRole != null)
-                    {
-                        user.UserRoleId = tenantLandlordRole.RoleId;
-                        await _usersContext.SaveEntitiesAsync();
-                    }
-                }
+                await _roleUpgradeService.AutoUpgradeOnFirstListingAsync(user.UserId);
             }
         }
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var apartment = new Apartment
         {
             LandlordId = landlordId,
@@ -118,9 +95,9 @@ public partial class ApartmentService
             ContactPhone = apartmentInputDto.ContactPhone,
             IsActive = true,
             CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            CreatedDate = DateTime.UtcNow,
+            CreatedDate = now,
             ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-            ModifiedDate = DateTime.UtcNow
+            ModifiedDate = now
         };
         // Serijalizacija features u JSON kolonu (NotMapped properties se ne čuvaju direktno)
         apartment.Features = ApartmentFeaturesHelper.Serialize(
@@ -142,9 +119,9 @@ public partial class ApartmentService
                     IsPrimary = index == 0,
                     IsDeleted = false,
                     CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-                    CreatedDate = DateTime.UtcNow,
+                    CreatedDate = now,
                     ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-                    ModifiedDate = DateTime.UtcNow
+                    ModifiedDate = now
                 }).ToList();
                 _context.ApartmentImages.AddRange(apartmentImages);
                 await _context.SaveEntitiesAsync(); // Save images
@@ -158,14 +135,8 @@ public partial class ApartmentService
         }
         _cacheVersion.Invalidate();
 
-        // Broadcast new listing notification
         if (apartment.IsActive)
-        {
-             await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification",
-                "New Apartment Listed!",
-                $"A new apartment '{apartment.Title}' is now available in {apartment.City}.",
-                "success");
-        }
+            await _notificationService.NotifyNewListingAsync(apartment.Title, apartment.City ?? string.Empty);
 
         return new ApartmentDto
         {
@@ -193,65 +164,15 @@ public partial class ApartmentService
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null) return false;
 
-        // Ownership check
-        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
-        {
-            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-            if (user == null || apartment.LandlordId != user.UserId)
-            {
-                throw new UnauthorizedAccessException("You do not have permission to delete this apartment.");
-            }
-        }
-        else
-        {
-            throw new UnauthorizedAccessException("Authentication required.");
-        }
+        await RequireOwnerAsync(apartment);
 
         // Notify saved search users BEFORE deactivating
-        try
-        {
-            // Find all active saved searches that reference this apartment ID in their filters
-            var allSavedSearches = await _savedSearchesContext.SavedSearches
-                .Where(ss => ss.IsActive && ss.EmailNotificationsEnabled)
-                .ToListAsync();
-
-            var affectedUserIds = allSavedSearches
-                .Where(ss => ss.FiltersJson != null &&
-                             ss.FiltersJson.Contains($"\"apartmentId\":{apartmentId}",
-                                 StringComparison.OrdinalIgnoreCase))
-                .Select(ss => ss.UserId)
-                .Distinct()
-                .ToList();
-
-            if (affectedUserIds.Any())
-            {
-                var usersToNotify = await _usersContext.Users
-                    .Where(u => affectedUserIds.Contains(u.UserId) && u.IsActive)
-                    .ToListAsync();
-
-                foreach (var user in usersToNotify)
-                {
-                    _ = _emailService.SendListingUnavailableEmailAsync(
-                        user.Email,
-                        user.FirstName,
-                        apartment.Title,
-                        "This listing has been removed by the landlord.");
-                }
-
-                _logger.LogInformation("Sent listing unavailable notifications to {Count} user(s) for apartment {ApartmentId}",
-                    usersToNotify.Count, apartmentId);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error notifying saved search users for deleted apartment {ApartmentId}", apartmentId);
-            // Do not block deletion on notification failure
-        }
+        await _notificationService.NotifyListingRemovedAsync(apartmentId, apartment.Title);
 
         apartment.IsDeleted = true;
         apartment.IsActive = false;
-        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid tempGuid)? tempGuid : null;
-        apartment.ModifiedDate = DateTime.UtcNow;
+        apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid tempGuid) ? tempGuid : null;
+        apartment.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -276,11 +197,12 @@ public partial class ApartmentService
 
         if (!apartments.Any()) return;
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         foreach (var apartment in apartments)
         {
             apartment.IsDeleted = true;
             apartment.IsActive = false;
-            apartment.ModifiedDate = DateTime.UtcNow;
+            apartment.ModifiedDate = now;
         }
 
         var transaction = await _context.BeginTransactionAsync();
@@ -304,23 +226,10 @@ public partial class ApartmentService
             .Include(a => a.ApartmentImages)
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null)
-        {
             throw new NotFoundException("Apartment not found or has been deleted");
-        }
 
-        // Ownership check
-        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
-        {
-            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-            if (user == null || apartment.LandlordId != user.UserId)
-            {
-                throw new UnauthorizedAccessException("You do not have permission to update this apartment.");
-            }
-        }
-        else
-        {
-            throw new UnauthorizedAccessException("Authentication required.");
-        }
+        await RequireOwnerAsync(apartment);
+
         if (updateDto.Title != null) apartment.Title = HtmlSanitizationHelper.SanitizePlainText(updateDto.Title)!;
         if (updateDto.Description != null) apartment.Description = HtmlSanitizationHelper.SanitizeRichText(updateDto.Description);
         if (updateDto.Rent.HasValue) apartment.Rent = updateDto.Rent.Value;
@@ -356,8 +265,9 @@ public partial class ApartmentService
         if (updateDto.IsImmediatelyAvailable.HasValue) apartment.IsImmediatelyAvailable = updateDto.IsImmediatelyAvailable.Value;
         if (updateDto.IsLookingForRoommate.HasValue) apartment.IsLookingForRoommate = updateDto.IsLookingForRoommate.Value;
         if (updateDto.ContactPhone != null) apartment.ContactPhone = updateDto.ContactPhone;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         apartment.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
-        apartment.ModifiedDate = DateTime.UtcNow;
+        apartment.ModifiedDate = now;
         if (updateDto.ImageUrls != null && updateDto.ImageUrls.Any())
         {
             var existingImages = apartment.ApartmentImages.Where(img => !img.IsDeleted).ToList();
@@ -365,7 +275,7 @@ public partial class ApartmentService
             {
                 img.IsDeleted = true;
                 img.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
-                img.ModifiedDate = DateTime.UtcNow;
+                img.ModifiedDate = now;
             }
             var newImages = updateDto.ImageUrls.Select((url, index) => new ApartmentImage
             {
@@ -374,9 +284,9 @@ public partial class ApartmentService
                 DisplayOrder = index,
                 IsPrimary = index == 0,
                 CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-                CreatedDate = DateTime.UtcNow,
+                CreatedDate = now,
                 ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
-                ModifiedDate = DateTime.UtcNow
+                ModifiedDate = now
             }).ToList();
             _context.ApartmentImages.AddRange(newImages);
         }
@@ -430,5 +340,16 @@ public partial class ApartmentService
 
         await _context.SaveChangesAsync();
         return count;
+    }
+
+    private async Task RequireOwnerAsync(Apartment apartment)
+    {
+        var httpUser = _httpContextAccessor.HttpContext?.User;
+        if (httpUser == null)
+            throw new UnauthorizedAccessException("Authentication required.");
+
+        var result = await _authorizationService.AuthorizeAsync(httpUser, apartment, new ApartmentOwnerRequirement());
+        if (!result.Succeeded)
+            throw new UnauthorizedAccessException("You do not have permission to modify this apartment.");
     }
 }
