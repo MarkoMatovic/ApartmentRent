@@ -23,6 +23,14 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = Path.GetTempPath()
 });
 
+// TEMP: k6 performance testing — higher connection limits to avoid TCP backlog on Windows loopback
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxConcurrentConnections = 1000;
+    options.Limits.MaxConcurrentUpgradedConnections = 1000;
+    options.Limits.MinRequestBodyDataRate = null;
+});
+
 StartupValidation.ValidateSecrets(builder.Configuration, builder.Environment);
 
 builder.Host.UseSerilog((ctx, svc, cfg) =>

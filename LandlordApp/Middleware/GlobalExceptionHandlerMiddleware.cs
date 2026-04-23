@@ -53,20 +53,20 @@ public class GlobalExceptionHandlerMiddleware
                 message = forbiddenEx.Message;
                 break;
             case UnauthorizedAccessException:
-                statusCode = HttpStatusCode.Unauthorized;
-                message = "Unauthorized access.";
+                statusCode = HttpStatusCode.Forbidden;
+                message = "Access denied.";
                 break;
             case KeyNotFoundException:
                 statusCode = HttpStatusCode.NotFound;
                 message = "Resource not found.";
                 break;
-            case ArgumentException:
+            case ArgumentException argEx:
                 statusCode = HttpStatusCode.BadRequest;
-                message = "Invalid input provided.";
+                message = argEx.Message;
                 break;
-            case InvalidOperationException:
-                statusCode = HttpStatusCode.BadRequest;
-                message = "Operation could not be completed.";
+            case InvalidOperationException invEx:
+                statusCode = HttpStatusCode.Conflict;
+                message = invEx.Message;
                 break;
             default:
                 message = "An unexpected error occurred.";

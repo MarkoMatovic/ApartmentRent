@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using Lander.src.Infrastructure.Services;
+using Lander.src.Modules.Analytics.Interfaces;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Services;
 using Lander.src.Modules.Users.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Lander.src.Modules.Listings.Implementation;
@@ -24,6 +26,8 @@ public partial class ApartmentService : IApartmentService
     private readonly TimeProvider _timeProvider;
     private readonly ApartmentCacheVersionService _cacheVersion;
     private readonly IAuditLogService _auditLog;
+    private readonly IAnalyticsService _analyticsService;
+    private readonly IOutputCacheStore _outputCacheStore;
 
     public ApartmentService(
         ListingsContext context,
@@ -37,7 +41,9 @@ public partial class ApartmentService : IApartmentService
         IAuthorizationService authorizationService,
         TimeProvider timeProvider,
         ApartmentCacheVersionService cacheVersion,
-        IAuditLogService auditLog)
+        IAuditLogService auditLog,
+        IAnalyticsService analyticsService,
+        IOutputCacheStore outputCacheStore)
     {
         _context = context;
         _usersContext = usersContext;
@@ -51,5 +57,7 @@ public partial class ApartmentService : IApartmentService
         _timeProvider = timeProvider;
         _cacheVersion = cacheVersion;
         _auditLog = auditLog;
+        _analyticsService = analyticsService;
+        _outputCacheStore = outputCacheStore;
     }
 }

@@ -47,9 +47,7 @@ public static class DatabaseServiceExtensions
         return services;
     }
 
-    private static Action<SqlServerDbContextOptionsBuilder> DbResilience() =>
-        sql => sql.EnableRetryOnFailure(
-            maxRetryCount: 3,
-            maxRetryDelay: TimeSpan.FromSeconds(5),
-            errorNumbersToAdd: null);
+    // TEMP: retry disabled for k6 performance testing (SqlServerRetryingExecutionStrategy
+    // conflicts with manual BeginTransactionAsync used throughout the app)
+    private static Action<SqlServerDbContextOptionsBuilder> DbResilience() => _ => { };
 }

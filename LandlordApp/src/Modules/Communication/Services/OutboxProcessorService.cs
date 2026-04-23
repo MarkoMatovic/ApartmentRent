@@ -84,15 +84,14 @@ public class OutboxProcessorService : BackgroundService
                 var payload = JsonSerializer.Deserialize<SuperLikePayload>(evt.Payload)
                     ?? throw new InvalidOperationException("Invalid SuperLikeTokenDeduction payload.");
 
-                var user = await usersContext.Users.FindAsync([payload.UserId], ct);
-                if (user == null)
-                    throw new InvalidOperationException($"User {payload.UserId} not found for token deduction.");
+                // Atomic UPDATE avoids read-modify-write race across concurrent processor instances.
+                var rows = await usersContext.Users
+                    .Where(u => u.UserId == payload.UserId && u.TokenBalance >= 1)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.TokenBalance, u => u.TokenBalance - 1), ct);
 
-                if (user.TokenBalance < 1)
-                    throw new InvalidOperationException($"User {payload.UserId} has insufficient tokens.");
+                if (rows == 0)
+                    throw new InvalidOperationException($"User {payload.UserId} not found or has insufficient tokens.");
 
-                user.TokenBalance -= 1;
-                await usersContext.SaveChangesAsync(ct);
                 break;
 
             default:

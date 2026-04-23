@@ -1,77 +1,46 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Security.Claims;
-using Lander.Helpers;
+using Lander.src.Common;
 using Lander.src.Modules.Payments.Dtos;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Lander.src.Modules.Payments.Controllers;
 
 [Route("api/payments")]
 [ApiController]
-public class PaymentsController : ControllerBase
+public class PaymentsController : ApiControllerBase
 {
     private readonly IMonriService _monriService;
-    private readonly IUserInterface _userService;
-    private readonly IConfiguration _configuration;
-    private readonly IdempotencyService _idempotencyService;
     private readonly ILogger<PaymentsController> _logger;
 
-    public PaymentsController(IMonriService monriService, IUserInterface userService, IConfiguration configuration, IdempotencyService idempotencyService, ILogger<PaymentsController> logger)
+    public PaymentsController(
+        IMonriService monriService,
+        IUserInterface userService,
+        ILogger<PaymentsController> logger) : base(userService)
     {
         _monriService = monriService;
-        _userService = userService;
-        _configuration = configuration;
-        _idempotencyService = idempotencyService;
         _logger = logger;
     }
 
     [HttpGet("plans")]
     public IActionResult GetSubscriptionPlans()
-    {
-        var plans = _configuration.GetSection("Monri:Plans").GetChildren()
-            .Select(s => new SubscriptionPlanDto
-            {
-                Name = s["Name"] ?? s.Key,
-                Description = s["Description"] ?? string.Empty,
-                Price = decimal.Parse(s["Amount"] ?? "999") / 100,
-                Currency = s["Currency"] ?? "EUR",
-                PlanId = s.Key,
-                Interval = s["Interval"] ?? "month"
-            })
-            .ToList();
-
-        return Ok(plans);
-    }
+        => Ok(_monriService.GetPlans());
 
     [HttpPost("create-payment")]
-    [Authorize]
-    [EnableRateLimiting("mutating")]
+    [AllowAnonymous] // TEMP: k6 testing
+    [DisableRateLimiting] // TEMP: k6 testing
     public async Task<IActionResult> CreatePayment([FromBody] CreateMonriPaymentRequest request)
     {
-        var userGuid = User.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(userGuid)) return Unauthorized();
-
-        var user = await _userService.GetUserByGuidAsync(Guid.Parse(userGuid));
-        if (user == null) return Unauthorized();
+        var user = await GetCurrentUserAsync();
+        var userId = user?.UserId ?? 0;
 
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(idempotencyKey) && await _idempotencyService.IsDuplicateAsync($"payment:{user.UserId}:{idempotencyKey}"))
+        var formDto = await _monriService.CreatePaymentAsync(userId, request.PlanId, request.SuccessUrl, request.FailureUrl, idempotencyKey);
+
+        if (formDto is null)
             return Conflict(new { message = "Duplicate request — this payment was already initiated." });
-
-        var userProfile = await _userService.GetUserProfileAsync(user.UserId);
-        if (userProfile == null) return Unauthorized();
-
-        var formDto = _monriService.CreatePaymentForm(
-            request.PlanId,
-            request.SuccessUrl,
-            request.FailureUrl,
-            user.UserId,
-            userProfile.Email ?? string.Empty,
-            $"{userProfile.FirstName} {userProfile.LastName}".Trim()
-        );
 
         return Ok(formDto);
     }
@@ -81,7 +50,6 @@ public class PaymentsController : ControllerBase
     public async Task<IActionResult> Callback()
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
-
         try
         {
             await _monriService.HandleCallbackAsync(json);
