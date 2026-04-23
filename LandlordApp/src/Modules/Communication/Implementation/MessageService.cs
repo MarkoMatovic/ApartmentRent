@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
@@ -20,6 +21,7 @@ public partial class MessageService : IMessageService
     private readonly IHubContext<ChatHub> _chatHubContext;
     private readonly IHubContext<NotificationHub> _notificationHubContext;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IdempotencyService _idempotencyService;
 
     public MessageService(
         CommunicationsContext context,
@@ -28,7 +30,8 @@ public partial class MessageService : IMessageService
         IEmailService emailService,
         IHubContext<ChatHub> chatHubContext,
         IHubContext<NotificationHub> notificationHubContext,
-        IWebHostEnvironment webHostEnvironment)
+        IWebHostEnvironment webHostEnvironment,
+        IdempotencyService idempotencyService)
     {
         _context = context;
         _usersContext = usersContext;
@@ -37,10 +40,15 @@ public partial class MessageService : IMessageService
         _chatHubContext = chatHubContext;
         _notificationHubContext = notificationHubContext;
         _webHostEnvironment = webHostEnvironment;
+        _idempotencyService = idempotencyService;
     }
 
-    public async Task<MessageDto> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false)
+    public async Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null)
     {
+        if (idempotencyKey is not null &&
+            await _idempotencyService.IsDuplicateAsync($"msg:{senderId}:{idempotencyKey}"))
+            return null;
+
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
         // Super-Like: validate sender has tokens (read-only check before transaction)
