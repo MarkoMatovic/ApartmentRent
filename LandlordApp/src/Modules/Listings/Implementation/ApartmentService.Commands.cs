@@ -40,6 +40,7 @@ public partial class ApartmentService
             throw;
         }
         _cacheVersion.Invalidate();
+        await _outputCacheStore.EvictByTagAsync("apartments", default);
         return true;
     }
 
@@ -134,6 +135,7 @@ public partial class ApartmentService
             throw;
         }
         _cacheVersion.Invalidate();
+        await _outputCacheStore.EvictByTagAsync("apartments", default);
 
         if (apartment.IsActive)
             await _notificationService.NotifyNewListingAsync(apartment.Title, apartment.City ?? string.Empty);
@@ -185,6 +187,7 @@ public partial class ApartmentService
             throw;
         }
         _cacheVersion.Invalidate();
+        await _outputCacheStore.EvictByTagAsync("apartments", default);
         _auditLog.Log("DeleteApartment", "Apartment", apartmentId, currentUserGuid);
         return true;
     }
@@ -302,6 +305,7 @@ public partial class ApartmentService
             throw;
         }
         _cacheVersion.Invalidate();
+        await _outputCacheStore.EvictByTagAsync("apartments", default);
         return new ApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
