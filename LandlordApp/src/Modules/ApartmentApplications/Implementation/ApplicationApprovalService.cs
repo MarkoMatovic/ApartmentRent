@@ -27,8 +27,21 @@ public class ApplicationApprovalService : IApplicationApprovalService
     public async Task<ApartmentApplication?> GetApplicationAsync(int userId, int apartmentId)
     {
         return await _context.ApartmentApplications
-            .FirstOrDefaultAsync(a => 
-                a.UserId == userId && 
+            .FirstOrDefaultAsync(a =>
+                a.UserId == userId &&
                 a.ApartmentId == apartmentId);
+    }
+
+    public async Task<ApprovalStatusResult> GetApprovalStatusAsync(int userId, int apartmentId)
+    {
+        var application = await _context.ApartmentApplications
+            .FirstOrDefaultAsync(a =>
+                a.UserId == userId &&
+                a.ApartmentId == apartmentId);
+
+        return new ApprovalStatusResult(
+            HasApprovedApplication: application?.Status == "Approved",
+            ApplicationStatus: application?.Status,
+            ApplicationId: application?.ApplicationId);
     }
 }

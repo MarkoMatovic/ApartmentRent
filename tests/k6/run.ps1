@@ -4,7 +4,7 @@
 
 .PARAMETER Scenario
   Which scenario to run. Defaults to 01 (cache stampede).
-  Options: 01, all
+  Options: 01, 02, 03, 04, 05, 06, 07, 08, 09, all
 
 .PARAMETER BaseUrl
   API base URL. Defaults to http://localhost:5197
@@ -18,9 +18,12 @@
   .\run.ps1 -AuthToken "eyJhbGciOiJIUzI1NiIs..."
 #>
 param(
-    [string] $Scenario  = "01",
-    [string] $BaseUrl   = "http://localhost:5197",
-    [string] $AuthToken = ""
+    [string] $Scenario    = "01",
+    [string] $BaseUrl     = "http://localhost:5197",
+    [string] $AuthToken   = "",
+    [string] $ApartmentId = "",
+    [string] $SenderId    = "",
+    [string] $ReceiverId  = ""
 )
 
 # ── Check k6 is installed ───────────────────────────────────────────────────
@@ -44,11 +47,14 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # ── Map scenario number to file ─────────────────────────────────────────────
 $ScenarioMap = @{
     "01" = "scenarios\01_cache_stampede.js"
-    # Future scenarios added here:
-    # "02" = "scenarios\02_role_upgrade_race.js"
-    # "03" = "scenarios\03_monri_idempotency.js"
-    # "04" = "scenarios\04_listing_load.js"
-    # "05" = "scenarios\05_signalr_broadcast.js"
+    "02" = "scenarios\02_role_upgrade_race.js"
+    "03" = "scenarios\03_monri_idempotency.js"
+    "04" = "scenarios\04_listing_load.js"
+    "05" = "scenarios\05_signalr_broadcast.js"
+    "06" = "scenarios\06_concurrent_applications.js"
+    "07" = "scenarios\07_auth_rate_limit.js"
+    "08" = "scenarios\08_available_slots_load.js"
+    "09" = "scenarios\09_message_idempotency.js"
 }
 
 function Run-Scenario($file) {
@@ -59,9 +65,10 @@ function Run-Scenario($file) {
     }
 
     $envArgs = @("-e", "BASE_URL=$BaseUrl")
-    if ($AuthToken) {
-        $envArgs += @("-e", "AUTH_TOKEN=$AuthToken")
-    }
+    if ($AuthToken)   { $envArgs += @("-e", "AUTH_TOKEN=$AuthToken") }
+    if ($ApartmentId) { $envArgs += @("-e", "APARTMENT_ID=$ApartmentId") }
+    if ($SenderId)    { $envArgs += @("-e", "SENDER_ID=$SenderId") }
+    if ($ReceiverId)  { $envArgs += @("-e", "RECEIVER_ID=$ReceiverId") }
 
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan

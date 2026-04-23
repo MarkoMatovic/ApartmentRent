@@ -54,7 +54,15 @@ public class ApartmentApplicationService : IApartmentApplicationService
         };
 
         _context.ApartmentApplications.Add(application);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            // Unique constraint (UserId, ApartmentId) — concurrent duplicate request
+            return null;
+        }
         
         // Notify Landlord (Ideally we need LandlordId here, but ApartmentApplication model might not have it directly on the entity without join)
         // For Phase 3 MVP, we will rely on the Controller to fetch extra details if needed for specific notifications,

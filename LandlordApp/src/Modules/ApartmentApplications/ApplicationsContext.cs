@@ -94,6 +94,8 @@ public class ApplicationsContext : DbContext, IUnitOfWork
 
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ApartmentId);
+            entity.HasIndex(e => new { e.UserId, e.ApartmentId }).IsUnique()
+                  .HasFilter("[UserId] IS NOT NULL AND [ApartmentId] IS NOT NULL");
         });
 
         modelBuilder.Entity<SearchPreference>(entity =>

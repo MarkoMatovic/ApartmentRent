@@ -34,6 +34,17 @@ public partial class ApartmentService
 
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
+        if (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue || filters.ListingType.HasValue)
+        {
+            var ctx = _httpContextAccessor.HttpContext;
+            var searchQuery = $"City:{filters.City},MinRent:{filters.MinRent},MaxRent:{filters.MaxRent},ListingType:{filters.ListingType}";
+            _ = _analyticsService.TrackEventAsync(
+                "ApartmentSearch", "Listings",
+                searchQuery: searchQuery,
+                ipAddress: ctx?.Connection.RemoteIpAddress?.ToString(),
+                userAgent: ctx?.Request.Headers["User-Agent"].ToString());
+        }
+
         // Deterministic cache key — GetHashCode() is not stable across processes/instances.
         var cacheKey = $"Apartments_p{filters.Page}_ps{filters.PageSize}_s{filters.SortBy}_{filters.SortOrder}" +
                        $"_c{filters.City}_mr{filters.MinRent}_{filters.MaxRent}" +
@@ -202,6 +213,17 @@ public partial class ApartmentService
 
     public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
     {
+        var ctx = _httpContextAccessor.HttpContext;
+        var userIdClaim = ctx?.User?.FindFirstValue("userId");
+        int? userId = int.TryParse(userIdClaim, out var parsedId) ? parsedId : null;
+        _ = _analyticsService.TrackEventAsync(
+            "ApartmentView", "Listings",
+            entityId: apartmentId,
+            entityType: "Apartment",
+            userId: userId,
+            ipAddress: ctx?.Connection.RemoteIpAddress?.ToString(),
+            userAgent: ctx?.Request.Headers["User-Agent"].ToString());
+
         var apartment = await _context.Apartments
             .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
             .AsNoTracking()
