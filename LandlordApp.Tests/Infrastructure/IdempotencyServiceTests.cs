@@ -98,4 +98,17 @@ public class IdempotencyServiceTests
 
         result.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task IsDuplicateAsync_ConcurrentCalls_OnlyOneRegisters()
+    {
+        var service = CreateService();
+
+        var results = await Task.WhenAll(
+            Enumerable.Range(0, 20).Select(_ => service.IsDuplicateAsync("concurrent-key"))
+        );
+
+        results.Count(r => r == false).Should().Be(1);
+        results.Count(r => r == true).Should().Be(19);
+    }
 }

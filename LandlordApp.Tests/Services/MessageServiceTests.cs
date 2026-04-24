@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using Lander;
+using Lander.Helpers;
 using Lander.src.Modules.Communication.Implementation;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Hubs;
@@ -79,7 +80,8 @@ public class MessageServiceTests : IDisposable
             _mockEmailService.Object,
             _mockChatHub.Object,
             _mockNotificationHub.Object,
-            _mockWebHostEnv.Object);
+            _mockWebHostEnv.Object,
+            new IdempotencyService(new Mock<Microsoft.Extensions.Caching.Distributed.IDistributedCache>().Object));
     }
 
     private static void SetupHub<T>(Mock<IHubContext<T>> mock) where T : Hub

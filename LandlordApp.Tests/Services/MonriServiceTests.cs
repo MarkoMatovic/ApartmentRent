@@ -1,11 +1,14 @@
 using Xunit;
 using Moq;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
+using Lander.Helpers;
 using Lander.src.Modules.Payments.Implementation;
+using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Lander.src.Modules.Users.Dtos.Dto;
 
@@ -17,15 +20,14 @@ public class MonriServiceTests
     private const string AuthenticityToken = "test_authenticity_token";
 
     private readonly Mock<IUserInterface> _mockUserService;
-    private readonly Mock<ILogger<MonriService>> _mockLogger;
     private readonly MonriService _service;
+    private readonly IConfiguration _config;
 
     public MonriServiceTests()
     {
         _mockUserService = new Mock<IUserInterface>();
-        _mockLogger = new Mock<ILogger<MonriService>>();
 
-        var config = new ConfigurationBuilder()
+        _config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Monri:AuthenticityToken"] = AuthenticityToken,
@@ -38,7 +40,25 @@ public class MonriServiceTests
             })
             .Build();
 
-        _service = new MonriService(config, _mockUserService.Object, _mockLogger.Object);
+        var formService = new MonriPaymentFormService(
+            _config,
+            new Mock<ILogger<MonriPaymentFormService>>().Object);
+
+        var callbackHandler = new MonriCallbackHandler(
+            _config,
+            _mockUserService.Object,
+            new Mock<ILogger<MonriCallbackHandler>>().Object,
+            TimeProvider.System);
+
+        var idempotencyService = new IdempotencyService(
+            new Mock<IDistributedCache>().Object);
+
+        _service = new MonriService(
+            formService,
+            callbackHandler,
+            _mockUserService.Object,
+            idempotencyService,
+            _config);
     }
 
     // ─── HandleCallbackAsync — JSON validation ────────────────────────────────

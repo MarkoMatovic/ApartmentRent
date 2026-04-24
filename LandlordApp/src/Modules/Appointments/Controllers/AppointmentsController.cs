@@ -26,24 +26,51 @@ namespace Lander.src.Modules.Appointments.Controllers
         {
             _logger.LogInformation("Creating appointment for ApartmentId: {ApartmentId}, Date: {Date}",
                 dto.ApartmentId, dto.AppointmentDate);
-            var appointment = await _appointmentService.CreateAppointmentAsync(dto);
-            return Ok(appointment);
+            try
+            {
+                var appointment = await _appointmentService.CreateAppointmentAsync(dto);
+                return Ok(appointment);
+            }
+            catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+            catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
+            catch (UnauthorizedAccessException ex) { return Forbid(); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error creating appointment");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("my-appointments")]
         public async Task<ActionResult<List<AppointmentDto>>> GetMyAppointments()
         {
-            var appointments = await _appointmentService.GetMyAppointmentsAsync();
-            return Ok(appointments);
+            try
+            {
+                var appointments = await _appointmentService.GetMyAppointmentsAsync();
+                return Ok(appointments);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching appointments");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("landlord-appointments")]
         public async Task<ActionResult<List<AppointmentDto>>> GetLandlordAppointments()
         {
             _logger.LogInformation("GetLandlordAppointments endpoint called");
-            var appointments = await _appointmentService.GetLandlordAppointmentsAsync();
-            _logger.LogInformation("Returning {Count} landlord appointments", appointments.Count);
-            return Ok(appointments);
+            try
+            {
+                var appointments = await _appointmentService.GetLandlordAppointmentsAsync();
+                _logger.LogInformation("Returning {Count} landlord appointments", appointments.Count);
+                return Ok(appointments);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching landlord appointments");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("available-slots/{apartmentId}")]
@@ -53,8 +80,12 @@ namespace Lander.src.Modules.Appointments.Controllers
             int apartmentId,
             [FromQuery] DateTime date)
         {
-            var slots = await _appointmentService.GetAvailableSlotsAsync(apartmentId, date);
-            return Ok(slots);
+            try
+            {
+                var slots = await _appointmentService.GetAvailableSlotsAsync(apartmentId, date);
+                return Ok(slots);
+            }
+            catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         }
 
         [HttpPut("{id}/status")]
@@ -62,15 +93,25 @@ namespace Lander.src.Modules.Appointments.Controllers
             int id,
             [FromBody] UpdateAppointmentStatusDto dto)
         {
-            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(id, dto);
-            return Ok(appointment);
+            try
+            {
+                var appointment = await _appointmentService.UpdateAppointmentStatusAsync(id, dto);
+                return Ok(appointment);
+            }
+            catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+            catch (UnauthorizedAccessException) { return Forbid(); }
         }
 
         [HttpDelete("{id}")]
         public async Task<ActionResult> CancelAppointment(int id)
         {
-            await _appointmentService.CancelAppointmentAsync(id);
-            return NoContent();
+            try
+            {
+                await _appointmentService.CancelAppointmentAsync(id);
+                return NoContent();
+            }
+            catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+            catch (UnauthorizedAccessException) { return Forbid(); }
         }
 
         [HttpGet("{id}")]
@@ -85,15 +126,23 @@ namespace Lander.src.Modules.Appointments.Controllers
         [HttpGet("availability")]
         public async Task<ActionResult<List<LandlordAvailabilityDto>>> GetMyAvailability()
         {
-            var availability = await _appointmentService.GetMyAvailabilityAsync();
-            return Ok(availability);
+            try
+            {
+                var availability = await _appointmentService.GetMyAvailabilityAsync();
+                return Ok(availability);
+            }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
         }
 
         [HttpPut("availability")]
         public async Task<ActionResult<List<LandlordAvailabilityDto>>> SetMyAvailability([FromBody] SetAvailabilityDto dto)
         {
-            var availability = await _appointmentService.SetMyAvailabilityAsync(dto);
-            return Ok(availability);
+            try
+            {
+                var availability = await _appointmentService.SetMyAvailabilityAsync(dto);
+                return Ok(availability);
+            }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
         }
     }
 }

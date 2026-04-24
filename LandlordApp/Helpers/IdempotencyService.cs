@@ -46,6 +46,9 @@ public class IdempotencyService
         finally
         {
             gate.Release();
+            // Key is now in cache; future calls hit the fast path and never need this lock again.
+            // Remove to prevent unbounded growth of _locks.
+            _locks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(cacheKey, gate));
         }
     }
 

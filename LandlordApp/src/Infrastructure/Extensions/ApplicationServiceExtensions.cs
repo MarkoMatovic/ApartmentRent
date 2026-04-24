@@ -8,6 +8,7 @@ using Lander.src.Modules.Communication.Services;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Services;
+using Lander.src.Modules.Reviews.Client;
 using Lander.src.Modules.Reviews.Implementation;
 using Lander.src.Modules.Roommates.Implementation;
 using Lander.src.Modules.Roommates.Interfaces;
@@ -93,6 +94,14 @@ public static class ApplicationServiceExtensions
         // User deletion handlers (decoupled cleanup via IUserDeletedHandler)
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Roommates.Implementation.RoommateUserDeletedHandler>();
+
+        // gRPC client for Reviews/Favorites microservice
+        services.AddScoped<IGrpcServiceClient>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();
+            var grpcUrl = config["GrpcServerUrl"] ?? "http://localhost:5001";
+            return new GrpcServiceClient(grpcUrl);
+        });
 
         // .NET 10 Feature: Vector Search for semantic apartment search
         services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();

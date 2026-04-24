@@ -40,7 +40,6 @@ public class ApartmentsControllerTests
 
         _controller = new ApartmentsController(
             _mockApartmentService.Object,
-            _mockAnalytics.Object,
             new SimpleEmbeddingService());
 
         _controller.ControllerContext = MakeAuthContext(1, Guid.NewGuid(), withOutputCache: true);
@@ -84,22 +83,6 @@ public class ApartmentsControllerTests
         var result = await _controller.GetAllApartments(null);
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(pagedResult);
-    }
-
-    [Fact]
-    public async Task GetAllApartments_WithCityFilter_TracksSearch()
-    {
-        var filter = new ApartmentFilterDto { City = "Sarajevo" };
-        _mockApartmentService.Setup(s => s.GetAllApartmentsAsync(filter))
-            .ReturnsAsync(new PagedResult<ApartmentDto> { Items = new List<ApartmentDto>(), TotalCount = 0 });
-
-        await _controller.GetAllApartments(filter);
-
-        _mockAnalytics.Verify(a => a.TrackEventAsync(
-            "ApartmentSearch", It.IsAny<string>(),
-            It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(),
-            It.IsAny<Dictionary<string, string>?>(), It.IsAny<int?>(),
-            It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]
@@ -252,72 +235,72 @@ public class ApartmentsControllerTests
         await act.Should().ThrowAsync<Exception>().WithMessage("Activate failed");
     }
 
-    // ─── GetAllApartmentsCursor ───────────────────────────────────────────────
+    // ─── GetAllApartmentsKeyset ───────────────────────────────────────────────
 
     [Fact]
-    public async Task GetAllApartmentsCursor_NoFilters_ReturnsOkWithFirstPage()
+    public async Task GetAllApartmentsKeyset_NoFilters_ReturnsOkWithFirstPage()
     {
-        var cursorResult = new CursorPagedResult<ApartmentDto>
+        var keysetResult = new KeysetPagedResult<ApartmentDto>
         {
             Items = new List<ApartmentDto> { SampleApartment },
-            NextCursor = "1"
+            NextPageToken = "1"
         };
-        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+        _mockApartmentService.Setup(s => s.GetAllApartmentsKeysetAsync(
                 It.IsAny<ApartmentFilterDto>(), null, 20))
-            .ReturnsAsync(cursorResult);
+            .ReturnsAsync(keysetResult);
 
-        var result = await _controller.GetAllApartmentsCursor(null, null, 20);
+        var result = await _controller.GetAllApartmentsKeyset(null, null, 20);
 
         result.Result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().Be(cursorResult);
+            .Which.Value.Should().Be(keysetResult);
     }
 
     [Fact]
-    public async Task GetAllApartmentsCursor_WithAfterId_PassesCursorToService()
+    public async Task GetAllApartmentsKeyset_WithAfterId_PassesTokenToService()
     {
-        var cursorResult = new CursorPagedResult<ApartmentDto>
+        var keysetResult = new KeysetPagedResult<ApartmentDto>
         {
             Items = new List<ApartmentDto>(),
-            NextCursor = null
+            NextPageToken = null
         };
-        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+        _mockApartmentService.Setup(s => s.GetAllApartmentsKeysetAsync(
                 It.IsAny<ApartmentFilterDto>(), 10, 20))
-            .ReturnsAsync(cursorResult);
+            .ReturnsAsync(keysetResult);
 
-        var result = await _controller.GetAllApartmentsCursor(null, afterId: 10, pageSize: 20);
+        var result = await _controller.GetAllApartmentsKeyset(null, afterId: 10, pageSize: 20);
 
         result.Result.Should().BeOfType<OkObjectResult>();
-        _mockApartmentService.Verify(s => s.GetAllApartmentsCursorAsync(
+        _mockApartmentService.Verify(s => s.GetAllApartmentsKeysetAsync(
             It.IsAny<ApartmentFilterDto>(), 10, 20), Times.Once);
     }
 
     [Fact]
-    public async Task GetAllApartmentsCursor_LastPage_HasMoreIsFalse()
+    public async Task GetAllApartmentsKeyset_LastPage_HasMoreIsFalse()
     {
-        var cursorResult = new CursorPagedResult<ApartmentDto>
+        var keysetResult = new KeysetPagedResult<ApartmentDto>
         {
             Items = new List<ApartmentDto> { SampleApartment },
-            NextCursor = null   // no next page
+            NextPageToken = null   // no next page
         };
-        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+        _mockApartmentService.Setup(s => s.GetAllApartmentsKeysetAsync(
                 It.IsAny<ApartmentFilterDto>(), It.IsAny<int?>(), It.IsAny<int>()))
-            .ReturnsAsync(cursorResult);
+            .ReturnsAsync(keysetResult);
 
-        var result = await _controller.GetAllApartmentsCursor(null, null, 20);
+        var result = await _controller.GetAllApartmentsKeyset(null, null, 20);
 
         var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returned = ok.Value.Should().BeOfType<CursorPagedResult<ApartmentDto>>().Subject;
+        var returned = ok.Value.Should().BeOfType<KeysetPagedResult<ApartmentDto>>().Subject;
         returned.HasMore.Should().BeFalse();
     }
 
     [Fact]
-    public async Task GetAllApartmentsCursor_ServiceThrows_PropagatesException()
+    public async Task GetAllApartmentsKeyset_ServiceThrows_PropagatesException()
     {
-        _mockApartmentService.Setup(s => s.GetAllApartmentsCursorAsync(
+        _mockApartmentService.Setup(s => s.GetAllApartmentsKeysetAsync(
                 It.IsAny<ApartmentFilterDto>(), It.IsAny<int?>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("DB error"));
 
-        Func<Task> act = async () => await _controller.GetAllApartmentsCursor(null, null, 20);
+        Func<Task> act = async () => await _controller.GetAllApartmentsKeyset(null, null, 20);
 
         await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }

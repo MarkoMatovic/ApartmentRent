@@ -4,7 +4,6 @@ using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace Lander.src.Modules.Payments.Controllers;
 
@@ -29,15 +28,14 @@ public class PaymentsController : ApiControllerBase
         => Ok(_monriService.GetPlans());
 
     [HttpPost("create-payment")]
-    [AllowAnonymous] // TEMP: k6 testing
-    [DisableRateLimiting] // TEMP: k6 testing
+    [Authorize]
     public async Task<IActionResult> CreatePayment([FromBody] CreateMonriPaymentRequest request)
     {
         var user = await GetCurrentUserAsync();
-        var userId = user?.UserId ?? 0;
+        if (user is null) return Unauthorized();
 
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
-        var formDto = await _monriService.CreatePaymentAsync(userId, request.PlanId, request.SuccessUrl, request.FailureUrl, idempotencyKey);
+        var formDto = await _monriService.CreatePaymentAsync(user.UserId, request.PlanId, request.SuccessUrl, request.FailureUrl, idempotencyKey);
 
         if (formDto is null)
             return Conflict(new { message = "Duplicate request — this payment was already initiated." });
