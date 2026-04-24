@@ -56,14 +56,15 @@ public class SearchRequestsControllerTests
     [Fact]
     public async Task GetAllSearchRequests_NoPagination_ReturnsOk()
     {
-        var list = new List<SearchRequestDto> { SampleDto };
-        _mockService.Setup(s => s.GetAllSearchRequestsAsync(null, null, null, null))
-            .ReturnsAsync(list);
+        var paged = PagedResult<SearchRequestDto>.Create(
+            new List<SearchRequestDto> { SampleDto }, 1, 1, 20);
+        _mockService.Setup(s => s.GetAllSearchRequestsAsync(null, null, null, null, 1, 20))
+            .ReturnsAsync(paged);
 
         var result = await _controller.GetAllSearchRequests();
 
         result.Should().BeOfType<OkObjectResult>()
-            .Which.Value.Should().Be(list);
+            .Which.Value.Should().Be(paged);
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class SearchRequestsControllerTests
     [Fact]
     public async Task GetAllSearchRequests_ServiceThrows_Throws()
     {
-        _mockService.Setup(s => s.GetAllSearchRequestsAsync(null, null, null, null))
+        _mockService.Setup(s => s.GetAllSearchRequestsAsync(null, null, null, null, 1, 20))
             .ThrowsAsync(new Exception("DB error"));
 
         var act = async () => await _controller.GetAllSearchRequests();

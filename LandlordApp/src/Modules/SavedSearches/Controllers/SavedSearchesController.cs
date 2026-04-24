@@ -27,7 +27,8 @@ public class SavedSearchesController : ApiControllerBase
     public async Task<ActionResult<IEnumerable<SavedSearchDto>>> GetSavedSearchesByUserId([FromQuery] int userId)
     {
         var user = await GetCurrentUserAsync();
-        if (user is null || user.UserId != userId) return Forbid();
+        if (user is null) return Unauthorized();
+        if (user.UserId != userId) return Forbid();
 
         var savedSearches = await _savedSearchService.GetSavedSearchesByUserIdAsync(userId);
         return Ok(savedSearches);
@@ -60,8 +61,15 @@ public class SavedSearchesController : ApiControllerBase
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        var savedSearch = await _savedSearchService.UpdateSavedSearchAsync(id, user.UserId, input);
-        return Ok(savedSearch);
+        try
+        {
+            var savedSearch = await _savedSearchService.UpdateSavedSearchAsync(id, user.UserId, input);
+            return Ok(savedSearch);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpDelete(ApiActionsV1.DeleteSavedSearch, Name = nameof(ApiActionsV1.DeleteSavedSearch))]

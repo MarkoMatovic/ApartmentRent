@@ -67,6 +67,6 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public virtual Role? UserRole { get; set; }
 
         [System.ComponentModel.DataAnnotations.Timestamp]
-        public byte[] RowVersion { get; set; } = null!;
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     }
 }

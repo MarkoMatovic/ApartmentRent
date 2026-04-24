@@ -35,7 +35,7 @@ public class ApartmentApplicationsControllerTests
         _mockApprovalService = new Mock<IApplicationApprovalService>();
 
         _controller = new ApartmentApplicationsController(
-            _mockAppService.Object, _mockUserService.Object, _mockApprovalService.Object);
+            _mockAppService.Object, _mockApprovalService.Object, _mockUserService.Object);
         _controller.ControllerContext = MakeAuthContext(TestGuid);
     }
 
@@ -167,9 +167,8 @@ public class ApartmentApplicationsControllerTests
     public async Task CheckApprovalStatus_ReturnsOkWithStatus()
     {
         _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync(TestUser);
-        _mockApprovalService.Setup(s => s.HasApprovedApplicationAsync(5, 10)).ReturnsAsync(true);
-        _mockApprovalService.Setup(s => s.GetApplicationAsync(5, 10))
-            .ReturnsAsync(new ApartmentApplication { ApplicationId = 1, Status = "Approved" });
+        _mockApprovalService.Setup(s => s.GetApprovalStatusAsync(5, 10))
+            .ReturnsAsync(new Lander.src.Modules.ApartmentApplications.Interfaces.ApprovalStatusResult(true, "Approved", 1));
 
         var result = await _controller.CheckApprovalStatus(10);
 
@@ -180,9 +179,8 @@ public class ApartmentApplicationsControllerTests
     public async Task CheckApprovalStatus_NoApplicationFound_ReturnsOkWithFalse()
     {
         _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync(TestUser);
-        _mockApprovalService.Setup(s => s.HasApprovedApplicationAsync(5, 10)).ReturnsAsync(false);
-        _mockApprovalService.Setup(s => s.GetApplicationAsync(5, 10))
-            .ReturnsAsync((ApartmentApplication?)null);
+        _mockApprovalService.Setup(s => s.GetApprovalStatusAsync(5, 10))
+            .ReturnsAsync(new Lander.src.Modules.ApartmentApplications.Interfaces.ApprovalStatusResult(false, null, null));
 
         var result = await _controller.CheckApprovalStatus(10);
 

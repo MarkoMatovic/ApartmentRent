@@ -67,16 +67,23 @@ public class UserServiceLockoutTests : IDisposable
         _context.Roles.Add(new Role { RoleId = 1, RoleName = "Tenant", Description = "t", CreatedDate = DateTime.UtcNow });
         _context.SaveChanges();
 
-        _userService = new UserService(
-            _context, reviewsCtx, tokenProvider,
+        var mockPasswordService = new Mock<Lander.src.Modules.Users.Interfaces.UserInterface.IPasswordService>();
+        var authService = new Lander.src.Modules.Users.Implementation.UserImplementation.AuthService(
+            _context,
+            new Lander.src.Infrastructure.Services.PasswordHashingService(),
+            tokenProvider,
+            new RefreshTokenService(_context),
             new Mock<IHttpContextAccessor>().Object,
             new Mock<IEmailService>().Object,
-            new Mock<IApartmentService>().Object,
-            new Mock<IRoommateService>().Object,
-            Array.Empty<Lander.src.Common.IUserDeletedHandler>(),
-            new RefreshTokenService(_context),
-            new Mock<ILogger<UserService>>().Object,
-            cfg);
+            mockPasswordService.Object,
+            cfg,
+            new Mock<ILogger<Lander.src.Modules.Users.Implementation.UserImplementation.AuthService>>().Object,
+            TimeProvider.System);
+
+        _userService = new UserService(
+            authService,
+            mockPasswordService.Object,
+            new Mock<Lander.src.Modules.Users.Interfaces.UserInterface.IUserProfileService>().Object);
     }
 
     public void Dispose() => _context.Database.EnsureDeleted();
@@ -336,13 +343,20 @@ public class ApartmentServiceFeaturesTests : IDisposable
         mockHub.Setup(h => h.Clients).Returns(mockHubClients.Object);
 
         _service = new ApartmentService(
-            _context, _usersContext, savedSearchesCtx,
-            new Mock<IEmailService>().Object,
-            mockHttp.Object,
-            mockCache.Object,
-            mockHub.Object,
+            _context,
+            _usersContext,
+            new Mock<Microsoft.Extensions.Caching.Hybrid.HybridCache>().Object,
             reviewsCtx,
-            new Mock<ILogger<ApartmentService>>().Object);
+            new Mock<Lander.src.Modules.Listings.Services.IApartmentNotificationService>().Object,
+            new Mock<Lander.src.Modules.Users.Services.IUserRoleUpgradeService>().Object,
+            mockHttp.Object,
+            new Mock<ILogger<ApartmentService>>().Object,
+            new Mock<Microsoft.AspNetCore.Authorization.IAuthorizationService>().Object,
+            TimeProvider.System,
+            new Lander.src.Modules.Listings.Services.ApartmentCacheVersionService(),
+            new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
+            new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
+            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object);
     }
 
     public void Dispose()

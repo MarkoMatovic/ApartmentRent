@@ -69,5 +69,5 @@ public partial class Apartment
     public DateTime? FeaturedUntil { get; set; }
 
     [System.ComponentModel.DataAnnotations.Timestamp]
-    public byte[] RowVersion { get; set; } = null!;
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }

@@ -1,6 +1,7 @@
 using Lander;
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Implementation;
+using Lander.src.Modules.Communication.Services;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ public class EmailServiceTests
             SenderEmail = "noreply@landlander.com",
             SenderName = "Landlander Platform"
         });
-        return new EmailService(settings, _context, _httpContextMock.Object, _loggerMock.Object);
+        return new EmailService(settings, _context, _httpContextMock.Object, new Mock<IEmailTemplateRenderer>().Object, _loggerMock.Object);
     }
 
 

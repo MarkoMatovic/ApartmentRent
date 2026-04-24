@@ -43,7 +43,7 @@ public class RoommatesControllerTests
             .Returns(Task.CompletedTask);
 
         _controller = new RoommatesController(
-            _mockRoommateService.Object, _mockUserService.Object, _mockAnalytics.Object);
+            _mockRoommateService.Object, _mockAnalytics.Object, _mockUserService.Object);
         _controller.ControllerContext = MakeAuthContext(TestGuid);
     }
 
@@ -160,7 +160,7 @@ public class RoommatesControllerTests
 
         var result = await _controller.CreateRoommate(new RoommateInputDto());
 
-        result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        result.Result.Should().BeOfType<UnauthorizedResult>();
     }
 
     [Fact]

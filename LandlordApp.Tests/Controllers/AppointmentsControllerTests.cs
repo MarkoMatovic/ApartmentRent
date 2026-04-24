@@ -132,28 +132,12 @@ public class AppointmentsControllerTests
     // ─── GetAvailableSlots ────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetAvailableSlots_MissingDate_ReturnsBadRequest()
-    {
-        var result = await _controller.GetAvailableSlots(10, string.Empty);
-
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
-    public async Task GetAvailableSlots_InvalidDateFormat_ReturnsBadRequest()
-    {
-        var result = await _controller.GetAvailableSlots(10, "not-a-date");
-
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Fact]
     public async Task GetAvailableSlots_ValidDate_ReturnsOk()
     {
         _mockService.Setup(s => s.GetAvailableSlotsAsync(10, It.IsAny<DateTime>()))
             .ReturnsAsync(new List<AvailableSlotDto>());
 
-        var result = await _controller.GetAvailableSlots(10, "2026-06-15");
+        var result = await _controller.GetAvailableSlots(10, new DateTime(2026, 6, 15));
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -164,7 +148,7 @@ public class AppointmentsControllerTests
         _mockService.Setup(s => s.GetAvailableSlotsAsync(10, It.IsAny<DateTime>()))
             .ThrowsAsync(new ArgumentException("Apartment not available"));
 
-        var result = await _controller.GetAvailableSlots(10, "2026-06-15");
+        var result = await _controller.GetAvailableSlots(10, new DateTime(2026, 6, 15));
 
         result.Result.Should().BeOfType<BadRequestObjectResult>();
     }

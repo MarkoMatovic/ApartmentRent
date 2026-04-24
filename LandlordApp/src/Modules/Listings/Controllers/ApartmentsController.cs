@@ -24,8 +24,7 @@ public partial class ApartmentsController : ControllerBase
         _embeddingService = embeddingService;
     }
     [HttpPost(ApiActionsV1.CreateApartment, Name = nameof(ApiActionsV1.CreateApartment))]
-    [AllowAnonymous] // TEMP: k6 testing
-    [Microsoft.AspNetCore.RateLimiting.DisableRateLimiting] // TEMP: k6 testing
+    [Authorize]
     public async Task<ActionResult<ApartmentDto>> CreateApartment([FromBody] ApartmentInputDto apartmentInputDto)
     {
         var result = await _apartmentService.CreateApartmentAsync(apartmentInputDto);
@@ -34,7 +33,6 @@ public partial class ApartmentsController : ControllerBase
 
     [HttpGet(ApiActionsV1.GetAllApartments, Name = nameof(ApiActionsV1.GetAllApartments))]
     [AllowAnonymous]
-    [Microsoft.AspNetCore.RateLimiting.DisableRateLimiting] // TEMP: k6 testing
     public async Task<ActionResult> GetAllApartments([FromQuery] ApartmentFilterDto? filters)
     {
         filters ??= new ApartmentFilterDto();
