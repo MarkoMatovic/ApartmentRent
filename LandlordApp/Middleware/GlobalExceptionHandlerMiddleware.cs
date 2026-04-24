@@ -53,7 +53,7 @@ public class GlobalExceptionHandlerMiddleware
                 message = forbiddenEx.Message;
                 break;
             case UnauthorizedAccessException:
-                statusCode = HttpStatusCode.Forbidden;
+                statusCode = HttpStatusCode.Unauthorized;
                 message = "Access denied.";
                 break;
             case KeyNotFoundException:
@@ -65,7 +65,7 @@ public class GlobalExceptionHandlerMiddleware
                 message = argEx.Message;
                 break;
             case InvalidOperationException invEx:
-                statusCode = HttpStatusCode.Conflict;
+                statusCode = HttpStatusCode.BadRequest;
                 message = invEx.Message;
                 break;
             default:

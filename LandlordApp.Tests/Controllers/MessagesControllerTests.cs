@@ -9,10 +9,7 @@ using Lander.src.Modules.Communication.Controllers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using Lander.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace LandlordApp.Tests.Controllers;
 
@@ -35,8 +32,8 @@ public class MessagesControllerTests
             It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
-        _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object,
-            new IdempotencyService(new Mock<IDistributedCache>().Object));
+        var logger = new Mock<ILogger<MessagesController>>().Object;
+        _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object, logger);
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 
@@ -108,10 +105,11 @@ public class MessagesControllerTests
     // ─── SendMessage ──────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task SendMessage_AsOwner_ReturnsOk()
+    public async Task SendMessage_AuthenticatedUser_ReturnsOk()
     {
-        var input = new SendMessageInputDto { SenderId = CurrentUserId, ReceiverId = 20, MessageText = "Hello" };
-        _mockMessageService.Setup(s => s.SendMessageAsync(CurrentUserId, 20, "Hello", false))
+        // Sender ID is always taken from JWT claims, not from the request body.
+        var input = new SendMessageInputDto { ReceiverId = 20, MessageText = "Hello" };
+        _mockMessageService.Setup(s => s.SendMessageAsync(CurrentUserId, 20, "Hello", false, null))
             .ReturnsAsync(new MessageDto());
 
         var result = await _controller.SendMessage(input);
@@ -120,33 +118,31 @@ public class MessagesControllerTests
     }
 
     [Fact]
-    public async Task SendMessage_AsDifferentUser_ReturnsForbid()
+    public async Task SendMessage_SenderAlwaysFromJwt_CannotImpersonateOtherUser()
     {
-        var input = new SendMessageInputDto { SenderId = 99, ReceiverId = 20, MessageText = "Hi" };
+        // Even if the service call uses CurrentUserId (from JWT), the body has no SenderId.
+        // This test documents that the sender is always JWT-derived.
+        var input = new SendMessageInputDto { ReceiverId = 20, MessageText = "Hello" };
+        _mockMessageService.Setup(s => s.SendMessageAsync(CurrentUserId, 20, "Hello", false, null))
+            .ReturnsAsync(new MessageDto());
 
         var result = await _controller.SendMessage(input);
 
-        result.Result.Should().BeOfType<ForbidResult>();
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockMessageService.Verify(s => s.SendMessageAsync(CurrentUserId, It.IsAny<int>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]
     public async Task SendMessage_DuplicateIdempotencyKey_ReturnsConflict()
     {
-        // Arrange: create a controller with a real IdempotencyService backed by a real distributed cache
-        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
-        var idempotencyService = new IdempotencyService(cache);
-        var controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object, idempotencyService);
-        controller.ControllerContext = MakeAuthContext(CurrentUserId);
+        _mockMessageService
+            .Setup(s => s.SendMessageAsync(CurrentUserId, 20, "Hello", false, "key-abc"))
+            .ReturnsAsync((MessageDto?)null);
 
-        // Pre-register the key so the second call sees a duplicate
-        await idempotencyService.IsDuplicateAsync($"msg:{CurrentUserId}:key-abc");
+        _controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "key-abc";
+        var input = new SendMessageInputDto { ReceiverId = 20, MessageText = "Hello" };
 
-        // Set the same Idempotency-Key header
-        controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "key-abc";
-
-        var input = new SendMessageInputDto { SenderId = CurrentUserId, ReceiverId = 20, MessageText = "Hello" };
-
-        var result = await controller.SendMessage(input);
+        var result = await _controller.SendMessage(input);
 
         result.Result.Should().BeOfType<ConflictObjectResult>();
     }

@@ -8,6 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Lander;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
+using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Lander.src.Modules.Users.Services;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
@@ -83,12 +86,12 @@ public class UserServiceTests : IDisposable
         _mockConfiguration.Setup(x => x["App:FrontendBaseUrl"]).Returns("http://localhost:5173");
         var refreshTokenService = new RefreshTokenService(_context);
 
-        _userService = new UserService(
+        _userService = BuildUserService(
             _context, _reviewsContext, _tokenProvider,
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             Array.Empty<IUserDeletedHandler>(),
-            refreshTokenService, _mockLogger.Object, _mockConfiguration.Object);
+            refreshTokenService, _mockConfiguration.Object);
 
         SeedTestData();
     }
@@ -316,12 +319,12 @@ public class UserServiceTests : IDisposable
         mockHandler.Setup(h => h.HandleAsync(It.IsAny<int>())).Returns(Task.CompletedTask);
 
         var refreshTokenService = new RefreshTokenService(_context);
-        var svc = new UserService(
+        var svc = BuildUserService(
             _context, _reviewsContext, _tokenProvider,
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             new[] { mockHandler.Object },
-            refreshTokenService, _mockLogger.Object, _mockConfiguration.Object);
+            refreshTokenService, _mockConfiguration.Object);
 
         await svc.DeleteUserAsync(new DeleteUserInputDto { UserGuid = guid });
 
@@ -486,5 +489,57 @@ public class UserServiceTests : IDisposable
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+    }
+
+    /// <summary>
+    /// Builds a UserService facade from the legacy 11-parameter test signature by constructing
+    /// the three sub-services (AuthService, PasswordService, UserProfileService) internally.
+    /// </summary>
+    private static UserService BuildUserService(
+        UsersContext context,
+        ReviewsContext reviewsContext,
+        TokenProvider tokenProvider,
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService,
+        IApartmentService apartmentService,
+        IRoommateService roommateService,
+        IEnumerable<IUserDeletedHandler> deletionHandlers,
+        RefreshTokenService refreshTokenService,
+        IConfiguration configuration)
+    {
+        var passwordHasher = new PasswordHashingService();
+
+        var passwordService = new PasswordService(
+            context,
+            passwordHasher,
+            httpContextAccessor,
+            emailService,
+            configuration,
+            new Mock<ILogger<PasswordService>>().Object,
+            TimeProvider.System);
+
+        var authService = new AuthService(
+            context,
+            passwordHasher,
+            tokenProvider,
+            refreshTokenService,
+            httpContextAccessor,
+            emailService,
+            passwordService,
+            configuration,
+            new Mock<ILogger<AuthService>>().Object,
+            TimeProvider.System);
+
+        var profileService = new UserProfileService(
+            context,
+            reviewsContext,
+            httpContextAccessor,
+            apartmentService,
+            roommateService,
+            deletionHandlers,
+            new UserRoleUpgradeService(context, new Mock<ILogger<UserRoleUpgradeService>>().Object, TimeProvider.System),
+            new Mock<ILogger<UserProfileService>>().Object);
+
+        return new UserService(authService, passwordService, profileService);
     }
 }
