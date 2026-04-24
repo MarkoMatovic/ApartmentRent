@@ -8,6 +8,7 @@ using Lander.src.Modules.Analytics.Controllers;
 using Lander.src.Modules.Analytics.Dtos.Dto;
 using Lander.src.Modules.Analytics.Dtos.InputDto;
 using Lander.src.Modules.Analytics.Interfaces;
+using Lander.src.Modules.Users.Interfaces.UserInterface;
 
 namespace LandlordApp.Tests.Controllers;
 
@@ -28,7 +29,7 @@ public class AnalyticsControllerTests
             It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
-        _controller = new AnalyticsController(_mockAnalyticsService.Object);
+        _controller = new AnalyticsController(_mockAnalyticsService.Object, new Mock<IUserInterface>().Object);
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 
@@ -701,6 +702,222 @@ public class AnalyticsControllerTests
 
         result.Result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null), Times.Once);
+    }
+
+    // ─── TrackEvent — response body & metadata ────────────────────────────────
+
+    [Fact]
+    public async Task TrackEvent_ResponseBodyContainsSuccessTrue()
+    {
+        var input = new TrackEventInputDto { EventType = "view", EventCategory = "apartment" };
+
+        var result = await _controller.TrackEvent(input);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeEquivalentTo(new { success = true });
+    }
+
+    [Fact]
+    public async Task TrackEvent_WithMetadataAndSearchQuery_PassesAllFieldsToService()
+    {
+        var metadata = new Dictionary<string, string> { { "source", "homepage" } };
+        var input = new TrackEventInputDto
+        {
+            EventType = "search",
+            EventCategory = "listings",
+            SearchQuery = "garsonjera Beograd",
+            EntityId = 42,
+            EntityType = "Apartment",
+            Metadata = metadata
+        };
+
+        var result = await _controller.TrackEvent(input);
+
+        result.Should().BeOfType<OkObjectResult>();
+        _mockAnalyticsService.Verify(s => s.TrackEventAsync(
+            "search", "listings",
+            42, "Apartment", "garsonjera Beograd",
+            metadata,
+            It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
+    }
+
+    // ─── GetMyApartmentViews — date filter & error ────────────────────────────
+
+    [Fact]
+    public async Task GetMyApartmentViews_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 6, 30);
+        var stats = new List<ApartmentViewStatsDto>
+        {
+            new() { ApartmentId = 2, Title = "Dvosoban stan", ViewCount = 30 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetLandlordApartmentViewsAsync(CurrentUserId, from, to))
+            .ReturnsAsync(stats);
+
+        var result = await _controller.GetMyApartmentViews(from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(stats);
+    }
+
+    [Fact]
+    public async Task GetMyApartmentViews_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetLandlordApartmentViewsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("DB unavailable"));
+
+        Func<Task> act = async () => await _controller.GetMyApartmentViews();
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB unavailable");
+    }
+
+    // ─── GetMyMessagesSent — date filter & error ──────────────────────────────
+
+    [Fact]
+    public async Task GetMyMessagesSent_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 3, 1);
+        var to = new DateTime(2025, 3, 31);
+        _mockAnalyticsService.Setup(s => s.GetUserMessageCountAsync(CurrentUserId, from, to))
+            .ReturnsAsync(12);
+
+        var result = await _controller.GetMyMessagesSent(from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(12);
+    }
+
+    [Fact]
+    public async Task GetMyMessagesSent_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserMessageCountAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("Count failed"));
+
+        Func<Task> act = async () => await _controller.GetMyMessagesSent();
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("Count failed");
+    }
+
+    // ─── GetMyViewedApartments — error propagation ────────────────────────────
+
+    [Fact]
+    public async Task GetMyViewedApartments_ServiceThrows_PropagatesException()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
+            .ThrowsAsync(new Exception("View fetch failed"));
+
+        Func<Task> act = async () => await _controller.GetMyViewedApartments();
+
+        await act.Should().ThrowAsync<Exception>().WithMessage("View fetch failed");
+    }
+
+    // ─── GetTopViewedApartments — date filter ─────────────────────────────────
+
+    [Fact]
+    public async Task GetTopViewedApartments_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 1, 1);
+        var to = new DateTime(2025, 1, 31);
+        var apartments = new List<TopEntityDto>
+        {
+            new() { EntityId = 7, EntityType = "Apartment", ViewCount = 22 }
+        };
+        _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(10, from, to))
+            .ReturnsAsync(apartments);
+
+        var result = await _controller.GetTopViewedApartments(10, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().Be(apartments);
+    }
+
+    // ─── GetTopViewedRoommates — date filter ──────────────────────────────────
+
+    [Fact]
+    public async Task GetTopViewedRoommates_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 4, 1);
+        var to = new DateTime(2025, 4, 30);
+        _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(10, from, to))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetTopViewedRoommates(10, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    // ─── GetUserTopApartments — custom count ──────────────────────────────────
+
+    [Fact]
+    public async Task GetUserTopApartments_CustomCount_PassesCountToService()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetUserTopApartments(CurrentUserId, 5);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockAnalyticsService.Verify(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null), Times.Once);
+    }
+
+    // ─── GetUserSearches — custom count ───────────────────────────────────────
+
+    [Fact]
+    public async Task GetUserSearches_CustomCount_PassesCountToService()
+    {
+        _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(CurrentUserId, 3, null, null))
+            .ReturnsAsync(new List<SearchTermDto>());
+
+        var result = await _controller.GetUserSearches(CurrentUserId, 3);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+        _mockAnalyticsService.Verify(s => s.GetUserSearchesAsync(CurrentUserId, 3, null, null), Times.Once);
+    }
+
+    // ─── GetUserTopRoommates — custom count & date filter ────────────────────
+
+    [Fact]
+    public async Task GetUserTopRoommates_WithDateFilter_ReturnsOk()
+    {
+        var from = new DateTime(2025, 5, 1);
+        var to = new DateTime(2025, 5, 31);
+        _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(CurrentUserId, 10, from, to))
+            .ReturnsAsync(new List<TopEntityDto>());
+
+        var result = await _controller.GetUserTopRoommates(CurrentUserId, 10, from, to);
+
+        result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    // ─── GetSummary — verifies DTO fields ────────────────────────────────────
+
+    [Fact]
+    public async Task GetSummary_ReturnsDtoWithAllFields()
+    {
+        var summary = new AnalyticsSummaryDto
+        {
+            TotalEvents = 200,
+            TotalApartmentViews = 80,
+            TotalRoommateViews = 40,
+            TotalSearches = 60,
+            TotalContactClicks = 20,
+            EventsByCategory = new Dictionary<string, int> { { "listing", 80 }, { "message", 60 } }
+        };
+        _mockAnalyticsService.Setup(s => s.GetSummaryAsync(null, null))
+            .ReturnsAsync(summary);
+
+        var result = await _controller.GetSummary();
+
+        var value = result.Result.Should().BeOfType<OkObjectResult>()
+            .Which.Value.Should().BeOfType<AnalyticsSummaryDto>().Subject;
+
+        value.TotalEvents.Should().Be(200);
+        value.TotalApartmentViews.Should().Be(80);
+        value.TotalRoommateViews.Should().Be(40);
+        value.TotalSearches.Should().Be(60);
+        value.TotalContactClicks.Should().Be(20);
+        value.EventsByCategory.Should().ContainKey("listing").And.ContainKey("message");
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

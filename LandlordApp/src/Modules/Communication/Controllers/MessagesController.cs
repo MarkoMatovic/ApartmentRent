@@ -15,13 +15,16 @@ public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
     private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
+    private readonly ILogger<MessagesController> _logger;
 
     public MessagesController(
         IMessageService messageService,
-        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
+        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService,
+        ILogger<MessagesController> logger)
     {
         _messageService = messageService;
         _analyticsService = analyticsService;
+        _logger = logger;
     }
 
     // ─── helpers ────────────────────────────────────────────────────────────────
@@ -65,32 +68,31 @@ public class MessagesController : ControllerBase
     }
 
     [HttpPost(ApiActionsV1.SendMessage, Name = nameof(ApiActionsV1.SendMessage))]
-    [AllowAnonymous] // TEMP: k6 testing
-    [Microsoft.AspNetCore.RateLimiting.DisableRateLimiting] // TEMP: k6 testing
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
-        // TEMP: skip ownership check for anonymous k6 callers
-        var claimStr = User.FindFirstValue("userId");
-        if (!string.IsNullOrEmpty(claimStr))
-        {
-            if (!int.TryParse(claimStr, out var currentId) || input.SenderId != currentId)
-                return Forbid();
-        }
+        var senderId = GetCurrentUserId();
 
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
         var message = await _messageService.SendMessageAsync(
-            input.SenderId, input.ReceiverId, input.MessageText, input.IsSuperLike,
+            senderId, input.ReceiverId, input.MessageText, input.IsSuperLike,
             idempotencyKey: idempotencyKey);
 
         if (message is null)
             return Conflict(new { message = "Duplicate request." });
 
-        _ = _analyticsService.TrackEventAsync(
-            "MessageSent", "Communication",
-            entityId: input.ReceiverId, entityType: "User",
-            userId: input.SenderId,
-            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
-            userAgent: HttpContext.Request.Headers["User-Agent"].ToString());
+        try
+        {
+            await _analyticsService.TrackEventAsync(
+                "MessageSent", "Communication",
+                entityId: input.ReceiverId, entityType: "User",
+                userId: senderId,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: HttpContext.Request.Headers["User-Agent"].ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Analytics tracking failed for message sent by user {UserId}.", senderId);
+        }
 
         return Ok(message);
     }

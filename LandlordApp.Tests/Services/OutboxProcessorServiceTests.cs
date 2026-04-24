@@ -97,6 +97,7 @@ public class OutboxProcessorServiceTests
         cts.Cancel();
         await svc.StopAsync(CancellationToken.None);
 
+        usersCtx.ChangeTracker.Clear();
         var user = await usersCtx.Users.FindAsync(1);
         user!.TokenBalance.Should().Be(2);
 
@@ -267,6 +268,7 @@ public class OutboxProcessorServiceTests
         cts.Cancel();
         await svc.StopAsync(CancellationToken.None);
 
+        usersCtx.ChangeTracker.Clear();
         (await usersCtx.Users.FindAsync(10))!.TokenBalance.Should().Be(4);
         (await usersCtx.Users.FindAsync(11))!.TokenBalance.Should().Be(4);
 

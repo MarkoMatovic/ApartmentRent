@@ -31,6 +31,7 @@ public class ApartmentServiceTests : IDisposable
     private readonly Mock<IHubContext<NotificationHub>> _mockHubContext;
     private readonly Mock<ILogger<ApartmentService>> _mockLogger;
     private readonly Mock<IEmailService> _mockEmailService;
+    private readonly Mock<Microsoft.AspNetCore.Authorization.IAuthorizationService> _mockAuthService;
     private readonly ApartmentService _apartmentService;
     private readonly int _testLandlordId = 1;
     private readonly Guid _testLandlordGuid = Guid.NewGuid();
@@ -68,6 +69,22 @@ public class ApartmentServiceTests : IDisposable
         _mockEmailService
             .Setup(x => x.SendListingUnavailableEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(true);
+
+        _mockAuthService = new Mock<Microsoft.AspNetCore.Authorization.IAuthorizationService>();
+        _mockAuthService
+            .Setup(a => a.AuthorizeAsync(
+                It.Is<System.Security.Claims.ClaimsPrincipal>(cp =>
+                    cp.FindFirst("userId") != null && cp.FindFirst("userId")!.Value == _testLandlordId.ToString()),
+                It.IsAny<object?>(),
+                It.IsAny<IEnumerable<Microsoft.AspNetCore.Authorization.IAuthorizationRequirement>>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Authorization.AuthorizationResult.Success());
+        _mockAuthService
+            .Setup(a => a.AuthorizeAsync(
+                It.Is<System.Security.Claims.ClaimsPrincipal>(cp =>
+                    cp.FindFirst("userId") == null || cp.FindFirst("userId")!.Value != _testLandlordId.ToString()),
+                It.IsAny<object?>(),
+                It.IsAny<IEnumerable<Microsoft.AspNetCore.Authorization.IAuthorizationRequirement>>()))
+            .ReturnsAsync(Microsoft.AspNetCore.Authorization.AuthorizationResult.Failed());
         
         // Setup IMemoryCache mock to handle cache operations
         object? nullValue = null;
@@ -98,16 +115,28 @@ public class ApartmentServiceTests : IDisposable
             .Options;
         var reviewsContext = new ReviewsContext(reviewsOptions);
 
+        var notificationService = new Lander.src.Modules.Listings.Services.ApartmentNotificationService(
+            _mockHubContext.Object,
+            _mockEmailService.Object,
+            _savedSearchesContext,
+            _usersContext,
+            new Mock<ILogger<Lander.src.Modules.Listings.Services.ApartmentNotificationService>>().Object);
+
         _apartmentService = new ApartmentService(
             _context,
             _usersContext,
-            _savedSearchesContext,
-            _mockEmailService.Object,
-            _mockHttpContextAccessor.Object,
-            _mockCache.Object,
-            _mockHubContext.Object,
+            new PassThroughHybridCache(),
             reviewsContext,
-            _mockLogger.Object
+            notificationService,
+            new Mock<Lander.src.Modules.Users.Services.IUserRoleUpgradeService>().Object,
+            _mockHttpContextAccessor.Object,
+            _mockLogger.Object,
+            _mockAuthService.Object,
+            TimeProvider.System,
+            new Lander.src.Modules.Listings.Services.ApartmentCacheVersionService(),
+            new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
+            new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
+            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object
         );
     }
 
@@ -989,4 +1018,29 @@ public class ApartmentServiceTests : IDisposable
     }
 
     #endregion
+}
+
+/// <summary>Minimal HybridCache that always invokes the factory — no caching, ideal for unit tests.</summary>
+file sealed class PassThroughHybridCache : Microsoft.Extensions.Caching.Hybrid.HybridCache
+{
+    public override ValueTask<T> GetOrCreateAsync<TState, T>(
+        string key, TState state,
+        Func<TState, CancellationToken, ValueTask<T>> factory,
+        Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions? options = null,
+        IEnumerable<string>? tags = null,
+        CancellationToken cancellationToken = default)
+        => factory(state, cancellationToken);
+
+    public override ValueTask SetAsync<T>(
+        string key, T value,
+        Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions? options = null,
+        IEnumerable<string>? tags = null,
+        CancellationToken cancellationToken = default)
+        => default;
+
+    public override ValueTask RemoveAsync(string key, CancellationToken cancellationToken = default)
+        => default;
+
+    public override ValueTask RemoveByTagAsync(string tag, CancellationToken cancellationToken = default)
+        => default;
 }

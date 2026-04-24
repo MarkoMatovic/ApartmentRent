@@ -73,8 +73,15 @@ public class SearchRequestsController : ApiControllerBase
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        var searchRequest = await _searchRequestService.UpdateSearchRequestAsync(id, user.UserId, input);
-        return Ok(searchRequest);
+        try
+        {
+            var searchRequest = await _searchRequestService.UpdateSearchRequestAsync(id, user.UserId, input);
+            return Ok(searchRequest);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpDelete(ApiActionsV1.DeleteSearchRequest, Name = nameof(ApiActionsV1.DeleteSearchRequest))]
