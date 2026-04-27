@@ -8,8 +8,9 @@ import {
   Alert,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reviewsApi } from '../../shared/api/reviews';
+import { useAuth } from '../../shared/context/AuthContext';
 import StarRating from './StarRating';
 import ReviewCard from './ReviewCard';
 import CreateReviewForm from './CreateReviewForm';
@@ -20,6 +21,8 @@ interface ReviewsSectionProps {
 
 const ReviewsSection: React.FC<ReviewsSectionProps> = ({ apartmentId }) => {
   const { t } = useTranslation(['common', 'reviews']);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const {
     data: reviews = [],
@@ -28,6 +31,13 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ apartmentId }) => {
   } = useQuery({
     queryKey: ['reviews', apartmentId],
     queryFn: () => reviewsApi.getByApartmentId(apartmentId),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (reviewId: number) => reviewsApi.deleteReview(reviewId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', apartmentId] });
+    },
   });
 
   // Calculate statistics
@@ -145,7 +155,12 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ apartmentId }) => {
         ) : (
           <Box>
             {publicReviews.map((review) => (
-              <ReviewCard key={review.reviewId} review={review} />
+              <ReviewCard
+                key={review.reviewId}
+                review={review}
+                currentUserId={user?.userId}
+                onDelete={(id) => deleteMutation.mutate(id)}
+              />
             ))}
           </Box>
         )}

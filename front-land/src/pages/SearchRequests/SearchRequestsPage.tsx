@@ -50,7 +50,7 @@ export const SearchRequestsPage: React.FC = () => {
             setLoading(true);
             setError('');
             const data = await searchRequestsApi.getAllSearchRequests();
-            setRequests(data);
+            setRequests(Array.isArray(data) ? data : (data as any).items ?? []);
         } catch (err: any) {
             console.error('Error loading search requests:', err);
             setError(err.message || 'Failed to load search requests');

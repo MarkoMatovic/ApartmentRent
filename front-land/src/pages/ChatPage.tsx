@@ -35,7 +35,7 @@ import { useChatSignalR } from '../hooks/useChatSignalR';
 import { useAuth } from '../shared/context/AuthContext';
 import { useNotifications } from '../shared/context/NotificationContext';
 import { analyticsApi } from '../shared/api/analytics';
-import axios from 'axios';
+import apiClient from '../shared/api/client';
 
 const chatColors = {
   primary: '#0891b2',
@@ -77,7 +77,7 @@ const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const targetUserIdParam = searchParams.get('userId');
 
-  const currentUserId = user?.userId || 1;
+  const currentUserId = user!.userId;
   const { connected, sendMessage, markAsRead, newMessage, userTyping } = useChatSignalR(currentUserId);
   const { refreshUnreadMessagesCount } = useNotifications();
 
@@ -178,12 +178,7 @@ const ChatPage: React.FC = () => {
       }
 
       // Ako ne postoji, pokušaj da dohvatiš korisnika direktno
-      const response = await axios.get(`https://localhost:7092/api/v1/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-
+      const response = await apiClient.get(`/api/v1/users/${userId}`);
       const userData = response.data;
       const newConv: ConversationDto = {
         otherUserId: userId,
@@ -683,28 +678,28 @@ const ChatPage: React.FC = () => {
                       key={msg.messageId}
                       sx={{
                         display: 'flex',
-                        justifyContent: isOwn ? 'flex-start' : 'flex-end', // Obrnuto: moje levo, primljene desno
+                        justifyContent: isOwn ? 'flex-end' : 'flex-start',
                         mb: isLastInGroup ? 2 : 0.5,
                         alignItems: 'flex-end'
                       }}
                     >
-                      {/* Avatar za moje poruke (levo) */}
-                      {isOwn && showAvatar && (
+                      {/* Avatar za primljene poruke (levo) */}
+                      {!isOwn && showAvatar && (
                         <Avatar
-                          src={user?.profilePicture || undefined}
+                          src={selectedConversation.otherUserProfilePicture || undefined}
                           sx={{
                             width: 32,
                             height: 32,
                             mr: 1,
                             mb: 0.5,
-                            bgcolor: chatColors.primary,
+                            bgcolor: chatColors.accent,
                             fontSize: '0.875rem',
                           }}
                         >
-                          {user?.firstName?.charAt(0) || 'U'}
+                          {selectedConversation.otherUserName?.charAt(0)}
                         </Avatar>
                       )}
-                      {isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
+                      {!isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
 
                       <Box
                         sx={{
@@ -717,14 +712,14 @@ const ChatPage: React.FC = () => {
                             px: 2,
                             py: 1.25,
                             borderRadius: isOwn
-                              ? isLastInGroup ? '20px 20px 20px 4px' : '20px 20px 20px 20px' // Moje poruke: zaobljeni levi ugao
-                              : isLastInGroup ? '20px 20px 4px 20px' : '20px 20px 20px 20px', // Primljene poruke: zaobljeni desni ugao
+                              ? isLastInGroup ? '20px 4px 20px 20px' : '20px 20px 20px 20px'
+                              : isLastInGroup ? '4px 20px 20px 20px' : '20px 20px 20px 20px',
                             bgcolor: isOwn
                               ? chatColors.messageSent
                               : (theme.palette.mode === 'dark' ? chatColors.messageReceivedDark : chatColors.messageReceived),
                             color: isOwn
                               ? chatColors.textOnPrimary
-                              : (theme.palette.mode === 'dark' ? chatColors.textOnReceivedDark : chatColors.textOnReceived), // Svetlo sivi tekst u dark mode, tamno sivi u light mode
+                              : (theme.palette.mode === 'dark' ? chatColors.textOnReceivedDark : chatColors.textOnReceived),
                             boxShadow: isOwn
                               ? '0 1px 2px rgba(0, 0, 0, 0.1)'
                               : '0 1px 2px rgba(0, 0, 0, 0.08)',
@@ -750,7 +745,7 @@ const ChatPage: React.FC = () => {
                             gap: 0.5,
                             mt: 0.5,
                             px: 0.5,
-                            justifyContent: isOwn ? 'flex-start' : 'flex-end' // Obrnuto poravnanje
+                            justifyContent: isOwn ? 'flex-end' : 'flex-start'
                           }}>
                             <Typography
                               variant="caption"
@@ -772,23 +767,23 @@ const ChatPage: React.FC = () => {
                         )}
                       </Box>
 
-                      {/* Avatar za primljene poruke (desno) */}
-                      {!isOwn && showAvatar && (
+                      {/* Avatar za moje poruke (desno) */}
+                      {isOwn && showAvatar && (
                         <Avatar
-                          src={selectedConversation.otherUserProfilePicture || undefined}
+                          src={user?.profilePicture || undefined}
                           sx={{
                             width: 32,
                             height: 32,
                             ml: 1,
                             mb: 0.5,
-                            bgcolor: chatColors.accent,
+                            bgcolor: chatColors.primary,
                             fontSize: '0.875rem',
                           }}
                         >
-                          {selectedConversation.otherUserName?.charAt(0)}
+                          {user?.firstName?.charAt(0) || 'U'}
                         </Avatar>
                       )}
-                      {!isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
+                      {isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
                     </Box>
                   );
                 })}
@@ -810,7 +805,7 @@ const ChatPage: React.FC = () => {
                     placeholder={t('typeMessage', 'Napiši poruku...')}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();

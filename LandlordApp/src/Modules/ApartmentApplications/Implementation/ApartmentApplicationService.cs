@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using Lander.src.Modules.ApartmentApplications.Interfaces;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.ApartmentApplications.Dtos.Dto;
 using Lander.src.Modules.Listings.Interfaces;
+using Lander.src.Modules.Listings;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
-using Lander.src.Notifications.Interfaces; // Assuming NotificationService interface exists
+using Lander;
+using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -13,20 +16,29 @@ namespace Lander.src.Modules.ApartmentApplications.Implementation;
 public class ApartmentApplicationService : IApartmentApplicationService
 {
     private readonly ApplicationsContext _context;
-    private readonly IApartmentService _apartmentService; // To verify landlord ownership
+    private readonly ListingsContext _listingsContext;
+    private readonly UsersContext _usersContext;
+    private readonly IApartmentService _apartmentService;
     private readonly IHubContext<NotificationHub> _notificationHub;
     private readonly IUserInterface _userService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public ApartmentApplicationService(
-        ApplicationsContext context, 
+        ApplicationsContext context,
+        ListingsContext listingsContext,
+        UsersContext usersContext,
         IApartmentService apartmentService,
         IHubContext<NotificationHub> notificationHub,
-        IUserInterface userService)
+        IUserInterface userService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
+        _listingsContext = listingsContext;
+        _usersContext = usersContext;
         _apartmentService = apartmentService;
         _notificationHub = notificationHub;
         _userService = userService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId, bool isPriority = false)
@@ -50,7 +62,9 @@ public class ApartmentApplicationService : IApartmentApplicationService
             Status = "Pending",
             IsPriority = isPriority,
             CreatedDate = DateTime.UtcNow,
-            CreatedByGuid = Guid.NewGuid(),
+            CreatedByGuid = Guid.TryParse(
+                _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub"),
+                out var callerGuid) ? callerGuid : Guid.Empty,
         };
 
         _context.ApartmentApplications.Add(application);
@@ -81,28 +95,42 @@ public class ApartmentApplicationService : IApartmentApplicationService
 
     public async Task<List<ApartmentApplicationDto>> GetLandlordApplicationsAsync(int landlordId)
     {
-        // Get all apartments owned by landlord
-        var apartments = await _apartmentService.GetApartmentsByLandlordIdAsync(landlordId);
-        var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
+        // Single query: all apartment IDs owned by landlord
+        var apartmentIds = await _listingsContext.Apartments
+            .AsNoTracking()
+            .Where(a => a.LandlordId == landlordId && !a.IsDeleted)
+            .Select(a => a.ApartmentId)
+            .ToListAsync();
 
-        // Get applications for landlord's apartments
         var applications = await _context.ApartmentApplications
+            .AsNoTracking()
             .Where(a => a.ApartmentId.HasValue && apartmentIds.Contains(a.ApartmentId.Value))
             .OrderByDescending(a => a.IsPriority)
             .ThenByDescending(a => a.ApplicationDate)
             .ToListAsync();
 
-        // Map to DTOs with apartment and user details
-        var applicationDtos = new List<ApartmentApplicationDto>();
-        
-        foreach (var app in applications)
-        {
-            var apartment = apartments.FirstOrDefault(a => a.ApartmentId == app.ApartmentId);
-            var userProfile = app.UserId.HasValue && app.UserId.Value > 0 
-                ? await _userService.GetUserProfileAsync(app.UserId.Value) 
-                : null;
+        // Batch fetch apartments and applicant users — no N+1
+        var apartments = await _listingsContext.Apartments
+            .AsNoTracking()
+            .Where(a => apartmentIds.Contains(a.ApartmentId))
+            .ToDictionaryAsync(a => a.ApartmentId);
 
-            applicationDtos.Add(new ApartmentApplicationDto
+        var userIds = applications
+            .Where(a => a.UserId.HasValue && a.UserId.Value > 0)
+            .Select(a => a.UserId!.Value)
+            .Distinct()
+            .ToList();
+
+        var users = await _usersContext.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId);
+
+        return applications.Select(app =>
+        {
+            apartments.TryGetValue(app.ApartmentId ?? 0, out var apt);
+            users.TryGetValue(app.UserId ?? 0, out var usr);
+            return new ApartmentApplicationDto
             {
                 ApplicationId = app.ApplicationId,
                 UserId = app.UserId,
@@ -111,46 +139,50 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 Status = app.Status,
                 IsPriority = app.IsPriority,
                 CreatedDate = app.CreatedDate,
-                Apartment = apartment != null ? new ApartmentDetailsDto
+                Apartment = apt != null ? new ApartmentDetailsDto
                 {
-                    ApartmentId = apartment.ApartmentId,
-                    Title = apartment.Title,
-                    City = apartment.City,
-                    Rent = apartment.Rent
+                    ApartmentId = apt.ApartmentId,
+                    Title = apt.Title,
+                    City = apt.City,
+                    Rent = apt.Rent
                 } : null,
-                User = userProfile != null ? new UserDetailsDto
+                User = usr != null ? new UserDetailsDto
                 {
-                    UserId = userProfile.UserId,
-                    FirstName = userProfile.FirstName,
-                    LastName = userProfile.LastName,
-                    Email = userProfile.Email
+                    UserId = usr.UserId,
+                    FirstName = usr.FirstName,
+                    LastName = usr.LastName,
+                    Email = usr.Email
                 } : null
-            });
-        }
-
-        return applicationDtos;
+            };
+        }).ToList();
     }
 
 
     public async Task<List<ApartmentApplicationDto>> GetTenantApplicationsAsync(int tenantId)
     {
-        // Get tenant's applications
         var applications = await _context.ApartmentApplications
+            .AsNoTracking()
             .Where(a => a.UserId == tenantId)
             .OrderByDescending(a => a.IsPriority)
             .ThenByDescending(a => a.ApplicationDate)
             .ToListAsync();
 
-        // Map to DTOs with apartment details
-        var applicationDtos = new List<ApartmentApplicationDto>();
-        
-        foreach (var app in applications)
-        {
-            var apartment = app.ApartmentId.HasValue 
-                ? await _apartmentService.GetApartmentByIdAsync(app.ApartmentId.Value) 
-                : null;
+        // Batch fetch all referenced apartments in one query
+        var apartmentIds = applications
+            .Where(a => a.ApartmentId.HasValue)
+            .Select(a => a.ApartmentId!.Value)
+            .Distinct()
+            .ToList();
 
-            applicationDtos.Add(new ApartmentApplicationDto
+        var apartments = await _listingsContext.Apartments
+            .AsNoTracking()
+            .Where(a => apartmentIds.Contains(a.ApartmentId))
+            .ToDictionaryAsync(a => a.ApartmentId);
+
+        return applications.Select(app =>
+        {
+            apartments.TryGetValue(app.ApartmentId ?? 0, out var apt);
+            return new ApartmentApplicationDto
             {
                 ApplicationId = app.ApplicationId,
                 UserId = app.UserId,
@@ -159,18 +191,16 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 Status = app.Status,
                 CreatedDate = app.CreatedDate,
                 IsPriority = app.IsPriority,
-                Apartment = apartment != null ? new ApartmentDetailsDto
+                Apartment = apt != null ? new ApartmentDetailsDto
                 {
-                    ApartmentId = apartment.ApartmentId,
-                    Title = apartment.Title,
-                    City = apartment.City,
-                    Rent = apartment.Rent
+                    ApartmentId = apt.ApartmentId,
+                    Title = apt.Title,
+                    City = apt.City,
+                    Rent = apt.Rent
                 } : null,
-                User = null // Tenant doesn't need their own details
-            });
-        }
-
-        return applicationDtos;
+                User = null
+            };
+        }).ToList();
     }
 
     public async Task<ApartmentApplication?> GetApplicationByIdAsync(int applicationId)

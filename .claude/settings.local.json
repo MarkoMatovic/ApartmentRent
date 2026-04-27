@@ -47,7 +47,12 @@
       "PowerShell(git -C \"C:\\\\Users\\\\Dell\\\\Desktop\\\\TuRentaj\" worktree list)",
       "PowerShell($path = \"C:\\\\Users\\\\Dell\\\\Desktop\\\\TuRentaj\\\\.claude\\\\worktrees\"; if \\(Test-Path $path\\) { Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue; \"Obrisano: $path\" } else { \"Folder ne postoji\" })",
       "PowerShell($claire = \"C:\\\\Users\\\\Dell\\\\Desktop\\\\TuRentaj\\\\.claire\"; if \\(Test-Path $claire\\) { Remove-Item $claire -Recurse -Force -ErrorAction SilentlyContinue; \"Obrisano: $claire\" } else { \"Ne postoji\" })",
-      "Bash(find src *)"
+      "Bash(find src *)",
+      "Bash(npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)",
+      "Bash(npx --no-install vite build)",
+      "Bash(find C:/Users/Dell/Desktop/TuRentaj/LandlordApp/src -name \"UsersContext.cs\" -exec grep -n \"DbSet\" {} \\\\;)"
     ]
   }
 }

@@ -64,14 +64,18 @@ public class AuthService : IAuthService
 
         if (!_passwordHashingService.Verify(dto.Password, user.Password))
         {
-            user.FailedLoginAttempts++;
+            // Atomic increment to avoid lost-update race on concurrent login attempts
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE [users].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
+                user.UserId);
+            await _context.Entry(user).ReloadAsync();
             if (user.FailedLoginAttempts >= 5)
             {
                 user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15);
+                await _context.SaveEntitiesAsync();
                 _logger.LogWarning("Account locked: {Email} after {Attempts} failed attempts",
                     user.Email, user.FailedLoginAttempts);
             }
-            await _context.SaveEntitiesAsync();
             return null;
         }
 
@@ -99,7 +103,8 @@ public class AuthService : IAuthService
             }
         }
 
-        if (!user.IsActive) return null;
+        if (!user.IsActive)
+            throw new ForbiddenException("EMAIL_NOT_VERIFIED");
 
         var accessToken = await _tokenProvider.CreateAsync(user);
         var refreshToken = await _refreshTokenService.CreateAsync(user.UserId);

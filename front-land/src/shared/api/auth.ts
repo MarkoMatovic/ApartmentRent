@@ -55,7 +55,11 @@ export const authApi = {
   },
 
   deleteUser: async (data: { userGuid: string }): Promise<void> => {
-    await apiClient.delete('/api/v1/auth/delete-account', { data });
+    await apiClient.delete('/api/v1/auth/delete-user', { data });
+  },
+
+  changePassword: async (data: { userId: string; oldPassword: string; newPassword: string }): Promise<void> => {
+    await apiClient.post('/api/v1/auth/change-password', data);
   },
 };
 

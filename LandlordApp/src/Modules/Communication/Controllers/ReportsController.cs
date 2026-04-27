@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Models;
@@ -20,6 +21,12 @@ public class ReportsController : ControllerBase
         _reportService = reportService;
     }
 
+    private int? GetAdminId()
+    {
+        var claim = User.FindFirstValue("userId");
+        return int.TryParse(claim, out var id) ? id : null;
+    }
+
     [HttpGet]
     public async Task<ActionResult<List<ReportedMessageDto>>> GetAllReports([FromQuery] string? status = null)
     {
@@ -28,17 +35,21 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPut("{reportId}/review")]
-    public async Task<IActionResult> ReviewReport(int reportId, [FromBody] UpdateReportStatusDto dto, [FromQuery] int adminId)
+    public async Task<IActionResult> ReviewReport(int reportId, [FromBody] UpdateReportStatusDto dto)
     {
-        var success = await _reportService.ReviewReportAsync(reportId, dto, adminId);
+        var adminId = GetAdminId();
+        if (adminId is null) return Unauthorized();
+        var success = await _reportService.ReviewReportAsync(reportId, dto, adminId.Value);
         if (!success) return NotFound();
         return Ok();
     }
 
     [HttpPut("{reportId}/resolve")]
-    public async Task<IActionResult> ResolveReport(int reportId, [FromBody] UpdateReportStatusDto dto, [FromQuery] int adminId)
+    public async Task<IActionResult> ResolveReport(int reportId, [FromBody] UpdateReportStatusDto dto)
     {
-        var success = await _reportService.ResolveReportAsync(reportId, dto, adminId);
+        var adminId = GetAdminId();
+        if (adminId is null) return Unauthorized();
+        var success = await _reportService.ResolveReportAsync(reportId, dto, adminId.Value);
         if (!success) return NotFound();
         return Ok();
     }

@@ -15,8 +15,25 @@ export const reviewsApi = {
   },
 
   getByApartmentId: async (apartmentId: number): Promise<Review[]> => {
-    // This endpoint might need to be added to backend
     const response = await apiClient.get<Review[]>(`/api/v1/reviews/apartment/${apartmentId}`);
+    return response.data;
+  },
+
+  deleteReview: async (id: number): Promise<void> => {
+    await apiClient.delete(`/api/v1/reviews/delete-review/${id}`);
+  },
+
+  createFavorite: async (userId: number, apartmentId: number): Promise<any> => {
+    const response = await apiClient.post(`/api/v1/reviews/create-favorite`, { userId, apartmentId });
+    return response.data;
+  },
+
+  deleteFavorite: async (id: number): Promise<void> => {
+    await apiClient.delete(`/api/v1/reviews/delete-favorite/${id}`);
+  },
+
+  getFavoritesByUserId: async (userId: number): Promise<any[]> => {
+    const response = await apiClient.get(`/api/v1/reviews/favorites/${userId}`);
     return response.data;
   },
 };

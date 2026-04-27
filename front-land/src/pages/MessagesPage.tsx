@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Typography,
@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { messagesApi } from '../shared/api/messages';
 import { MessageList } from '../components/Messages/MessageList';
 import { MessageThread } from '../components/Messages/MessageThread';
@@ -19,6 +20,7 @@ import { ConfirmDialog } from '../components/Messages/ConfirmDialog';
 const MessagesPage: React.FC = () => {
     const { t } = useTranslation(['common', 'chat']);
     const queryClient = useQueryClient();
+    const [searchParams] = useSearchParams();
     const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
     const [reportDialogOpen, setReportDialogOpen] = useState(false);
     const [confirmDialog, setConfirmDialog] = useState<{
@@ -38,6 +40,17 @@ const MessagesPage: React.FC = () => {
         queryFn: messagesApi.getConversations,
     });
 
+    // Auto-select conversation when navigating from ?userId=X (e.g. from roommate detail page)
+    useEffect(() => {
+        const userIdParam = searchParams.get('userId');
+        if (userIdParam && !conversationsLoading) {
+            const targetUserId = parseInt(userIdParam, 10);
+            if (!isNaN(targetUserId)) {
+                setSelectedConversationId(targetUserId);
+            }
+        }
+    }, [searchParams, conversationsLoading]);
+
     const { data: messages, isLoading: messagesLoading } = useQuery({
         queryKey: ['conversation-messages', selectedConversationId],
         queryFn: () => messagesApi.getConversationMessages(selectedConversationId!),
@@ -46,11 +59,10 @@ const MessagesPage: React.FC = () => {
 
     const sendMessageMutation = useMutation({
         mutationFn: ({ content, isSuperLike }: { content: string; isSuperLike?: boolean }) => {
-            const selectedConversation = conversations?.find(c => c.otherUserId === selectedConversationId);
-            if (!selectedConversation) throw new Error('No conversation selected');
-
+            if (!selectedConversationId) throw new Error('No conversation selected');
+            // Works for both existing conversations and new ones (sends first message)
             return messagesApi.sendMessage({
-                receiverId: selectedConversation.otherUserId,
+                receiverId: selectedConversationId,
                 content,
                 isSuperLike,
             });
@@ -284,19 +296,23 @@ const MessagesPage: React.FC = () => {
                                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
                                         <CircularProgress />
                                     </Box>
-                                ) : messages ? (
+                                ) : (
                                     <>
-                                        <MessageThread messages={messages} />
+                                        {messages && messages.length > 0 ? (
+                                            <MessageThread messages={messages} />
+                                        ) : (
+                                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+                                                <Typography color="text.secondary">
+                                                    {t('chat:startConversation', { defaultValue: 'Send a message to start the conversation.' })}
+                                                </Typography>
+                                            </Box>
+                                        )}
                                         <MessageComposer
                                             onSendMessage={(content, isSuperLike) => sendMessageMutation.mutate({ content, isSuperLike })}
                                             onSendFile={(file) => uploadFileMutation.mutate(file)}
                                             disabled={sendMessageMutation.isPending || uploadFileMutation.isPending}
                                         />
                                     </>
-                                ) : (
-                                    <Alert severity="error" sx={{ m: 2 }}>
-                                        {t('chat:errorLoadingMessages')}
-                                    </Alert>
                                 )}
                             </>
                         ) : (

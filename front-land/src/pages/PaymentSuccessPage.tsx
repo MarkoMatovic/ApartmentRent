@@ -1,36 +1,54 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Paper, Button, Box, CircularProgress } from '@mui/material';
+import { Container, Typography, Paper, Button, Box, CircularProgress, Alert } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { paymentsApi } from '../shared/api/paymentsApi';
+import { useNavigate } from 'react-router-dom';
+import { authApi } from '../shared/api/auth';
+import { useAuth } from '../shared/context/AuthContext';
 
 const PaymentSuccessPage: React.FC = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const [refreshing, setRefreshing] = useState(false);
+    const { updateUser } = useAuth();
+    const [refreshing, setRefreshing] = useState(true);
+    const [refreshFailed, setRefreshFailed] = useState(false);
 
     useEffect(() => {
-        // After redirect from Monri, refresh the JWT so the frontend
-        // picks up the updated premium status set by the backend webhook.
-        // The "refreshed" flag prevents re-running this on the reloaded page.
-        if (searchParams.get('refreshed') === '1') return;
-
-        const refreshToken = async () => {
-            setRefreshing(true);
+        const refreshSession = async () => {
             try {
-                const newToken = await paymentsApi.refreshToken();
-                sessionStorage.setItem('authToken', newToken);
-                sessionStorage.removeItem('user'); // force re-decode on next load
+                // Rotate tokens so the new JWT reflects the updated premium role
+                const tokens = await authApi.rotateTokens();
+                if (tokens?.accessToken) {
+                    sessionStorage.setItem('authToken', tokens.accessToken);
+                    // Decode and push updated user into AuthContext without a full page reload
+                    const parts = tokens.accessToken.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                        updateUser({
+                            userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
+                            userGuid: payload.sub || '',
+                            firstName: payload.given_name || '',
+                            lastName: payload.family_name || '',
+                            email: payload.email || '',
+                            isActive: true,
+                            userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
+                            roleName: payload.role || payload.roleName,
+                            permissions: Array.isArray(payload.permission) ? payload.permission : payload.permission ? [payload.permission] : [],
+                            hasPersonalAnalytics: payload.hasPersonalAnalytics === 'true' || payload.hasPersonalAnalytics === true,
+                            hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
+                            tokenBalance: payload.tokenBalance !== undefined ? parseInt(payload.tokenBalance) : undefined,
+                            isIncognito: false,
+                        });
+                    }
+                }
             } catch {
-                // Webhook may not have fired yet — user can re-login later
+                // Webhook may not have fired yet — user can re-login manually
+                setRefreshFailed(true);
             } finally {
-                // Reload once with the flag so AuthContext re-initializes from sessionStorage
-                window.location.replace('/payment-success?refreshed=1');
+                setRefreshing(false);
             }
         };
 
-        refreshToken();
-    }, [searchParams]);
+        refreshSession();
+    }, []);
 
     if (refreshing) {
         return (
@@ -48,9 +66,16 @@ const PaymentSuccessPage: React.FC = () => {
                 <Typography variant="h4" gutterBottom>
                     Plaćanje uspešno!
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                    Vaša premium pretplata je aktivna. Možete koristiti sve premium funkcije.
-                </Typography>
+                {refreshFailed ? (
+                    <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+                        Vaša pretplata je aktivna, ali se nismo uspeli osvežiti sesiju automatski.
+                        Odjavite se i ponovo prijavite da aktivirate premium funkcije.
+                    </Alert>
+                ) : (
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                        Vaša premium pretplata je aktivna. Možete koristiti sve premium funkcije.
+                    </Typography>
+                )}
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                     <Button variant="contained" onClick={() => navigate('/profile')}>
                         Moj profil
