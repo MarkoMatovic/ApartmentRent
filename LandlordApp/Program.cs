@@ -20,7 +20,7 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
-    WebRootPath = Path.GetTempPath()
+    WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
 });
 
 // TEMP: k6 performance testing — higher connection limits to avoid TCP backlog on Windows loopback
@@ -75,6 +75,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 
 // Add FluentValidation
@@ -162,6 +163,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseResponseCompression();
 app.UseOutputCache();
 app.UseRateLimiter();

@@ -29,6 +29,7 @@ import {
   Analytics as AnalyticsIcon,
   Star as StarIcon,
   Report as ReportIcon,
+  Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -249,6 +250,10 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/price-predictor'); handleMenuClose(); }}>
                   {t('machineLearning:pricePredictor.title')}
                 </MenuItem>
+                <MenuItem onClick={() => { navigate('/roommates/matches'); handleMenuClose(); }}>
+                  <PsychologyIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                  {t('roommates:matches', { defaultValue: 'Roommate Matches' })}
+                </MenuItem>
                 {!user?.roleName?.includes('Premium') && (
                   <MenuItem
                     onClick={() => { navigate('/pricing'); handleMenuClose(); }}
@@ -413,6 +418,14 @@ const Header: React.FC = () => {
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/price-predictor'); setMobileOpen(false); }}>
                     <ListItemText primary={t('machineLearning:pricePredictor.title')} />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => { navigate('/roommates/matches'); setMobileOpen(false); }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PsychologyIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                      <ListItemText primary={t('roommates:matches', { defaultValue: 'Roommate Matches' })} />
+                    </Box>
                   </ListItemButton>
                 </ListItem>
                 {!user?.roleName?.includes('Premium') && (

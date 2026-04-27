@@ -36,10 +36,11 @@ export const roommatesApi = {
     if (filters?.stayDuration) params.stayDuration = filters.stayDuration;
     if (filters?.apartmentId) params.apartmentId = filters.apartmentId;
 
-    const response = await apiClient.get<Roommate[]>(`/api/v1/roommates/get-all-roommates`, {
+    const response = await apiClient.get<any>(`/api/v1/roommates/get-all-roommates`, {
       params,
     });
-    return response.data;
+    // Backend returns PagedResult<RoommateDto> with { items, totalCount, page, pageSize }
+    return Array.isArray(response.data) ? response.data : (response.data?.items ?? []);
   },
 
   getById: async (id: number): Promise<Roommate> => {

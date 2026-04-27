@@ -371,7 +371,7 @@ const CreateRoommatePage: React.FC = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  label={t('roommates:preferredLocation')}
+                  label={t('roommates:preferredLocation', { defaultValue: 'Preferred Location' })}
                   value={formData.preferredLocation}
                   onChange={(e) => handleChange('preferredLocation', e.target.value)}
                   margin="normal"
@@ -385,7 +385,7 @@ const CreateRoommatePage: React.FC = () => {
                 variant="contained"
                 color="secondary"
                 size="large"
-                disabled={createMutation.isPending || !user?.profilePicture}
+                disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? t('loading') : t('common:save')}
               </Button>

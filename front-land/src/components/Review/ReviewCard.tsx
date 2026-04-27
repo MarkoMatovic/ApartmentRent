@@ -5,8 +5,9 @@ import {
   Typography,
   Avatar,
   Chip,
+  IconButton,
 } from '@mui/material';
-import { Person as PersonIcon, Lock as LockIcon } from '@mui/icons-material';
+import { Person as PersonIcon, Lock as LockIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { Review } from '../../shared/types/review';
 import StarRating from './StarRating';
@@ -14,9 +15,11 @@ import { format } from 'date-fns';
 
 interface ReviewCardProps {
   review: Review;
+  currentUserId?: number;
+  onDelete?: (reviewId: number) => void;
 }
 
-const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
+const ReviewCard: React.FC<ReviewCardProps> = ({ review, currentUserId, onDelete }) => {
   const { t } = useTranslation(['common', 'reviews']);
 
   const displayName = review.isAnonymous
@@ -101,7 +104,19 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
                 {formattedDate}
               </Typography>
             </Box>
-            <StarRating rating={review.rating} size="small" />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <StarRating rating={review.rating} size="small" />
+              {currentUserId && review.userId === currentUserId && onDelete && (
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => onDelete(review.reviewId)}
+                  title="Delete review"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
           </Box>
 
           {review.comment && (

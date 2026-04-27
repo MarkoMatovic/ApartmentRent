@@ -54,8 +54,8 @@ export const apartmentsApi = {
     return apartments;
   },
 
-  create: async (data: ApartmentInputDto): Promise<Apartment> => {
-    const response = await apiClient.post<Apartment>(`/api/v1/rent/create-apartment`, data);
+  create: async (data: ApartmentInputDto): Promise<GetApartmentDto> => {
+    const response = await apiClient.post<GetApartmentDto>(`/api/v1/rent/create-apartment`, data);
     return response.data;
   },
 
@@ -69,7 +69,7 @@ export const apartmentsApi = {
   },
 
   activate: async (id: number): Promise<void> => {
-    await apiClient.post(`/api/v1/rent/activate-apartment/${id}`);
+    await apiClient.put(`/api/v1/rent/activate-apartment/${id}`);
   },
 
   uploadImages: async (files: File[]): Promise<string[]> => {
