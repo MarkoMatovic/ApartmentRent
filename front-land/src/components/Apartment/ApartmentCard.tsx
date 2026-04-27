@@ -19,6 +19,7 @@ import {
   People as PeopleIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  PlayArrow as ActivateIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -36,11 +37,13 @@ interface ApartmentCardProps {
   onToggleRoommate?: (isLookingForRoommate: boolean) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onActivate?: () => void;
   isUpdating?: boolean;
   isDeleting?: boolean;
+  isActivating?: boolean;
 }
 
-const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = false, onToggleRoommate, onEdit, onDelete, isUpdating = false, isDeleting = false }) => {
+const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = false, onToggleRoommate, onEdit, onDelete, onActivate, isUpdating = false, isDeleting = false, isActivating = false }) => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -289,29 +292,46 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = fals
         </Button>
         {isOwner && (
           <Box sx={{ display: 'flex', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onEdit) onEdit();
-              }}
-              title={t('common:edit', { defaultValue: 'Edit' })}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onDelete) onDelete();
-              }}
-              disabled={isDeleting}
-              title={t('common:delete', { defaultValue: 'Delete' })}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            {apartment.isActive === false ? (
+              <IconButton
+                size="small"
+                color="success"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onActivate) onActivate();
+                }}
+                disabled={isActivating}
+                title={t('apartments:activate', { defaultValue: 'Activate' })}
+              >
+                <ActivateIcon fontSize="small" />
+              </IconButton>
+            ) : (
+              <>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onEdit) onEdit();
+                  }}
+                  title={t('common:edit', { defaultValue: 'Edit' })}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onDelete) onDelete();
+                  }}
+                  disabled={isDeleting}
+                  title={t('common:delete', { defaultValue: 'Delete' })}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </>
+            )}
           </Box>
         )}
       </CardActions>

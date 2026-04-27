@@ -23,6 +23,8 @@ import {
     Home as HomeIcon,
     Visibility as VisibilityIcon,
     Message as MessageIcon,
+    People as PeopleIcon,
+    Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +57,28 @@ const PersonalAnalyticsPage: React.FC = () => {
     const { data: messagesSent, isLoading: messagesLoading, error: messagesError } = useQuery({
         queryKey: ['my-messages-sent'],
         queryFn: () => analyticsApi.getMyMessagesSent(),
+        enabled: !!user?.userId,
+        retry: false,
+    });
+
+    // Roommate analytics
+    const { data: roommateSummary } = useQuery({
+        queryKey: ['user-roommate-summary', user?.userId],
+        queryFn: () => analyticsApi.getUserRoommateSummary(user!.userId),
+        enabled: !!user?.userId,
+        retry: false,
+    });
+
+    const { data: topRoommates } = useQuery({
+        queryKey: ['user-top-roommates', user?.userId],
+        queryFn: () => analyticsApi.getUserTopRoommates(user!.userId, 5),
+        enabled: !!user?.userId,
+        retry: false,
+    });
+
+    const { data: userSearches } = useQuery({
+        queryKey: ['user-searches', user?.userId],
+        queryFn: () => analyticsApi.getUserSearches(user!.userId, 5),
         enabled: !!user?.userId,
         retry: false,
     });
@@ -232,6 +256,110 @@ const PersonalAnalyticsPage: React.FC = () => {
                         <Alert severity="info">{t('analytics:analytics:noApartmentsOwned')}</Alert>
                     )}
                 </Paper>
+                {/* Roommate Analytics */}
+                {(roommateSummary || topRoommates || userSearches) && (
+                    <>
+                        <Typography variant="h5" sx={{ mt: 5, mb: 2 }} gutterBottom>
+                            <PeopleIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                            {t('analytics:analytics:roommateActivity', { defaultValue: 'Roommate Activity' })}
+                        </Typography>
+
+                        {roommateSummary && (
+                            <Grid container spacing={3} sx={{ mb: 3 }}>
+                                {roommateSummary.roommateViews > 0 && (
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Card>
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                    <VisibilityIcon color="primary" sx={{ mr: 1 }} />
+                                                    <Typography variant="subtitle2">
+                                                        {t('analytics:analytics:roommateViews', { defaultValue: 'Roommate Views' })}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="h5">{roommateSummary.roommateViews}</Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                )}
+                                {roommateSummary.searches > 0 && (
+                                    <Grid item xs={12} sm={6} md={3}>
+                                        <Card>
+                                            <CardContent>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                    <SearchIcon color="secondary" sx={{ mr: 1 }} />
+                                                    <Typography variant="subtitle2">
+                                                        {t('analytics:analytics:searches', { defaultValue: 'Searches' })}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="h5">{roommateSummary.searches}</Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                )}
+                            </Grid>
+                        )}
+
+                        {topRoommates && topRoommates.length > 0 && (
+                            <Paper sx={{ mt: 2, p: 3 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    <PeopleIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                                    {t('analytics:analytics:topViewedRoommates', { defaultValue: 'Most Viewed Roommates' })}
+                                </Typography>
+                                <TableContainer>
+                                    <Table size="small">
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>{t('analytics:analytics:rank')}</TableCell>
+                                                <TableCell>{t('analytics:analytics:roommate', { defaultValue: 'Roommate' })}</TableCell>
+                                                <TableCell align="right">{t('analytics:analytics:views')}</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {topRoommates.map((r: any, index: number) => (
+                                                <TableRow key={r.entityId}>
+                                                    <TableCell>
+                                                        <Chip label={`#${index + 1}`} color={index < 3 ? 'primary' : 'default'} size="small" />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <MuiLink
+                                                            component="button"
+                                                            variant="body2"
+                                                            onClick={() => navigate(`/roommates/${r.entityId}`)}
+                                                            sx={{ textDecoration: 'none', cursor: 'pointer' }}
+                                                        >
+                                                            {r.entityTitle || `Roommate #${r.entityId}`}
+                                                        </MuiLink>
+                                                    </TableCell>
+                                                    <TableCell align="right">{r.viewCount}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            </Paper>
+                        )}
+
+                        {userSearches && userSearches.length > 0 && (
+                            <Paper sx={{ mt: 3, p: 3 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    <SearchIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                                    {t('analytics:analytics:recentSearches', { defaultValue: 'Recent Searches' })}
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                    {userSearches.map((s: any, index: number) => (
+                                        <Chip
+                                            key={index}
+                                            label={s.searchTerm || s.term || s.query || JSON.stringify(s)}
+                                            size="small"
+                                            variant="outlined"
+                                            icon={<SearchIcon />}
+                                        />
+                                    ))}
+                                </Box>
+                            </Paper>
+                        )}
+                    </>
+                )}
             </PremiumBlur>
         </Container >
     );

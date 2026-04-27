@@ -4,9 +4,7 @@ using Lander.src.Notifications.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-// Moved from LandLanderContext.cs (root mega-file) into per-module location.
-// Namespace intentionally kept as 'Lander' to avoid breaking migrations,
-// service registrations, and all existing consumers.
+
 namespace Lander;
 
 public partial class NotificationContext : DbContext, IUnitOfWork

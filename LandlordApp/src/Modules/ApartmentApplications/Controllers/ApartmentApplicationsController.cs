@@ -26,7 +26,6 @@ public class ApartmentApplicationsController : ApiControllerBase
 
     [HttpPost]
     [Authorize]
-    [Microsoft.AspNetCore.RateLimiting.DisableRateLimiting] // TEMP: k6 testing
     public async Task<IActionResult> ApplyForApartment([FromBody] CreateApplicationInputDto input)
     {
         var user = await GetCurrentUserAsync();
@@ -69,16 +68,9 @@ public class ApartmentApplicationsController : ApiControllerBase
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        try
-        {
-            var result = await _applicationService.UpdateApplicationStatusAsync(id, input.Status, user.UserId);
-            if (result == null) return NotFound("Application not found");
-            return Ok(result);
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        var result = await _applicationService.UpdateApplicationStatusAsync(id, input.Status, user.UserId);
+        if (result == null) return NotFound("Application not found");
+        return Ok(result);
     }
 
     [HttpGet("check-approval/{apartmentId}")]

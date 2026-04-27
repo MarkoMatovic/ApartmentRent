@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Lander.Helpers;
+using Lander.src.Common.Exceptions;
 using Lander.src.Modules.Users.Dtos.Dto;
 using Lander.src.Modules.Users.Dtos.InputDto;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
@@ -41,24 +42,30 @@ namespace Lander.src.Modules.Users.Controllers
         [HttpPost(ApiActionsV1.Login, Name = nameof(ApiActionsV1.Login))]
         public async Task<ActionResult<AuthTokenDto>> LoginUser([FromBody] LoginUserInputDto loginUserInputDto)
         {
-            var tokens = await _userInterface.LoginUserAsync(loginUserInputDto);
+            AuthTokenDto? tokens;
+            try
+            {
+                tokens = await _userInterface.LoginUserAsync(loginUserInputDto);
+            }
+            catch (ForbiddenException ex) when (ex.Message == "EMAIL_NOT_VERIFIED")
+            {
+                return StatusCode(403, new { message = "EMAIL_NOT_VERIFIED" });
+            }
             if (tokens == null)
                 return Unauthorized(new { message = "Neispravan email ili lozinka" });
 
-            // Store refresh token in httpOnly cookie — not accessible to JS (XSS protection)
             SetRefreshTokenCookie(tokens.RefreshToken);
 
-            // Return only the access token in the body; refresh token travels via cookie
             return Ok(new AuthTokenDto { AccessToken = tokens.AccessToken, RefreshToken = string.Empty });
         }
         [HttpPost(ApiActionsV1.Logout, Name = nameof(ApiActionsV1.Logout))]
         public async Task<ActionResult> Logout([FromBody] LogoutInputDto? dto = null)
         {
-            // Accept refresh token from cookie (preferred) or body (fallback for old clients)
+            
             var rawRefreshToken = Request.Cookies["refreshToken"] ?? dto?.RefreshToken;
             await _userInterface.LogoutUserAsync(rawRefreshToken);
 
-            // Clear the httpOnly cookie
+         
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
                 Path = "/api/v1/auth",
@@ -126,14 +133,11 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(exportData);
         }
 
-        /// <summary>
-        /// Rotates refresh token: validates old refresh token, issues new access + refresh token pair.
-        /// Accepts refresh token from httpOnly cookie (preferred) or JSON body (fallback).
-        /// </summary>
+        
         [HttpPost("token/refresh")]
         public async Task<ActionResult<AuthTokenDto>> RotateRefreshToken([FromBody] LogoutInputDto? dto = null)
         {
-            // Cookie takes priority; body accepted as backward-compat fallback
+            
             var rawRefreshToken = Request.Cookies["refreshToken"] ?? dto?.RefreshToken;
 
             if (string.IsNullOrEmpty(rawRefreshToken))
@@ -149,16 +153,12 @@ namespace Lander.src.Modules.Users.Controllers
             var newAccess = await _tokenProvider.CreateAsync(user);
             var newRefresh = await _refreshTokenService.CreateAsync(user.UserId);
 
-            // Rotate cookie
             SetRefreshTokenCookie(newRefresh);
 
             return Ok(new AuthTokenDto { AccessToken = newAccess, RefreshToken = string.Empty });
         }
 
-        /// <summary>
-        /// Re-issues a fresh JWT token with updated claims (e.g. after subscription purchase).
-        /// Requires a valid Bearer access token.
-        /// </summary>
+       
         [HttpPost("refresh-token")]
         [Authorize]
         public async Task<ActionResult<string>> RefreshToken()
@@ -178,6 +178,7 @@ namespace Lander.src.Modules.Users.Controllers
 
         [HttpPost("send-verification-email/{userId}")]
         [Authorize]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> SendVerificationEmail([FromRoute] int userId)
         {
             var currentId = int.Parse(User.FindFirstValue("userId") ?? "0");
@@ -202,7 +203,6 @@ namespace Lander.src.Modules.Users.Controllers
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordInputDto dto)
         {
             await _userInterface.SendPasswordResetEmailAsync(dto.Email);
-            // Always return OK to avoid email enumeration
             return Ok(new { message = "Ako email postoji, poslan je link za reset lozinke." });
         }
 
@@ -216,16 +216,15 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { message = "Lozinka je uspješno promijenjena." });
         }
 
-        // ─── helpers ────────────────────────────────────────────────────────────
         private void SetRefreshTokenCookie(string rawRefreshToken)
         {
             var cookieOptions = new CookieOptions
             {
-                HttpOnly  = true,     // Not accessible to JavaScript (XSS protection)
-                Secure    = true,     // Sent only over HTTPS
-                SameSite  = SameSiteMode.Strict, // CSRF protection
+                HttpOnly  = true,     
+                Secure    = true,  
+                SameSite  = SameSiteMode.Strict,
                 Expires   = DateTimeOffset.UtcNow.AddDays(30),
-                Path      = "/api/v1/auth" // Scope to auth endpoints only
+                Path      = "/api/v1/auth" 
             };
             Response.Cookies.Append("refreshToken", rawRefreshToken, cookieOptions);
         }

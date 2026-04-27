@@ -65,6 +65,7 @@ public static class ApplicationServiceExtensions
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
         services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
         services.AddHostedService<Lander.src.Modules.Communication.Services.OutboxProcessorService>();
+        services.AddHostedService<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IRoommateService, RoommateService>();
         services.AddScoped<ISearchRequestService, SearchRequestService>();

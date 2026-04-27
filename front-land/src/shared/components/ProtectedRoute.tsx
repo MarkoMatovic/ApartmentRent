@@ -1,6 +1,7 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions';
+import { useAuth } from '../context/AuthContext';
 import { Permission } from '../types/permission';
 
 interface ProtectedRouteProps {
@@ -11,38 +12,30 @@ interface ProtectedRouteProps {
     children: React.ReactNode;
 }
 
-/**
- * ProtectedRoute component - wraps routes that require specific permissions
- * 
- * Usage:
- * <ProtectedRoute permission="apartments.create">
- *   <CreateApartmentPage />
- * </ProtectedRoute>
- */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     permission,
     permissions,
     requireAll = false,
-    fallbackPath = '/unauthorized',
+    fallbackPath = '/login',
     children,
 }) => {
+    const { isAuthenticated, loading } = useAuth();
     const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermissions();
+    const location = useLocation();
 
-    let authorized = false;
+    // Wait for auth to initialize before redirecting
+    if (loading) return null;
 
-    if (permission) {
-        authorized = hasPermission(permission);
-    } else if (permissions) {
-        authorized = requireAll
-            ? hasAllPermissions(permissions)
-            : hasAnyPermission(permissions);
-    } else {
-        // No permission required, always authorized
-        authorized = true;
+    if (!isAuthenticated) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    if (!authorized) {
-        return <Navigate to={fallbackPath} replace />;
+    if (permission) {
+        if (!hasPermission(permission))
+            return <Navigate to={fallbackPath} replace />;
+    } else if (permissions) {
+        const ok = requireAll ? hasAllPermissions(permissions) : hasAnyPermission(permissions);
+        if (!ok) return <Navigate to={fallbackPath} replace />;
     }
 
     return <>{children}</>;

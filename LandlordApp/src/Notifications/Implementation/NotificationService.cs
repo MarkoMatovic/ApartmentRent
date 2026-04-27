@@ -81,7 +81,7 @@ public class NotificationService : INotificationService
             Message = createNotificationInputDto.Message,
             ActionType = createNotificationInputDto.ActionType,
             ActionTarget = createNotificationInputDto.ActionTarget,
-            CreatedByGuid = Guid.Parse(currentUserGuid),
+            CreatedByGuid = Guid.TryParse(currentUserGuid, out var callerGuid) ? callerGuid : Guid.Empty,
             SenderUserId = createNotificationInputDto.SenderUserId,
             RecipientUserId = createNotificationInputDto.RecipientUserId,
             CreatedDate = DateTime.UtcNow,
@@ -165,5 +165,25 @@ public class NotificationService : INotificationService
             throw;
         }
         return true;
+    }
+    public async Task<NotificationDto?> GetNotificationByIdAsync(int notificationId)
+    {
+        var n = await _context.Notifications
+            .AsNoTracking()
+            .FirstOrDefaultAsync(n => n.Id == notificationId);
+        if (n == null) return null;
+        return new NotificationDto
+        {
+            Id = n.Id,
+            Title = n.Title,
+            Message = n.Message,
+            ActionType = n.ActionType,
+            ActionTarget = n.ActionTarget,
+            IsRead = n.IsRead,
+            CreatedDate = n.CreatedDate,
+            CreatedByGuid = n.CreatedByGuid,
+            SenderUserId = n.SenderUserId,
+            RecipientUserId = n.RecipientUserId
+        };
     }
 }

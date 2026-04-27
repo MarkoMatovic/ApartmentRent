@@ -1,49 +1,33 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Lander.Helpers;
 using Lander.src.Modules.Payments.Interfaces;
+using Lander.src.Modules.Payments.Models;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.Payments.Implementation;
 
 public class MonriCallbackHandler : IMonriCallbackHandler
 {
-    // Idempotency: track recently processed order numbers (order_number → processed-at).
-    // Static so it's shared across all scoped instances — one dictionary per process.
-    private static readonly ConcurrentDictionary<string, DateTimeOffset> _processedOrders = new();
-
-    // PeriodicTimer runs once per hour in a background task to evict entries older than 24h.
-    // Replaces the previous O(n) sweep that ran on every single callback call.
-    static MonriCallbackHandler()
-    {
-        _ = Task.Run(async () =>
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
-            while (await timer.WaitForNextTickAsync())
-                EvictExpiredOrders();
-        });
-    }
-
-    private static void EvictExpiredOrders()
-    {
-        var cutoff = DateTimeOffset.UtcNow.AddHours(-24);
-        foreach (var key in _processedOrders.Keys)
-            if (_processedOrders.TryGetValue(key, out var ts) && ts < cutoff)
-                _processedOrders.TryRemove(key, out _);
-    }
-
     private readonly string _merchantKey;
     private readonly IUserInterface _userService;
+    private readonly PaymentsContext _paymentsContext;
     private readonly ILogger<MonriCallbackHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
-    public MonriCallbackHandler(IConfiguration configuration, IUserInterface userService, ILogger<MonriCallbackHandler> logger, TimeProvider timeProvider)
+    public MonriCallbackHandler(
+        IConfiguration configuration,
+        IUserInterface userService,
+        PaymentsContext paymentsContext,
+        ILogger<MonriCallbackHandler> logger,
+        TimeProvider timeProvider)
     {
         _merchantKey = configuration["Monri:MerchantKey"]
             ?? throw new InvalidOperationException("Monri:MerchantKey is not configured");
         _userService = userService;
+        _paymentsContext = paymentsContext;
         _logger = logger;
         _timeProvider = timeProvider;
     }
@@ -122,7 +106,8 @@ public class MonriCallbackHandler : IMonriCallbackHandler
             var match = string.Equals(expected, receivedDigest, StringComparison.OrdinalIgnoreCase);
             if (!match)
                 _logger.LogWarning("Monri digest mismatch. Expected: {Expected}, Received: {Received}",
-                    expected[..16] + "…", receivedDigest[..16] + "…");
+                    (expected.Length >= 16 ? expected[..16] : expected) + "…",
+                    (receivedDigest.Length >= 16 ? receivedDigest[..16] : receivedDigest) + "…");
             return match;
         }
         catch (Exception ex)
@@ -137,8 +122,10 @@ public class MonriCallbackHandler : IMonriCallbackHandler
         var orderNumber = data.TryGetProperty("order_number", out var on) ? on.GetString() : null;
         if (string.IsNullOrEmpty(orderNumber)) return;
 
-        // Idempotency: reject duplicate callbacks — no eviction here, timer handles it
-        if (!_processedOrders.TryAdd(orderNumber, _timeProvider.GetUtcNow()))
+        // DB-backed idempotency — safe across multiple instances
+        var alreadyProcessed = await _paymentsContext.ProcessedMonriOrders
+            .AnyAsync(o => o.OrderNumber == orderNumber);
+        if (alreadyProcessed)
         {
             _logger.LogWarning("Monri duplicate callback for order {OrderNumber} — ignored", orderNumber);
             return;
@@ -173,5 +160,21 @@ public class MonriCallbackHandler : IMonriCallbackHandler
             HasPersonalAnalytics = true
         };
         await _userService.UpdateUserProfileAsync(userId, updateDto);
+
+        // Mark as processed AFTER upgrade succeeds — safe to retry if this save fails
+        try
+        {
+            _paymentsContext.ProcessedMonriOrders.Add(new ProcessedMonriOrder
+            {
+                OrderNumber = orderNumber,
+                ProcessedAt = _timeProvider.GetUtcNow()
+            });
+            await _paymentsContext.SaveEntitiesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // Unique constraint race — another instance processed it concurrently; upgrade already done
+            _logger.LogWarning("Monri concurrent duplicate callback for order {OrderNumber} — upgrade already applied", orderNumber);
+        }
     }
 }

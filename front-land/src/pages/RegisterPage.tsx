@@ -28,6 +28,7 @@ const RegisterPage: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -52,6 +53,11 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
+    if (formData.dateOfBirth && new Date(formData.dateOfBirth) > new Date()) {
+      setError(t('dobInFuture', { defaultValue: 'Date of birth cannot be in the future.' }));
+      return;
+    }
+
     if (formData.password.length < 8) {
       setError(t('passwordRequirements'));
       return;
@@ -73,17 +79,39 @@ const RegisterPage: React.FC = () => {
         phoneNumber: formData.phoneNumber || undefined,
         dateOfBirth: formData.dateOfBirth || undefined,
       });
-      navigate('/login');
+      setRegisteredEmail(formData.email);
     } catch (err: any) {
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
         setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
       } else {
-        setError(err.response?.data || err.message || 'Registration failed');
+        const d = err.response?.data;
+        setError(typeof d === 'string' ? d : d?.message || d?.title || err.message || 'Registration failed');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (registeredEmail) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8 }}>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h5" gutterBottom>
+            {t('checkYourEmail', { defaultValue: 'Check your email' })}
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 2, mb: 3 }}>
+            {t('verificationSent', {
+              defaultValue: 'We sent a verification link to {{email}}. Click the link to activate your account, then log in.',
+              email: registeredEmail,
+            })}
+          </Typography>
+          <Button variant="contained" onClick={() => navigate('/login')}>
+            {t('goToLogin', { defaultValue: 'Go to Login' })}
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>

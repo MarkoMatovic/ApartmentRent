@@ -39,6 +39,10 @@ const ProfilePage: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
 
   const handleDeleteAccount = async () => {
     setIsUpdating(true);
@@ -150,7 +154,7 @@ const ProfilePage: React.FC = () => {
         updateData.dateOfBirth = formData.dateOfBirth;
       }
 
-      const response = await apiClient.put(`/api/v1/users/update-profile/${user.userId}`, updateData);
+      const response = await apiClient.put(`/api/v1/auth/update-profile/${user.userId}`, updateData);
 
       if (updateUser) {
         updateUser(response.data);
@@ -229,6 +233,35 @@ const ProfilePage: React.FC = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       setError('Failed to export data');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+    if (!user?.userGuid) return;
+    setPasswordUpdating(true);
+    try {
+      await authApi.changePassword({
+        userId: user.userGuid,
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setSuccess('Password changed successfully');
+      setChangePasswordDialogOpen(false);
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setPasswordError(err.response?.data || 'Failed to change password');
+    } finally {
+      setPasswordUpdating(false);
     }
   };
 
@@ -496,6 +529,16 @@ const ProfilePage: React.FC = () => {
 
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Typography variant="h6" gutterBottom>{t('profile:security', { defaultValue: 'Security' })}</Typography>
+          <Button
+            variant="outlined"
+            onClick={() => setChangePasswordDialogOpen(true)}
+          >
+            {t('profile:changePassword', { defaultValue: 'Change Password' })}
+          </Button>
+        </Box>
+
+        <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="h6" gutterBottom color="error">{t('profile:dangerZone')}</Typography>
           <Button
             variant="outlined"
@@ -514,6 +557,42 @@ const ProfilePage: React.FC = () => {
           </Button>
         </Box>
       </Paper>
+
+      <Dialog open={changePasswordDialogOpen} onClose={() => { setChangePasswordDialogOpen(false); setPasswordError(''); }}>
+        <DialogTitle>{t('profile:changePassword', { defaultValue: 'Change Password' })}</DialogTitle>
+        <DialogContent sx={{ pt: 2, minWidth: 360 }}>
+          {passwordError && <Alert severity="error" sx={{ mb: 2 }}>{passwordError}</Alert>}
+          <TextField
+            fullWidth
+            label={t('profile:currentPassword', { defaultValue: 'Current Password' })}
+            type="password"
+            value={passwordForm.oldPassword}
+            onChange={(e) => setPasswordForm(p => ({ ...p, oldPassword: e.target.value }))}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label={t('profile:newPassword', { defaultValue: 'New Password' })}
+            type="password"
+            value={passwordForm.newPassword}
+            onChange={(e) => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label={t('profile:confirmNewPassword', { defaultValue: 'Confirm New Password' })}
+            type="password"
+            value={passwordForm.confirmPassword}
+            onChange={(e) => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setChangePasswordDialogOpen(false); setPasswordError(''); }}>{t('common:cancel')}</Button>
+          <Button onClick={handleChangePassword} variant="contained" disabled={passwordUpdating}>
+            {passwordUpdating ? <CircularProgress size={24} /> : t('common:save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={deactivateDialogOpen} onClose={() => setDeactivateDialogOpen(false)}>
         <DialogTitle>{t('profile:deactivateConfirmTitle')}</DialogTitle>

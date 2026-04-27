@@ -15,24 +15,20 @@ public class MessagesController : ControllerBase
 {
     private readonly IMessageService _messageService;
     private readonly Lander.src.Modules.Analytics.Interfaces.IAnalyticsService _analyticsService;
-    private readonly ILogger<MessagesController> _logger;
 
     public MessagesController(
         IMessageService messageService,
-        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService,
-        ILogger<MessagesController> logger)
+        Lander.src.Modules.Analytics.Interfaces.IAnalyticsService analyticsService)
     {
         _messageService = messageService;
         _analyticsService = analyticsService;
-        _logger = logger;
     }
 
-    // ─── helpers ────────────────────────────────────────────────────────────────
     private int GetCurrentUserId()
     {
         var claim = User.FindFirstValue("userId");
         if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out var id))
-            throw new UnauthorizedAccessException("Korisnički ID nije pronađen u tokenu.");
+            throw new UnauthorizedAccessException();
         return id;
     }
 
@@ -41,8 +37,6 @@ public class MessagesController : ControllerBase
         var currentId = GetCurrentUserId();
         return currentId != requestedUserId ? Forbid() : null;
     }
-
-    // ─── endpoints ──────────────────────────────────────────────────────────────
 
     [HttpGet(ApiActionsV1.GetConversation, Name = nameof(ApiActionsV1.GetConversation))]
     public async Task<ActionResult<ConversationMessagesDto>> GetConversation(
@@ -80,19 +74,12 @@ public class MessagesController : ControllerBase
         if (message is null)
             return Conflict(new { message = "Duplicate request." });
 
-        try
-        {
-            await _analyticsService.TrackEventAsync(
-                "MessageSent", "Communication",
-                entityId: input.ReceiverId, entityType: "User",
-                userId: senderId,
-                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
-                userAgent: HttpContext.Request.Headers["User-Agent"].ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Analytics tracking failed for message sent by user {UserId}.", senderId);
-        }
+        _ = _analyticsService.TrackEventAsync(
+            "MessageSent", "Communication",
+            entityId: input.ReceiverId, entityType: "User",
+            userId: senderId,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: HttpContext.Request.Headers["User-Agent"].ToString());
 
         return Ok(message);
     }

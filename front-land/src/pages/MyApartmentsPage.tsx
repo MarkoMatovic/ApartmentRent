@@ -38,6 +38,13 @@ const MyApartmentsPage: React.FC = () => {
     },
   });
 
+  const activateMutation = useMutation({
+    mutationFn: (id: number) => apartmentsApi.activate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myApartments'] });
+    },
+  });
+
   const handleToggleRoommate = (apartmentId: number) => (isLookingForRoommate: boolean) => {
     updateMutation.mutate({ id: apartmentId, isLookingForRoommate });
   };
@@ -94,14 +101,16 @@ const MyApartmentsPage: React.FC = () => {
         <Grid container spacing={3}>
           {apartments.map((apartment) => (
             <Grid item xs={12} sm={6} md={4} key={apartment.apartmentId}>
-              <ApartmentCard 
+              <ApartmentCard
                 apartment={apartment}
                 isOwner={true}
                 onToggleRoommate={handleToggleRoommate(apartment.apartmentId)}
                 onEdit={() => handleEdit(apartment.apartmentId)}
                 onDelete={() => handleDeleteClick(apartment.apartmentId)}
+                onActivate={() => activateMutation.mutate(apartment.apartmentId)}
                 isUpdating={updateMutation.isPending}
                 isDeleting={deleteMutation.isPending && apartmentToDelete === apartment.apartmentId}
+                isActivating={activateMutation.isPending}
               />
             </Grid>
           ))}

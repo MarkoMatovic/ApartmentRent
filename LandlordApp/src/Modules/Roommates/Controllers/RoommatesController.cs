@@ -101,15 +101,8 @@ public class RoommatesController : ApiControllerBase
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        try
-        {
-            var roommate = await _roommateService.UpdateRoommateAsync(id, user.UserId, input);
-            return Ok(roommate);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var roommate = await _roommateService.UpdateRoommateAsync(id, user.UserId, input);
+        return Ok(roommate);
     }
 
     [HttpDelete(ApiActionsV1.DeleteRoommate, Name = nameof(ApiActionsV1.DeleteRoommate))]

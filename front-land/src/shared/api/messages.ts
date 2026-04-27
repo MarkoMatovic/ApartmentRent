@@ -86,7 +86,7 @@ export const messagesApi = {
     // Conversation Settings
     archiveConversation: async (otherUserId: number): Promise<void> => {
         const userId = getUserId();
-        await apiClient.post(`/api/v1/messages/archive?userId=${userId}`, { otherUserId });
+        await apiClient.post(`/api/v1/messages/archive`, { userId, otherUserId });
     },
 
     unarchiveConversation: async (otherUserId: number): Promise<void> => {
@@ -115,19 +115,12 @@ export const messagesApi = {
     },
 
     deleteConversation: async (otherUserId: number): Promise<void> => {
-        const userId = getUserId();
-        await apiClient.delete(`/api/v1/messages/delete-conversation?userId=${userId}&otherUserId=${otherUserId}`);
+        await apiClient.delete(`/api/v1/messages/delete-conversation?otherUserId=${otherUserId}`);
     },
 
-    // File Upload
-    uploadFile: async (file: File): Promise<{ fileUrl: string }> => {
-        const userId = getUserId();
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await apiClient.post(`/api/v1/messages/upload?userId=${userId}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        return response.data;
+    // File Upload — endpoint not yet implemented on the backend
+    uploadFile: async (_file: File): Promise<{ fileUrl: string }> => {
+        throw new Error('File upload is not yet available.');
     },
 
     // Search

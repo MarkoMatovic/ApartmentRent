@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   Typography,
@@ -13,11 +13,13 @@ import {
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { roommatesApi } from '../shared/api/roommates';
 import { analyticsApi } from '../shared/api/analytics';
 import { applicationsApi } from '../shared/api/applicationsApi';
+import { reviewsApi } from '../shared/api/reviews';
+import { useAuth } from '../shared/context/AuthContext';
 import ApartmentMap from '../components/Map/ApartmentMap';
 import RoommateCard from '../components/Roommate/RoommateCard';
 import ApartmentImageGallery from '../components/Apartment/ApartmentImageGallery';
@@ -33,6 +35,8 @@ import {
   Chat as ChatIcon,
   Person as PersonIcon,
   CalendarToday as CalendarIcon,
+  Bookmark as BookmarkIcon,
+  BookmarkBorder as BookmarkBorderIcon,
 } from '@mui/icons-material';
 import ApplicationModal from '../components/Applications/ApplicationModal';
 import AppointmentModal from '../components/Appointments/AppointmentModal';
@@ -43,9 +47,11 @@ const ApartmentDetailPage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [openApplyModal, setOpenApplyModal] = React.useState(false);
-  const [openAppointmentModal, setOpenAppointmentModal] = React.useState(false);
-  const [openProfileModal, setOpenProfileModal] = React.useState(false);
+  const { user } = useAuth();
+  const [openApplyModal, setOpenApplyModal] = useState(false);
+  const [openAppointmentModal, setOpenAppointmentModal] = useState(false);
+  const [openProfileModal, setOpenProfileModal] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   const { data: apartment, isLoading } = useQuery({
     queryKey: ['apartment', id],
@@ -63,8 +69,17 @@ const ApartmentDetailPage: React.FC = () => {
   const { data: approvalStatus } = useQuery({
     queryKey: ['application-approval', id],
     queryFn: () => applicationsApi.checkApprovalStatus(Number(id)),
-    enabled: !!id,
+    enabled: !!id && !!user,
     retry: false,
+  });
+
+  const favoriteMutation = useMutation({
+    mutationFn: () => {
+      if (!user) throw new Error('Must be logged in to save favorites');
+      return reviewsApi.createFavorite(user.userId, Number(id));
+    },
+    onSuccess: () => setIsFavorited(true),
+    onError: () => {}, // silently ignore — button is hidden when not logged in
   });
 
   // Track apartment view when component mounts and apartment data is loaded
@@ -381,17 +396,36 @@ const ApartmentDetailPage: React.FC = () => {
                 </Typography>
               )}
 
-              {/* Apply Button */}
-              <Button
-                fullWidth
-                variant="contained"
-                color="primary"
-                size="large"
-                sx={{ mt: 1 }}
-                onClick={() => setOpenApplyModal(true)}
-              >
-                {t('apartments:applyForApartment')}
-              </Button>
+              {/* Apply Button — only for logged-in users */}
+              {user && (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  sx={{ mt: 1 }}
+                  onClick={() => setOpenApplyModal(true)}
+                >
+                  {t('apartments:applyForApartment')}
+                </Button>
+              )}
+
+              {/* Save to Favorites */}
+              {user && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  startIcon={isFavorited ? <BookmarkIcon /> : <BookmarkBorderIcon />}
+                  sx={{ mt: 1 }}
+                  onClick={() => { if (!isFavorited) favoriteMutation.mutate(); }}
+                  disabled={isFavorited || favoriteMutation.isPending}
+                >
+                  {isFavorited
+                    ? t('apartments:savedToFavorites', { defaultValue: 'Saved to Favorites' })
+                    : t('apartments:saveToFavorites', { defaultValue: 'Save to Favorites' })}
+                </Button>
+              )}
 
               <ApplicationModal
                 open={openApplyModal}

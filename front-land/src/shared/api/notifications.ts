@@ -20,32 +20,31 @@ export interface CreateNotificationInput {
 }
 
 export const notificationsApi = {
-    // Get all notifications for a user
     getUserNotifications: async (userId: number): Promise<Notification[]> => {
-        const response = await apiClient.get(`/api/v1/notifications/user/${userId}`);
+        const response = await apiClient.get(`/api/v1/notification/get-user-notifications`, {
+            params: { id: userId },
+        });
         return response.data;
     },
 
-    // Send a notification
     sendNotification: async (input: CreateNotificationInput): Promise<Notification> => {
-        const response = await apiClient.post('/api/v1/notifications/send', input);
+        const response = await apiClient.post('/api/v1/notification/send-notification', input);
         return response.data;
     },
 
-    // Mark notification as read
     markAsRead: async (notificationId: number): Promise<void> => {
-        await apiClient.post(`/api/v1/notifications/${notificationId}/mark-read`);
+        await apiClient.post(`/api/v1/notification/mark-as-read`, null, {
+            params: { notificationId },
+        });
     },
 
-    // Delete a notification
     deleteNotification: async (notificationId: number): Promise<boolean> => {
-        const response = await apiClient.delete(`/api/v1/notifications/${notificationId}`);
+        const response = await apiClient.delete(`/api/v1/notification/delete/${notificationId}`);
         return response.data;
     },
 
-    // Mark all notifications as read
-    markAllAsRead: async (userId: number): Promise<boolean> => {
-        const response = await apiClient.post('/api/v1/notifications/mark-all-read', userId);
+    markAllAsRead: async (): Promise<boolean> => {
+        const response = await apiClient.post('/api/v1/notification/mark-all-as-read');
         return response.data;
     },
 };

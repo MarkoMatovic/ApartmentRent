@@ -48,8 +48,9 @@ public partial class ApartmentService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid? callerGuid = Guid.TryParse(currentUserGuid, out var parsedGuid) ? parsedGuid : null;
         int? landlordId = null;
-        if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
+        if (callerGuid.HasValue)
         {
             var user = await _usersContext.Users
                 .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
@@ -95,9 +96,9 @@ public partial class ApartmentService
             IsLookingForRoommate = apartmentInputDto.IsLookingForRoommate ?? false,
             ContactPhone = apartmentInputDto.ContactPhone,
             IsActive = true,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = callerGuid,
             CreatedDate = now,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            ModifiedByGuid = callerGuid,
             ModifiedDate = now
         };
         // Serijalizacija features u JSON kolonu (NotMapped properties se ne čuvaju direktno)
@@ -119,9 +120,9 @@ public partial class ApartmentService
                     DisplayOrder = index,
                     IsPrimary = index == 0,
                     IsDeleted = false,
-                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    CreatedByGuid = callerGuid,
                     CreatedDate = now,
-                    ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    ModifiedByGuid = callerGuid,
                     ModifiedDate = now
                 }).ToList();
                 _context.ApartmentImages.AddRange(apartmentImages);
@@ -225,6 +226,7 @@ public partial class ApartmentService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid? callerGuid = Guid.TryParse(currentUserGuid, out var cg) ? cg : null;
         var apartment = await _context.Apartments
             .Include(a => a.ApartmentImages)
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
@@ -269,7 +271,7 @@ public partial class ApartmentService
         if (updateDto.IsLookingForRoommate.HasValue) apartment.IsLookingForRoommate = updateDto.IsLookingForRoommate.Value;
         if (updateDto.ContactPhone != null) apartment.ContactPhone = updateDto.ContactPhone;
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        apartment.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        apartment.ModifiedByGuid = callerGuid;
         apartment.ModifiedDate = now;
         if (updateDto.ImageUrls != null && updateDto.ImageUrls.Any())
         {
@@ -277,7 +279,7 @@ public partial class ApartmentService
             foreach (var img in existingImages)
             {
                 img.IsDeleted = true;
-                img.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+                img.ModifiedByGuid = callerGuid;
                 img.ModifiedDate = now;
             }
             var newImages = updateDto.ImageUrls.Select((url, index) => new ApartmentImage
@@ -286,9 +288,9 @@ public partial class ApartmentService
                 ImageUrl = url,
                 DisplayOrder = index,
                 IsPrimary = index == 0,
-                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                CreatedByGuid = callerGuid,
                 CreatedDate = now,
-                ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                ModifiedByGuid = callerGuid,
                 ModifiedDate = now
             }).ToList();
             _context.ApartmentImages.AddRange(newImages);
