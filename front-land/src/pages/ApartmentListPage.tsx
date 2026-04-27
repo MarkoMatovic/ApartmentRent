@@ -65,7 +65,7 @@ const ApartmentListPage: React.FC = () => {
   }, [page]);
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['apartments', filters],
+    queryKey: ['apartments', filters, page],
     queryFn: () => {
       const filterParams: any = {
         page: page,
@@ -82,7 +82,6 @@ const ApartmentListPage: React.FC = () => {
       if (filters.minRent) filterParams.minRent = Number(filters.minRent);
       if (filters.maxRent) filterParams.maxRent = Number(filters.maxRent);
       if (filters.numberOfRooms) filterParams.numberOfRooms = Number(filters.numberOfRooms);
-      if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
       if (filters.apartmentType) filterParams.apartmentType = Number(filters.apartmentType);
 
       // Boolean filters

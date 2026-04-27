@@ -67,9 +67,12 @@ public class AnalyticsController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetEventTrends, Name = nameof(ApiActionsV1.GetEventTrends))]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<EventTrendDto>>> GetEventTrends(
         [FromQuery] DateTime from, [FromQuery] DateTime to, [FromQuery] string? eventType = null)
     {
+        if ((to - from).TotalDays > 366)
+            return BadRequest(new { message = "Date range cannot exceed 1 year." });
         return Ok(await _analyticsService.GetEventTrendsAsync(from, to, eventType));
     }
 
@@ -77,6 +80,9 @@ public class AnalyticsController : ApiControllerBase
     public async Task<ActionResult<UserRoommateAnalyticsSummaryDto>> GetUserRoommateSummary(
         [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserRoommateSummaryAsync(userId, from, to));
     }
 
@@ -85,6 +91,9 @@ public class AnalyticsController : ApiControllerBase
         [FromQuery] int userId, [FromQuery] int count = 10,
         [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserTopRoommatesAsync(userId, count, from, to));
     }
 
@@ -93,6 +102,9 @@ public class AnalyticsController : ApiControllerBase
         [FromQuery] int userId, [FromQuery] int count = 10,
         [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserSearchesAsync(userId, count, from, to));
     }
 
@@ -100,6 +112,9 @@ public class AnalyticsController : ApiControllerBase
     public async Task<ActionResult<UserRoommateTrendsDto>> GetUserRoommateTrends(
         [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserRoommateTrendsAsync(userId, from, to));
     }
 
@@ -108,6 +123,9 @@ public class AnalyticsController : ApiControllerBase
         [FromQuery] int userId, [FromQuery] int count = 10,
         [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserTopApartmentsAsync(userId, count, from, to));
     }
 
@@ -115,6 +133,9 @@ public class AnalyticsController : ApiControllerBase
     public async Task<ActionResult<AnalyticsSummaryDto>> GetUserCompleteAnalytics(
         [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
         return Ok(await _analyticsService.GetUserCompleteAnalyticsAsync(userId, from, to));
     }
 

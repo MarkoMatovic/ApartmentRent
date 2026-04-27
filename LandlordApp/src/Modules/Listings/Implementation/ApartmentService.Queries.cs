@@ -216,13 +216,6 @@ public partial class ApartmentService
         var ctx = _httpContextAccessor.HttpContext;
         var userIdClaim = ctx?.User?.FindFirstValue("userId");
         int? userId = int.TryParse(userIdClaim, out var parsedId) ? parsedId : null;
-        _ = _analyticsService.TrackEventAsync(
-            "ApartmentView", "Listings",
-            entityId: apartmentId,
-            entityType: "Apartment",
-            userId: userId,
-            ipAddress: ctx?.Connection.RemoteIpAddress?.ToString(),
-            userAgent: ctx?.Request.Headers["User-Agent"].ToString());
 
         var apartment = await _context.Apartments
             .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
@@ -248,6 +241,15 @@ public partial class ApartmentService
                 ReviewCount = g.Count()
             })
             .FirstOrDefaultAsync();
+
+        // Fire-and-forget AFTER all DB queries — avoids concurrent scoped DbContext access.
+        _ = _analyticsService.TrackEventAsync(
+            "ApartmentView", "Listings",
+            entityId: apartmentId,
+            entityType: "Apartment",
+            userId: userId,
+            ipAddress: ctx?.Connection.RemoteIpAddress?.ToString(),
+            userAgent: ctx?.Request.Headers["User-Agent"].ToString());
 
         var features = ApartmentFeaturesHelper.Deserialize(apartment.Features);
         return new GetApartmentDto

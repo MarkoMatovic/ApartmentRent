@@ -17,6 +17,9 @@ import CheckIcon from '@mui/icons-material/Check';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import StarIcon from '@mui/icons-material/Star';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import HomeIcon from '@mui/icons-material/Home';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useNavigate } from 'react-router-dom';
 import { paymentsApi } from '../shared/api/paymentsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
@@ -26,6 +29,28 @@ const analyticsFeatures = [
   { icon: <CheckIcon fontSize="small" />, text: "Detailed apartment view tracking" },
   { icon: <CheckIcon fontSize="small" />, text: "Message response analytics" },
   { icon: <CheckIcon fontSize="small" />, text: "ML-powered price predictions (Landlords)" },
+];
+
+const listingFeatures = [
+  { icon: <HomeIcon fontSize="small" />, text: "Objavi oglas za stan ili kuću", highlighted: true },
+  { icon: <CheckIcon fontSize="small" />, text: "Oglas aktivan 30 dana" },
+  { icon: <CheckIcon fontSize="small" />, text: "Neograničen broj fotografija" },
+  { icon: <CheckIcon fontSize="small" />, text: "Direktne poruke od zainteresovanih stanara" },
+  { icon: <CheckIcon fontSize="small" />, text: "Upravljanje prijavama stanara" },
+];
+
+const boostProfileFeatures = [
+  { icon: <RocketLaunchIcon fontSize="small" />, text: "Tvoj profil se prikazuje prvi u pretrazi cimera", highlighted: true },
+  { icon: <CheckIcon fontSize="small" />, text: "Vidljiv korisnicima koji odgovaraju tvojim preferencijama" },
+  { icon: <CheckIcon fontSize="small" />, text: "Boost aktivan 7 dana" },
+  { icon: <CheckIcon fontSize="small" />, text: "Do 3× više pregleda profila" },
+];
+
+const priorityInboxFeatures = [
+  { icon: <MarkEmailReadIcon fontSize="small" />, text: "Notifikacija ko je pregledao tvoj oglas", highlighted: true },
+  { icon: <CheckIcon fontSize="small" />, text: "Poruke od verifikovanih korisnika označene prioritetom" },
+  { icon: <CheckIcon fontSize="small" />, text: "Aktivan 30 dana" },
+  { icon: <CheckIcon fontSize="small" />, text: "Uvid u broj pregleda po danu" },
 ];
 
 const featuredFeatures = [
@@ -46,31 +71,18 @@ const PricingPage: React.FC = () => {
   // State for Featured Apartment
   const [featuredDuration, setFeaturedDuration] = useState<'7 Days' | '30 Days'>('7 Days');
 
+  const [listingCount, setListingCount] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const handleSubscribeAnalytics = async () => {
-    setLoading(true);
-    try {
-      const amount = analyticsCycle === 'Yearly' ? 49.99 : 4.99;
-      const response = await paymentsApi.initiatePaytenCheckout(`Analytics ${analyticsCycle}`, amount);
-      if (response && response.checkoutUrl) window.location.href = response.checkoutUrl;
-    } catch (error: any) {
-      addNotification({ title: 'Error', message: 'Failed to initiate checkout', type: 'error' });
-      setLoading(false);
-    }
+  const comingSoon = () => {
+    addNotification({ title: 'Coming Soon', message: 'Online payment will be available soon. Contact us at info@turentaj.com to arrange payment.', type: 'info' });
   };
 
-  const handlePromoteFeature = async () => {
-    setLoading(true);
-    try {
-      const amount = featuredDuration === '30 Days' ? 29.99 : 9.99;
-      const response = await paymentsApi.initiatePaytenCheckout(`Featured Listing ${featuredDuration}`, amount);
-      if (response && response.checkoutUrl) window.location.href = response.checkoutUrl;
-    } catch (error: any) {
-      addNotification({ title: 'Error', message: 'Failed to initiate checkout', type: 'error' });
-      setLoading(false);
-    }
-  };
+  const handleSubscribeAnalytics = comingSoon;
+  const handleBoostProfile = comingSoon;
+  const handlePriorityInbox = comingSoon;
+  const handlePublishListing = comingSoon;
+  const handlePromoteFeature = comingSoon;
 
   const handleSubscribe = async (planId: string) => {
     setLoading(true);
@@ -153,7 +165,9 @@ const PricingPage: React.FC = () => {
         }}
       >
         <Tab label="Analytics" />
-        <Tab label="Promote Listing" />
+        <Tab label="Promote" />
+        <Tab label="Oglas" />
+        <Tab label="Boost" />
         <Tab label="Tokens" />
       </Tabs>
 
@@ -337,8 +351,181 @@ const PricingPage: React.FC = () => {
         </>
       )}
 
-      {/* Content for Tokens (Tab 2) */}
+      {/* Content for Listing (Tab 2) */}
       {tabIndex === 2 && (
+        <>
+          <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
+            Objavi oglas i pronađi stanare brzo i lako
+          </Typography>
+
+          {/* Quantity selector */}
+          <Box sx={{ display: 'flex', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.3)', mb: 4, p: '2px' }}>
+            {[1, 3, 5].map((n) => (
+              <Button
+                key={n}
+                fullWidth
+                sx={{
+                  borderRadius: '28px',
+                  color: listingCount === n ? '#fff' : 'rgba(255,255,255,0.6)',
+                  backgroundColor: listingCount === n ? 'rgba(255,255,255,0.15)' : 'transparent',
+                  textTransform: 'none',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }}
+                onClick={() => setListingCount(n)}
+              >
+                {n === 1 ? '1 oglas' : `${n} oglasa`}
+              </Button>
+            ))}
+          </Box>
+
+          {/* Card */}
+          <Box sx={{
+            background: 'rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            overflow: 'hidden'
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                Oglašavanje stana
+              </Typography>
+              {listingCount >= 3 && (
+                <Chip label={listingCount === 3 ? 'Uštedi vremena' : 'Najpovoljnije'} size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
+              )}
+            </Box>
+
+            <Box sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 1 }}>
+                <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                  {(listingCount * 5).toFixed(0)}
+                </Typography>
+                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>
+                  ({listingCount} × €5 / oglas)
+                </Typography>
+              </Box>
+              <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
+                Jednokratna uplata — oglas aktivan 30 dana
+              </Typography>
+
+              <List sx={{ mt: 2 }}>
+                {listingFeatures.map((feature, idx) => (
+                  <ListItem key={idx} disablePadding sx={{ alignItems: 'flex-start', mb: 1.5 }}>
+                    <ListItemIcon sx={{ minWidth: 28, color: feature.highlighted ? '#89D9F8' : 'rgba(255,255,255,0.6)', mt: 0.3 }}>
+                      {feature.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={feature.text} primaryTypographyProps={{ sx: { fontSize: '0.9rem', color: feature.highlighted ? '#fff' : 'rgba(255,255,255,0.8)', fontWeight: feature.highlighted ? 'bold' : 'normal' } }} />
+                  </ListItem>
+                ))}
+              </List>
+
+              <Button
+                fullWidth variant="contained" onClick={handlePublishListing} disabled={loading}
+                sx={{
+                  mt: 2, backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold', borderRadius: '24px', py: 1.5, textTransform: 'none', fontSize: '1rem',
+                  '&:hover': { backgroundColor: '#6FC9F0' }
+                }}
+              >
+                {loading ? 'Obrađuje se...' : `Objavi ${listingCount === 1 ? 'oglas' : `${listingCount} oglasa`}`}
+              </Button>
+            </Box>
+          </Box>
+        </>
+      )}
+
+      {/* Content for Boost (Tab 3) */}
+      {tabIndex === 3 && (
+        <>
+          <Typography variant="body1" sx={{ textAlign: 'center', mb: 4 }}>
+            Povećaj svoju vidljivost i dobij pravi uvid u interes
+          </Typography>
+
+          {/* Boost Profila card */}
+          <Box sx={{
+            background: 'rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '2px solid rgba(137,217,248,0.5)',
+            overflow: 'hidden',
+            mb: 3,
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <RocketLaunchIcon sx={{ color: '#89D9F8' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Boost Profila Cimera</Typography>
+              </Box>
+              <Chip label="7 dana" size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
+            </Box>
+            <Box sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
+                <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>2</Typography>
+                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>/ 7 dana</Typography>
+              </Box>
+              <List dense>
+                {boostProfileFeatures.map((feature, idx) => (
+                  <ListItem key={idx} disablePadding sx={{ alignItems: 'flex-start', mb: 1 }}>
+                    <ListItemIcon sx={{ minWidth: 28, color: feature.highlighted ? '#89D9F8' : 'rgba(255,255,255,0.6)', mt: 0.3 }}>
+                      {feature.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={feature.text} primaryTypographyProps={{ sx: { fontSize: '0.9rem', color: feature.highlighted ? '#fff' : 'rgba(255,255,255,0.8)', fontWeight: feature.highlighted ? 'bold' : 'normal' } }} />
+                  </ListItem>
+                ))}
+              </List>
+              <Button
+                fullWidth variant="contained" onClick={handleBoostProfile} disabled={loading}
+                sx={{ mt: 1, backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold', borderRadius: '24px', py: 1.5, textTransform: 'none', fontSize: '1rem', '&:hover': { backgroundColor: '#6FC9F0' } }}
+              >
+                {loading ? 'Obrađuje se...' : 'Aktiviraj Boost'}
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Priority Inbox card */}
+          <Box sx={{
+            background: 'rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '2px solid rgba(255,215,0,0.4)',
+            overflow: 'hidden',
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MarkEmailReadIcon sx={{ color: '#FFD700' }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Priority Inbox</Typography>
+              </Box>
+              <Chip label="30 dana" size="small" sx={{ backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold' }} />
+            </Box>
+            <Box sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
+                <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
+                <Typography variant="h3" sx={{ fontWeight: 'bold' }}>2</Typography>
+                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>/ 30 dana</Typography>
+              </Box>
+              <List dense>
+                {priorityInboxFeatures.map((feature, idx) => (
+                  <ListItem key={idx} disablePadding sx={{ alignItems: 'flex-start', mb: 1 }}>
+                    <ListItemIcon sx={{ minWidth: 28, color: feature.highlighted ? '#FFD700' : 'rgba(255,255,255,0.6)', mt: 0.3 }}>
+                      {feature.icon}
+                    </ListItemIcon>
+                    <ListItemText primary={feature.text} primaryTypographyProps={{ sx: { fontSize: '0.9rem', color: feature.highlighted ? '#fff' : 'rgba(255,255,255,0.8)', fontWeight: feature.highlighted ? 'bold' : 'normal' } }} />
+                  </ListItem>
+                ))}
+              </List>
+              <Button
+                fullWidth variant="contained" onClick={handlePriorityInbox} disabled={loading}
+                sx={{ mt: 1, backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold', borderRadius: '24px', py: 1.5, textTransform: 'none', fontSize: '1rem', '&:hover': { backgroundColor: '#F0CA00' } }}
+              >
+                {loading ? 'Obrađuje se...' : 'Aktiviraj Priority Inbox'}
+              </Button>
+            </Box>
+          </Box>
+        </>
+      )}
+
+      {/* Content for Tokens (Tab 4) */}
+      {tabIndex === 4 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
             Kupi tokene za Super-Like i direktne poruke

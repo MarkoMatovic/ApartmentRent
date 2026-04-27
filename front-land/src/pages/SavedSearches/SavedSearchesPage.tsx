@@ -13,6 +13,11 @@ import {
     IconButton,
     CircularProgress,
     Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
 } from '@mui/material';
 import {
     Delete as DeleteIcon,
@@ -23,7 +28,7 @@ import {
     Euro as EuroIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
-import { savedSearchesApi, SavedSearch } from '../../shared/api/savedSearches';
+import { savedSearchesApi, SavedSearch, SavedSearchInput } from '../../shared/api/savedSearches';
 import { useAuth } from '../../shared/context/AuthContext';
 
 export const SavedSearchesPage: React.FC = () => {
@@ -32,6 +37,15 @@ export const SavedSearchesPage: React.FC = () => {
     const [searches, setSearches] = useState<SavedSearch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [newSearchOpen, setNewSearchOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [newSearchForm, setNewSearchForm] = useState<SavedSearchInput>({
+        searchName: '',
+        city: '',
+        minRent: undefined,
+        maxRent: undefined,
+        numberOfRooms: undefined,
+    });
 
     useEffect(() => {
         if (user?.userId) {
@@ -50,6 +64,25 @@ export const SavedSearchesPage: React.FC = () => {
             setError(err.message || 'Failed to load saved searches');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenNewSearch = () => {
+        setNewSearchForm({ searchName: '', city: '', minRent: undefined, maxRent: undefined, numberOfRooms: undefined });
+        setNewSearchOpen(true);
+    };
+
+    const handleCreateSearch = async () => {
+        if (!newSearchForm.searchName.trim()) return;
+        try {
+            setSaving(true);
+            const created = await savedSearchesApi.createSavedSearch(newSearchForm);
+            setSearches([...searches, created]);
+            setNewSearchOpen(false);
+        } catch (err: any) {
+            setError(err.message || 'Failed to create search');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -84,6 +117,7 @@ export const SavedSearchesPage: React.FC = () => {
                     color="primary"
                     startIcon={<AddIcon />}
                     size="large"
+                    onClick={handleOpenNewSearch}
                 >
                     {t('createNew')}
                 </Button>
@@ -109,6 +143,7 @@ export const SavedSearchesPage: React.FC = () => {
                         color="primary"
                         startIcon={<AddIcon />}
                         sx={{ mt: 2 }}
+                        onClick={handleOpenNewSearch}
                     >
                         {t('createNew')}
                     </Button>
@@ -196,6 +231,67 @@ export const SavedSearchesPage: React.FC = () => {
                     ))}
                 </Grid>
             )}
+            {/* New Search Dialog */}
+            <Dialog open={newSearchOpen} onClose={() => setNewSearchOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>{t('createNew')}</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        fullWidth
+                        label={t('searchName')}
+                        value={newSearchForm.searchName}
+                        onChange={(e) => setNewSearchForm({ ...newSearchForm, searchName: e.target.value })}
+                        margin="normal"
+                        required
+                        autoFocus
+                    />
+                    <TextField
+                        fullWidth
+                        label={t('filters.city')}
+                        value={newSearchForm.city ?? ''}
+                        onChange={(e) => setNewSearchForm({ ...newSearchForm, city: e.target.value || undefined })}
+                        margin="normal"
+                    />
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <TextField
+                            fullWidth
+                            label={t('filters.minRent')}
+                            type="number"
+                            value={newSearchForm.minRent ?? ''}
+                            onChange={(e) => setNewSearchForm({ ...newSearchForm, minRent: e.target.value ? Number(e.target.value) : undefined })}
+                            margin="normal"
+                            inputProps={{ min: 0 }}
+                        />
+                        <TextField
+                            fullWidth
+                            label={t('filters.maxRent')}
+                            type="number"
+                            value={newSearchForm.maxRent ?? ''}
+                            onChange={(e) => setNewSearchForm({ ...newSearchForm, maxRent: e.target.value ? Number(e.target.value) : undefined })}
+                            margin="normal"
+                            inputProps={{ min: 0 }}
+                        />
+                    </Box>
+                    <TextField
+                        fullWidth
+                        label={t('filters.rooms')}
+                        type="number"
+                        value={newSearchForm.numberOfRooms ?? ''}
+                        onChange={(e) => setNewSearchForm({ ...newSearchForm, numberOfRooms: e.target.value ? Number(e.target.value) : undefined })}
+                        margin="normal"
+                        inputProps={{ min: 1, max: 10 }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setNewSearchOpen(false)}>{t('common:cancel', { defaultValue: 'Cancel' })}</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleCreateSearch}
+                        disabled={saving || !newSearchForm.searchName.trim()}
+                    >
+                        {saving ? <CircularProgress size={20} /> : t('saveSearch')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 };

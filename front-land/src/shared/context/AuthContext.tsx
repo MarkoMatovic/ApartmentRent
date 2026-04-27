@@ -73,6 +73,15 @@ const decodeToken = (token: string): User | null => {
   }
 };
 
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.exp != null && payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -83,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const storedToken = sessionStorage.getItem('authToken');
       const storedUser = sessionStorage.getItem('user');
 
-      if (storedToken) {
+      if (storedToken && !isTokenExpired(storedToken)) {
         setToken(storedToken);
         if (storedUser) {
           try {
@@ -139,12 +148,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const register = async (data: RegisterRequest) => {
-    try {
-      const newUser = await authApi.register(data);
-      setUser(newUser);
-    } catch (error) {
-      throw error;
-    }
+    await authApi.register(data);
+    // Registration creates an inactive account — no token issued.
+    // User must verify email before they can log in.
   };
 
   const logout = async () => {
@@ -173,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     register,
     logout,
     updateUser,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && !isTokenExpired(token),
     loading,
   };
 

@@ -8,12 +8,12 @@ export const usersApi = {
     },
 
     updateProfile: async (userId: number, data: Partial<User>): Promise<User> => {
-        const response = await apiClient.put<User>(`/api/users/${userId}/profile`, data);
+        const response = await apiClient.put<User>(`/api/v1/auth/update-profile/${userId}`, data);
         return response.data;
     },
 
     updatePrivacySettings: async (userId: number, settings: PrivacySettings): Promise<User> => {
-        const response = await apiClient.put<User>(`/api/users/${userId}/privacy`, settings);
+        const response = await apiClient.put<User>(`/api/v1/auth/update-privacy-settings/${userId}`, settings);
         return response.data;
     },
 };

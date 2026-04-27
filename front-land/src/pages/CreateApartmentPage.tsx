@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Container,
     Paper,
@@ -122,11 +122,12 @@ const SortableImageItem: React.FC<SortableImageItemProps> = ({ url, index, onRem
 
 interface SortableFileItemProps {
     file: File;
+    previewUrl: string;
     index: number;
     onRemove: () => void;
 }
 
-const SortableFileItem: React.FC<SortableFileItemProps> = ({ file, index, onRemove }) => {
+const SortableFileItem: React.FC<SortableFileItemProps> = ({ file, previewUrl, index, onRemove }) => {
     const {
         attributes,
         listeners,
@@ -170,7 +171,7 @@ const SortableFileItem: React.FC<SortableFileItemProps> = ({ file, index, onRemo
                 <CardMedia
                     component="img"
                     height="120"
-                    image={URL.createObjectURL(file)}
+                    image={previewUrl}
                     alt={file.name}
                     sx={{ objectFit: 'cover' }}
                 />
@@ -235,6 +236,12 @@ const CreateApartmentPage: React.FC = () => {
     const [imageUrlInput, setImageUrlInput] = useState('');
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
+
+    const filePreviews = useMemo(
+        () => selectedFiles.map(f => URL.createObjectURL(f)),
+        [selectedFiles]
+    );
+    useEffect(() => () => { filePreviews.forEach(url => URL.revokeObjectURL(url)); }, [filePreviews]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -558,6 +565,7 @@ const CreateApartmentPage: React.FC = () => {
                                                             <SortableFileItem
                                                                 key={`file-${index}`}
                                                                 file={file}
+                                                                previewUrl={filePreviews[index]}
                                                                 index={index}
                                                                 onRemove={() => handleRemoveSelectedFile(index)}
                                                             />

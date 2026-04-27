@@ -67,6 +67,7 @@ export interface ApartmentDto {
   listingType?: ListingType;
   isFurnished?: boolean;
   isImmediatelyAvailable?: boolean;
+  isActive?: boolean;
   apartmentImages?: ApartmentImage[];
   isLookingForRoommate?: boolean;
   averageRating?: number;

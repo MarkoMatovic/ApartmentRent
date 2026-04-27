@@ -29,22 +29,9 @@ const SubscriptionPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'Monthly' | 'Yearly'>('Yearly');
   const [loading, setLoading] = useState(false);
 
-  const handleUpgrade = async () => {
-    setLoading(true);
-    try {
-      // Typically we call the new backend via paymentsApi or axios
-      const amount = billingCycle === 'Yearly' ? 134.99 : 14.99;
-      
-      const response = await paymentsApi.initiatePaytenCheckout(billingCycle, amount);
-      
-      if (response && response.checkoutUrl) {
-         window.location.href = response.checkoutUrl;
-      }
-    } catch (error) {
-      console.error('Checkout failed', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleUpgrade = () => {
+    // Payten integration coming soon — direct users to contact for now
+    alert('Online payment will be available soon. Contact us at info@turentaj.com to arrange payment.');
   };
 
   return (

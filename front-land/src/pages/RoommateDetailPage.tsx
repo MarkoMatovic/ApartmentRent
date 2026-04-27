@@ -26,6 +26,7 @@ import {
   Euro as EuroIcon,
   CalendarToday as CalendarIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 
 const RoommateDetailPage: React.FC = () => {
@@ -276,25 +277,29 @@ const RoommateDetailPage: React.FC = () => {
               >
                 {t('roommates:contact')}
               </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                sx={{ mb: 2 }}
-              >
-                {t('favorites')}
-              </Button>
               {user?.userId === roommate.userId && (
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  color="error"
-                  size="large"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  {t('roommates:deleteMyCard')}
-                </Button>
+                <>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="large"
+                    startIcon={<EditIcon />}
+                    onClick={() => navigate('/roommates/create')}
+                    sx={{ mb: 1 }}
+                  >
+                    {t('roommates:editProfile', { defaultValue: 'Edit Profile' })}
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    color="error"
+                    size="large"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    {t('roommates:deleteMyCard')}
+                  </Button>
+                </>
               )}
             </CardContent>
           </Card>

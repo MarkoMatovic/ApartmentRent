@@ -11,6 +11,7 @@ namespace Lander.src.Modules.Payments
 
         public DbSet<Subscription> Subscriptions { get; set; } = null!;
         public DbSet<Transaction> Transactions { get; set; } = null!;
+        public DbSet<ProcessedMonriOrder> ProcessedMonriOrders { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,6 +34,13 @@ namespace Lander.src.Modules.Payments
                 entity.HasIndex(e => e.TransactionGuid).IsUnique();
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.PaytenTransactionId);
+            });
+
+            modelBuilder.Entity<ProcessedMonriOrder>(entity =>
+            {
+                entity.ToTable("ProcessedMonriOrders", "payments");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.OrderNumber).IsUnique();
             });
         }
 

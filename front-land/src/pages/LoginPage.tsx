@@ -44,12 +44,12 @@ const LoginPage: React.FC = () => {
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
         setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
       } else {
-        // Handle error response - could be string or object with message property
-        const errorMessage = err.response?.data;
-        if (typeof errorMessage === 'string') {
-          setError(errorMessage);
-        } else if (errorMessage && typeof errorMessage === 'object' && errorMessage.message) {
-          setError(String(errorMessage.message));
+        const responseData = err.response?.data;
+        const message = typeof responseData === 'string' ? responseData : responseData?.message;
+        if (message === 'EMAIL_NOT_VERIFIED' || err.response?.status === 403) {
+          setError(t('emailNotVerified', { defaultValue: 'Please verify your email address before logging in. Check your inbox for the verification link.' }));
+        } else if (typeof message === 'string') {
+          setError(message);
         } else {
           setError(t('invalidCredentials'));
         }

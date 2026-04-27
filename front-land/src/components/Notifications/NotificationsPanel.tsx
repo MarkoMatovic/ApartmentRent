@@ -49,7 +49,7 @@ export const NotificationsPanel: React.FC = () => {
 
     const handleMarkAllAsRead = async () => {
         try {
-            await notificationsApi.markAllAsRead(user!.userId);
+            await notificationsApi.markAllAsRead();
             setNotifications(notifications.map(n => ({ ...n, isRead: true })));
         } catch (error) {
             console.error('Error marking all as read:', error);
