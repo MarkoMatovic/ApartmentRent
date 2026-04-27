@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, User } from '../types/user';
+import { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, User, PrivacySettings } from '../types/user';
 
 export interface AuthTokenDto {
   accessToken: string;
@@ -44,13 +44,13 @@ export const authApi = {
     await apiClient.post(`/api/v1/auth/deactivate-user`, { userGuid });
   },
 
-  updatePrivacySettings: async (userId: number, settings: any): Promise<any> => {
-    const response = await apiClient.put<any>(`/api/v1/auth/update-privacy-settings/${userId}`, settings);
+  updatePrivacySettings: async (userId: number, settings: PrivacySettings): Promise<User> => {
+    const response = await apiClient.put<User>(`/api/v1/auth/update-privacy-settings/${userId}`, settings);
     return response.data;
   },
 
-  exportUserData: async (userId: number): Promise<any> => {
-    const response = await apiClient.get<any>(`/api/v1/auth/export-data/${userId}`);
+  exportUserData: async (userId: number): Promise<User> => {
+    const response = await apiClient.get<User>(`/api/v1/auth/export-data/${userId}`);
     return response.data;
   },
 

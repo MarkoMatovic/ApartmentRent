@@ -13,13 +13,16 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     }
     public override async Task<FavoriteResponse> CreateFavorite(CreateFavoriteRequest request, ServerCallContext context)
     {
+        if (!Guid.TryParse(request.CreatedByGuid, out var favGuid))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid CreatedByGuid format"));
+
         var favorite = new Favorite
         {
             UserId = request.UserId,
             ApartmentId = request.ApartmentId,
-            CreatedByGuid = Guid.Parse(request.CreatedByGuid),
+            CreatedByGuid = favGuid,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = Guid.Parse(request.CreatedByGuid),
+            ModifiedByGuid = favGuid,
             ModifiedDate = DateTime.UtcNow
         };
         var transaction = await _context.BeginTransactionAsync();
@@ -36,8 +39,8 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
         }
         return new FavoriteResponse
         {
-            UserId = (int)favorite.UserId,
-            ApartmentId = (int)favorite.ApartmentId,
+            UserId = favorite.UserId ?? 0,
+            ApartmentId = favorite.ApartmentId ?? 0,
             CreatedByGuid = favorite.CreatedByGuid.ToString(),
             CreatedDate = Timestamp.FromDateTime((DateTime)favorite.CreatedDate),
             ModifiedByGuid = favorite.ModifiedByGuid.ToString(),
@@ -51,6 +54,9 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Rating must be between 1 and 5"));
         }
 
+        if (!Guid.TryParse(request.CreatedByGuid, out var reviewGuid))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid CreatedByGuid format"));
+
         var review = new Review
         {
             TenantId = request.UserId,
@@ -59,9 +65,9 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ReviewText = request.Comment,
             IsAnonymous = request.IsAnonymous,
             IsPublic = request.IsPublic,
-            CreatedByGuid = Guid.Parse(request.CreatedByGuid),
+            CreatedByGuid = reviewGuid,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = Guid.Parse(request.CreatedByGuid),
+            ModifiedByGuid = reviewGuid,
             ModifiedDate = DateTime.UtcNow
         };
         var transaction = await _context.BeginTransactionAsync();

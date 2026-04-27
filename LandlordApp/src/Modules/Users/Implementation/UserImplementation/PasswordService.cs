@@ -39,7 +39,9 @@ public class PasswordService : IPasswordService
     public async Task ChangePasswordAsync(ChangePasswordInputDto dto)
     {
         var userGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == Guid.Parse(userGuid!));
+        if (!Guid.TryParse(userGuid, out var parsedUserGuid))
+            throw new UnauthorizedAccessException("Invalid or missing user identity.");
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedUserGuid);
         if (user == null || !_passwordHashingService.Verify(dto.OldPassword, user.Password))
             throw new InvalidOperationException("Incorrect old password.");
 

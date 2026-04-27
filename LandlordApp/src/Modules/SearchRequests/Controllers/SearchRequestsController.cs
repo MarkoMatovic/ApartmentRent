@@ -51,6 +51,10 @@ public class SearchRequestsController : ApiControllerBase
     [Authorize]
     public async Task<ActionResult<IEnumerable<SearchRequestDto>>> GetSearchRequestsByUserId([FromQuery] int userId)
     {
+        var callerId = TryGetCurrentUserId();
+        if (callerId is null) return Unauthorized();
+        if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
+
         var searchRequests = await _searchRequestService.GetSearchRequestsByUserIdAsync(userId);
         return Ok(searchRequests);
     }

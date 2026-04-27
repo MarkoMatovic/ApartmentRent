@@ -331,7 +331,7 @@ public class RoommateService : IRoommateService
                 roommate.PreferredLocation = input.PreferredLocation;
                 roommate.LookingForApartmentId = input.LookingForApartmentId;
                 roommate.IsActive = true;
-                roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+                roommate.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var rmGuid) ? rmGuid : null;
                 roommate.ModifiedDate = DateTime.UtcNow;
                 _context.Roommates.Update(roommate);
             }
@@ -360,9 +360,9 @@ public class RoommateService : IRoommateService
                     PreferredLocation = input.PreferredLocation,
                     LookingForApartmentId = input.LookingForApartmentId,
                     IsActive = true,
-                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    CreatedByGuid = Guid.TryParse(currentUserGuid, out var cGuid) ? cGuid : null,
                     CreatedDate = DateTime.UtcNow,
-                    ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                    ModifiedByGuid = Guid.TryParse(currentUserGuid, out var mGuid) ? mGuid : null,
                     ModifiedDate = DateTime.UtcNow
                 };
                 _context.Roommates.Add(roommate);
@@ -433,7 +433,7 @@ public class RoommateService : IRoommateService
         roommate.LookingForRoomType = input.LookingForRoomType;
         roommate.LookingForApartmentType = input.LookingForApartmentType;
         roommate.PreferredLocation = input.PreferredLocation;
-        roommate.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        roommate.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var rmGuid) ? rmGuid : null;
         roommate.ModifiedDate = DateTime.UtcNow;
         var transaction = await _context.BeginTransactionAsync();
         try

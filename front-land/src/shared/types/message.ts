@@ -42,6 +42,10 @@ export interface SendMessageRequest {
     receiverId: number;
     content: string;
     isSuperLike?: boolean;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
 }
 
 export interface ReportMessageRequest {

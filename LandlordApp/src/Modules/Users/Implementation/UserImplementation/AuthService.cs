@@ -115,9 +115,14 @@ public class AuthService : IAuthService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
 
+        if (_timeProvider.GetUtcNow().UtcDateTime.AddYears(-18) < dto.DateOfBirth)
+            throw new ArgumentException("User must be at least 18 years old.");
+
         var existingUser = await _context.Users.AnyAsync(u => u.Email == dto.Email);
         if (existingUser)
             throw new ConflictException("User with this email already exists.");
+
+        Guid? callerGuid = Guid.TryParse(currentUserGuid, out var authCg) ? authCg : null;
 
         var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
         var transaction = await _context.BeginTransactionAsync();
@@ -130,7 +135,7 @@ public class AuthService : IAuthService
                     RoleName = "Tenant",
                     Description = "Tenant role for users looking for apartments",
                     CreatedDate = _timeProvider.GetUtcNow().UtcDateTime,
-                    CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null
+                    CreatedByGuid = callerGuid
                 };
                 _context.Roles.Add(tenantRole);
                 await _context.SaveEntitiesAsync();
@@ -147,8 +152,8 @@ public class AuthService : IAuthService
                 PhoneNumber = dto.PhoneNumber,
                 ProfilePicture = dto.ProfilePicture,
                 CreatedDate = now,
-                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
-                ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : (Guid?)null,
+                CreatedByGuid = callerGuid,
+                ModifiedByGuid = callerGuid,
                 IsActive = false,
                 UserRoleId = tenantRole.RoleId
             };

@@ -66,7 +66,7 @@ public partial class MessageService
 
         var result = new List<ConversationDto>();
         var otherUserIds = conversations.Select(c => c.OtherUserId).ToList();
-        var users = await _usersContext.Users
+        var users = await _usersContext.Users.AsNoTracking()
             .Where(u => otherUserIds.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId);
 

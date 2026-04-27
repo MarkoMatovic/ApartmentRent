@@ -52,7 +52,9 @@
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(npm run *)",
       "Bash(npx --no-install vite build)",
-      "Bash(find C:/Users/Dell/Desktop/TuRentaj/LandlordApp/src -name \"UsersContext.cs\" -exec grep -n \"DbSet\" {} \\\\;)"
+      "Bash(find C:/Users/Dell/Desktop/TuRentaj/LandlordApp/src -name \"UsersContext.cs\" -exec grep -n \"DbSet\" {} \\\\;)",
+      "Bash(grep -n \"\\\\\\\\.Count++\\\\|\\\\\\\\.RetryCount++\" \"C:\\\\Users\\\\Dell\\\\Desktop\\\\TuRentaj\\\\LandlordApp\\\\src\\\\Modules\\\\Communication\\\\Services\\\\OutboxProcessorService.cs\")",
+      "Bash(find /c/Users/Dell/Desktop/TuRentaj/LandlordApp -name \"*.cs\" -exec grep -l \"IsBlocked\\\\|BlockUser\" {} \\\\;)"
     ]
   }
 }

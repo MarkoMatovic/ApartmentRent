@@ -21,7 +21,7 @@ public partial class MessageService
                 IsArchived = false,
                 IsMuted = false,
                 IsBlocked = false,
-                CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+                CreatedByGuid = Guid.TryParse(currentUserGuid, out var settingsGuid) ? settingsGuid : null,
                 CreatedDate = DateTime.UtcNow
             };
             _context.ConversationSettings.Add(settings);
@@ -100,6 +100,29 @@ public partial class MessageService
         if (!allowedExtensions.Contains(extension))
             throw new ArgumentException("File type not allowed");
 
+        // Magic byte validation for image types to prevent extension spoofing
+        using (var peek = file.OpenReadStream())
+        {
+            var header = new byte[8];
+            var read = await peek.ReadAsync(header, 0, header.Length);
+            var isJpeg = read >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF;
+            var isPng = read >= 8 && header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47;
+            var isGif = read >= 4 && header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38;
+            var isPdf = read >= 4 && header[0] == 0x25 && header[1] == 0x50 && header[2] == 0x44 && header[3] == 0x46;
+            var isOffice = read >= 8 && header[0] == 0xD0 && header[1] == 0xCF; // legacy .doc/.xls
+            var isOfficeXml = read >= 4 && header[0] == 0x50 && header[1] == 0x4B; // .docx/.xlsx (ZIP)
+
+            var validMagic = (extension is ".jpg" or ".jpeg" && isJpeg)
+                || (extension == ".png" && isPng)
+                || (extension == ".gif" && isGif)
+                || (extension == ".pdf" && isPdf)
+                || (extension is ".doc" or ".xls" && (isOffice || isOfficeXml))
+                || (extension is ".docx" or ".xlsx" && isOfficeXml);
+
+            if (!validMagic)
+                throw new ArgumentException("File content does not match its extension");
+        }
+
         // Create upload directory if it doesn't exist
         var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "chat-files");
         Directory.CreateDirectory(uploadsFolder);
@@ -129,7 +152,7 @@ public partial class MessageService
             ReportedUserId = reportDto.ReportedUserId,
             Reason = reportDto.Reason,
             Status = "Pending",
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = Guid.TryParse(currentUserGuid, out var reporterGuid) ? reporterGuid : null,
             CreatedDate = DateTime.UtcNow
         };
 

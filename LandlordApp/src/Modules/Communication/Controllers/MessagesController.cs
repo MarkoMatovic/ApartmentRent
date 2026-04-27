@@ -61,6 +61,32 @@ public class MessagesController : ControllerBase
         return Ok(await _messageService.GetUserConversationsAsync(userId));
     }
 
+    [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadFile(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "No file provided." });
+
+        var userId = GetCurrentUserId();
+        try
+        {
+            var relativeUrl = await _messageService.UploadFileAsync(file, userId);
+            var fileUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
+            return Ok(new
+            {
+                fileUrl,
+                fileName = file.FileName,
+                fileSize = file.Length,
+                fileType = file.ContentType
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost(ApiActionsV1.SendMessage, Name = nameof(ApiActionsV1.SendMessage))]
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
@@ -69,7 +95,9 @@ public class MessagesController : ControllerBase
         var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
         var message = await _messageService.SendMessageAsync(
             senderId, input.ReceiverId, input.MessageText, input.IsSuperLike,
-            idempotencyKey: idempotencyKey);
+            idempotencyKey: idempotencyKey,
+            fileUrl: input.FileUrl, fileName: input.FileName,
+            fileSize: input.FileSize, fileType: input.FileType);
 
         if (message is null)
             return Conflict(new { message = "Duplicate request." });

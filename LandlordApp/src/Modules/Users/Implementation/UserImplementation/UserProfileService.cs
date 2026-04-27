@@ -101,7 +101,7 @@ public class UserProfileService : IUserProfileService
         if (updateDto.PhoneNumber != null) user.PhoneNumber = updateDto.PhoneNumber;
         if (updateDto.ProfilePicture != null) user.ProfilePicture = updateDto.ProfilePicture;
         if (updateDto.DateOfBirth.HasValue) user.DateOfBirth = updateDto.DateOfBirth.Value;
-        user.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        user.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var upMg) ? upMg : null;
         user.ModifiedDate = DateTime.UtcNow;
 
         var transaction = await _context.BeginTransactionAsync();

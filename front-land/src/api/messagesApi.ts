@@ -29,9 +29,9 @@ export interface ConversationMessagesDto {
 }
 
 export interface SendMessageInputDto {
-  senderId: number;
   receiverId: number;
   messageText: string;
+  isSuperLike?: boolean;
 }
 
 export const messagesApi = {

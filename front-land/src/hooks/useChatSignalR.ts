@@ -61,10 +61,10 @@ export const useChatSignalR = (userId: number | null) => {
     };
   }, [userId]);
 
-  const sendMessage = useCallback(async (senderId: number, receiverId: number, messageText: string) => {
+  const sendMessage = useCallback(async (receiverId: number, messageText: string) => {
     if (connection && connected) {
       try {
-        await connection.invoke('SendMessage', senderId, receiverId, messageText);
+        await connection.invoke('SendMessage', receiverId, messageText);
       } catch {
       }
     }

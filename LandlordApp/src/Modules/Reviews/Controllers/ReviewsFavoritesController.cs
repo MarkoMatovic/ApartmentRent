@@ -5,6 +5,7 @@ using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 namespace Lander.src.Modules.Reviews.Controllers
 {
     [Route(ApiActionsV1.Reviews)]
@@ -16,6 +17,12 @@ namespace Lander.src.Modules.Reviews.Controllers
         public ReviewsFavoritesController(IGrpcServiceClient grpcClient)
         {
             _grpcClient = grpcClient;
+        }
+
+        private int? TryGetCurrentUserId()
+        {
+            var claim = User.FindFirstValue("userId");
+            return int.TryParse(claim, out var id) ? id : null;
         }
 
         [HttpPost(ApiActionsV1.CreateFavorite, Name = nameof(ApiActionsV1.CreateFavorite))]
@@ -59,8 +66,13 @@ namespace Lander.src.Modules.Reviews.Controllers
             return Ok(response);
         }
         [HttpGet(ApiActionsV1.GetUserFavorites, Name = nameof(ApiActionsV1.GetUserFavorites))]
+        [Authorize]
         public async Task<IActionResult> GetUserFavorites([FromRoute] int userId)
         {
+            var callerId = TryGetCurrentUserId();
+            if (callerId is null) return Unauthorized();
+            if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
+
             var response = await _grpcClient.GetUserFavoritesAsync(userId);
             return Ok(response.Favorites);
         }
