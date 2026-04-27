@@ -65,9 +65,9 @@ public class SavedSearchService : ISavedSearchService
             FiltersJson = input.FiltersJson,
             EmailNotificationsEnabled = input.EmailNotificationsEnabled,
             IsActive = true,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = Guid.TryParse(currentUserGuid, out var ssCg) ? ssCg : null,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            ModifiedByGuid = Guid.TryParse(currentUserGuid, out var ssMg) ? ssMg : null,
             ModifiedDate = DateTime.UtcNow
         };
         var transaction = await _context.BeginTransactionAsync();
@@ -95,7 +95,7 @@ public class SavedSearchService : ISavedSearchService
         savedSearch.SearchType = input.SearchType;
         savedSearch.FiltersJson = input.FiltersJson;
         savedSearch.EmailNotificationsEnabled = input.EmailNotificationsEnabled;
-        savedSearch.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        savedSearch.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var ssMg2) ? ssMg2 : null;
         savedSearch.ModifiedDate = DateTime.UtcNow;
         var transaction = await _context.BeginTransactionAsync();
         try

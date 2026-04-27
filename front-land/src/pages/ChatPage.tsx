@@ -287,10 +287,9 @@ const ChatPage: React.FC = () => {
 
     try {
       if (connected) {
-        await sendMessage(currentUserId, selectedConversation.otherUserId, messageToSend);
+        await sendMessage(selectedConversation.otherUserId, messageToSend);
       } else {
         const newMsg = await messagesApi.sendMessage({
-          senderId: currentUserId,
           receiverId: selectedConversation.otherUserId,
           messageText: messageToSend
         });

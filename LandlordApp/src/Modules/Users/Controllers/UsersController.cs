@@ -76,6 +76,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { Message = "Logged out successfully" });
         }
         [EnableRateLimiting("auth")]
+        [Authorize]
         [HttpPost(ApiActionsV1.ChangePassword, Name = nameof(ApiActionsV1.ChangePassword))]
         public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordInputDto changePasswordInputDto)
         {
@@ -83,26 +84,36 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok();
         }
         [HttpDelete(ApiActionsV1.DeleteUser, Name = nameof(ApiActionsV1.DeleteUser))]
+        [Authorize]
         public async Task<ActionResult<bool>> DeleteUser(DeleteUserInputDto deleteUserInputDto)
         {
+            if (!Guid.TryParse(User.FindFirstValue("sub"), out var callerGuid) ||
+                (callerGuid != deleteUserInputDto.UserGuid && !User.IsInRole("Admin"))) return Forbid();
             await _userInterface.DeleteUserAsync(deleteUserInputDto);
             return Ok(true);
         }
         [HttpPost(ApiActionsV1.DeactivateUser, Name = nameof(ApiActionsV1.DeactivateUser))]
+        [Authorize]
         public async Task<IActionResult> DeactivateUser([FromBody] DeactivateUserInputDto deactivateUserInputDto)
         {
+            if (!Guid.TryParse(User.FindFirstValue("sub"), out var callerGuid) ||
+                (callerGuid != deactivateUserInputDto.UserGuid && !User.IsInRole("Admin"))) return Forbid();
             await _userInterface.DeactivateUserAsync(deactivateUserInputDto);
             return Ok("User deactivated successfully.");
         }
         [HttpPost(ApiActionsV1.ReactivateUser, Name = nameof(ApiActionsV1.ReactivateUser))]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ReactivateUser([FromBody] ReactivateUserInputDto reactivateUserInputDto)
         {
             await _userInterface.ReactivateUserAsync(reactivateUserInputDto);
             return Ok("User reactivated successfully.");
         }
         [HttpPost(ApiActionsV1.UpdateRoommateStatus, Name = nameof(ApiActionsV1.UpdateRoommateStatus))]
+        [Authorize]
         public async Task<IActionResult> UpdateRoommateStatus([FromBody] UpdateRoommateStatusInputDto updateRoommateStatusInputDto)
         {
+            if (!Guid.TryParse(User.FindFirstValue("sub"), out var callerGuid) ||
+                (callerGuid != updateRoommateStatusInputDto.UserGuid && !User.IsInRole("Admin"))) return Forbid();
             await _userInterface.UpdateRoommateStatusAsync(updateRoommateStatusInputDto);
             return Ok("Roommate status updated successfully.");
         }
@@ -115,20 +126,29 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(profile);
         }
         [HttpPut(ApiActionsV1.UpdateUserProfile, Name = nameof(ApiActionsV1.UpdateUserProfile))]
+        [Authorize]
         public async Task<ActionResult<UserProfileDto>> UpdateUserProfile([FromRoute] int userId, [FromBody] UserProfileUpdateInputDto updateDto)
         {
+            if (!int.TryParse(User.FindFirstValue("userId"), out var callerId) || (callerId != userId && !User.IsInRole("Admin")))
+                return Forbid();
             var profile = await _userInterface.UpdateUserProfileAsync(userId, updateDto);
             return Ok(profile);
         }
         [HttpPut("update-privacy-settings/{userId}")]
+        [Authorize]
         public async Task<ActionResult<UserProfileDto>> UpdatePrivacySettings([FromRoute] int userId, [FromBody] PrivacySettingsDto privacySettingsDto)
         {
+            if (!int.TryParse(User.FindFirstValue("userId"), out var callerId) || (callerId != userId && !User.IsInRole("Admin")))
+                return Forbid();
             var profile = await _userInterface.UpdatePrivacySettingsAsync(userId, privacySettingsDto);
             return Ok(profile);
         }
         [HttpGet("export-data/{userId}")]
+        [Authorize]
         public async Task<ActionResult<UserExportDto>> ExportUserData([FromRoute] int userId)
         {
+            if (!int.TryParse(User.FindFirstValue("userId"), out var callerId) || (callerId != userId && !User.IsInRole("Admin")))
+                return Forbid();
             var exportData = await _userInterface.ExportUserDataAsync(userId);
             return Ok(exportData);
         }
@@ -166,9 +186,12 @@ namespace Lander.src.Modules.Users.Controllers
             var userGuid = User.FindFirstValue("sub");
             if (string.IsNullOrEmpty(userGuid)) return Unauthorized();
 
+            if (!Guid.TryParse(userGuid, out var parsedGuid))
+                return Unauthorized();
+
             var user = await _usersContext.Users
                 .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.UserGuid == Guid.Parse(userGuid));
+                .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
 
             if (user == null) return Unauthorized();
 

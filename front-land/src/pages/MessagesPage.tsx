@@ -78,13 +78,15 @@ const MessagesPage: React.FC = () => {
             const selectedConversation = conversations?.find(c => c.otherUserId === selectedConversationId);
             if (!selectedConversation) throw new Error('No conversation selected');
 
-            // Upload file first
-            const uploadedFile = await messagesApi.uploadFile(file);
+            const uploaded = await messagesApi.uploadFile(file);
 
-            // Then send message with file info
             return messagesApi.sendMessage({
                 receiverId: selectedConversation.otherUserId,
-                content: uploadedFile.fileUrl.split('/').pop() || file.name,
+                content: '',
+                fileUrl: uploaded.fileUrl,
+                fileName: uploaded.fileName,
+                fileSize: uploaded.fileSize,
+                fileType: uploaded.fileType,
             });
         },
         onSuccess: () => {

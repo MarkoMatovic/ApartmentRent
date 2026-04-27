@@ -361,11 +361,16 @@ namespace Lander.src.Modules.Appointments.Implementation
 
         public async Task<AppointmentDto?> GetAppointmentByIdAsync(int appointmentId)
         {
+            var userId = GetCurrentUserId();
+
             var appointment = await _context.Appointments
                 .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId);
 
             if (appointment == null)
                 return null;
+
+            if (appointment.TenantId != userId && appointment.LandlordId != userId)
+                throw new UnauthorizedAccessException("You don't have permission to view this appointment");
 
             return await MapToDto(appointment);
         }

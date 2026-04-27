@@ -43,11 +43,15 @@ public partial class MessageService : IMessageService
         _idempotencyService = idempotencyService;
     }
 
-    public async Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null)
+    public async Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null,
+        string? fileUrl = null, string? fileName = null, long? fileSize = null, string? fileType = null)
     {
         if (idempotencyKey is not null &&
             await _idempotencyService.IsDuplicateAsync($"msg:{senderId}:{idempotencyKey}"))
             return null;
+
+        if (await IsUserBlockedAsync(receiverId, senderId))
+            throw new InvalidOperationException("You cannot send messages to this user.");
 
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -60,17 +64,22 @@ public partial class MessageService : IMessageService
                 throw new InvalidOperationException("Nemate dovoljno tokena za Super-Like.");
         }
 
+        var callerGuid = Guid.TryParse(currentUserGuid, out var cg) ? cg : (Guid?)null;
         var message = new Message
         {
             SenderId = senderId,
             ReceiverId = receiverId,
             MessageText = messageText,
             IsSuperLike = isSuperLike,
+            FileUrl = fileUrl,
+            FileName = fileName,
+            FileSize = fileSize,
+            FileType = fileType,
             SentAt = DateTime.UtcNow,
             IsRead = false,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = callerGuid,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            ModifiedByGuid = callerGuid,
             ModifiedDate = DateTime.UtcNow
         };
         // Outbox pattern: message + token deduction event are written atomically in one transaction.
@@ -99,8 +108,11 @@ public partial class MessageService : IMessageService
             _context.RollBackTransaction();
             throw;
         }
-        var sender = await _usersContext.Users.FindAsync(senderId);
-        var receiver = await _usersContext.Users.FindAsync(receiverId);
+        var users = await _usersContext.Users.AsNoTracking()
+            .Where(u => u.UserId == senderId || u.UserId == receiverId)
+            .ToDictionaryAsync(u => u.UserId);
+        users.TryGetValue(senderId, out var sender);
+        users.TryGetValue(receiverId, out var receiver);
         if (receiver != null && !string.IsNullOrEmpty(receiver.Email))
         {
             var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
@@ -114,6 +126,10 @@ public partial class MessageService : IMessageService
             ReceiverId = receiverId,
             MessageText = messageText,
             IsSuperLike = isSuperLike,
+            FileUrl = fileUrl,
+            FileName = fileName,
+            FileSize = fileSize,
+            FileType = fileType,
             SentAt = message.SentAt ?? DateTime.UtcNow,
             IsRead = message.IsRead ?? false,
             SenderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : null,

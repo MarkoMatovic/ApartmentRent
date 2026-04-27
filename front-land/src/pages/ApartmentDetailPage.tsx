@@ -84,7 +84,7 @@ const ApartmentDetailPage: React.FC = () => {
 
   // Track apartment view when component mounts and apartment data is loaded
   useEffect(() => {
-    if (apartment && id) {
+    if (id) {
       analyticsApi.trackEvent(
         'ApartmentView',
         'Listings',
@@ -92,7 +92,7 @@ const ApartmentDetailPage: React.FC = () => {
         'Apartment'
       );
     }
-  }, [apartment, id]);
+  }, [id]);
 
   if (isLoading) {
     return (

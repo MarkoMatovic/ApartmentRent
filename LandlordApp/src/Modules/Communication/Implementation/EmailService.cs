@@ -206,7 +206,7 @@ public class EmailService : IEmailService
             IsDelivered = isDelivered,
             ProviderMessageId = providerMessageId,
             ErrorMessage = errorMessage,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = Guid.TryParse(currentUserGuid, out var elCg) ? elCg : null,
             CreatedDate = DateTime.UtcNow
         };
         try

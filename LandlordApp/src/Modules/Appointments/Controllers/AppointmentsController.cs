@@ -67,10 +67,17 @@ public class AppointmentsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<AppointmentDto>> GetAppointmentById(int id)
     {
-        var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
-        if (appointment == null)
-            return NotFound(new { message = "Appointment not found" });
-        return Ok(appointment);
+        try
+        {
+            var appointment = await _appointmentService.GetAppointmentByIdAsync(id);
+            if (appointment == null)
+                return NotFound(new { message = "Appointment not found" });
+            return Ok(appointment);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("availability")]

@@ -292,9 +292,9 @@ public class SearchRequestService : ISearchRequestService
             LookingForPetFriendly = input.LookingForPetFriendly,
             PreferredLifestyle = input.PreferredLifestyle,
             IsActive = true,
-            CreatedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            CreatedByGuid = Guid.TryParse(currentUserGuid, out var srCg) ? srCg : null,
             CreatedDate = DateTime.UtcNow,
-            ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null,
+            ModifiedByGuid = Guid.TryParse(currentUserGuid, out var srMg) ? srMg : null,
             ModifiedDate = DateTime.UtcNow
         };
         var transaction = await _context.BeginTransactionAsync();
@@ -338,7 +338,7 @@ public class SearchRequestService : ISearchRequestService
         searchRequest.LookingForSmokingAllowed = input.LookingForSmokingAllowed;
         searchRequest.LookingForPetFriendly = input.LookingForPetFriendly;
         searchRequest.PreferredLifestyle = input.PreferredLifestyle;
-        searchRequest.ModifiedByGuid = currentUserGuid != null ? Guid.Parse(currentUserGuid) : null;
+        searchRequest.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var srMg2) ? srMg2 : null;
         searchRequest.ModifiedDate = DateTime.UtcNow;
         var transaction = await _context.BeginTransactionAsync();
         try

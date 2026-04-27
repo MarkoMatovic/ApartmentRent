@@ -57,12 +57,14 @@ export const messagesApi = {
      * Send a new message
      */
     sendMessage: async (data: SendMessageRequest): Promise<Message> => {
-        const userId = getUserId();
         const response = await apiClient.post('/api/v1/messages/send', {
-            senderId: userId,
             receiverId: data.receiverId,
-            messageText: data.content,
+            messageText: data.content ?? '',
             isSuperLike: data.isSuperLike ?? false,
+            fileUrl: data.fileUrl,
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            fileType: data.fileType,
         });
         return response.data;
     },
@@ -118,9 +120,13 @@ export const messagesApi = {
         await apiClient.delete(`/api/v1/messages/delete-conversation?otherUserId=${otherUserId}`);
     },
 
-    // File Upload — endpoint not yet implemented on the backend
-    uploadFile: async (_file: File): Promise<{ fileUrl: string }> => {
-        throw new Error('File upload is not yet available.');
+    uploadFile: async (file: File): Promise<{ fileUrl: string; fileName: string; fileSize: number; fileType: string }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/api/v1/messages/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
     },
 
     // Search

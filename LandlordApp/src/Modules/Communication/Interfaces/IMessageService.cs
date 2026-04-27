@@ -7,7 +7,8 @@ public interface IMessageService
     /// <summary>
     /// Returns null when the request is a duplicate (idempotency key already seen).
     /// </summary>
-    Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null);
+    Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null,
+        string? fileUrl = null, string? fileName = null, long? fileSize = null, string? fileType = null);
     Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50);
     Task<List<ConversationDto>> GetUserConversationsAsync(int userId);
     Task MarkAsReadAsync(int messageId);

@@ -18,6 +18,7 @@ public class OutboxProcessorService : BackgroundService
     private readonly ILogger<OutboxProcessorService> _logger;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(10);
     private const int MaxRetries = 3;
+    private const int BatchSize = 50;
 
     public OutboxProcessorService(IServiceScopeFactory scopeFactory, ILogger<OutboxProcessorService> logger)
     {
@@ -53,7 +54,7 @@ public class OutboxProcessorService : BackgroundService
         var pending = await commContext.OutboxMessages
             .Where(e => e.ProcessedAt == null && e.RetryCount < MaxRetries)
             .OrderBy(e => e.CreatedAt)
-            .Take(50)
+            .Take(BatchSize)
             .ToListAsync(ct);
 
         foreach (var evt in pending)
@@ -65,18 +66,17 @@ public class OutboxProcessorService : BackgroundService
             }
             catch (Exception ex)
             {
-                evt.RetryCount++;
-                evt.Error = ex.Message;
+                await commContext.Database.ExecuteSqlRawAsync(
+                    "UPDATE [communications].[OutboxMessages] SET RetryCount = RetryCount + 1, Error = {0} WHERE Id = {1}",
+                    ex.Message, evt.Id);
+                await commContext.Entry(evt).ReloadAsync(ct);
                 _logger.LogWarning(ex, "Failed to process outbox event {Id} (type: {Type}), retry {Retry}/{Max}.",
                     evt.Id, evt.EventType, evt.RetryCount, MaxRetries);
             }
         }
 
         if (pending.Count > 0)
-        {
-            await usersContext.SaveChangesAsync(ct);
             await commContext.SaveChangesAsync(ct);
-        }
     }
 
     private static async Task HandleEventAsync(OutboxMessage evt, UsersContext usersContext, CancellationToken ct)
@@ -87,13 +87,12 @@ public class OutboxProcessorService : BackgroundService
                 var payload = JsonSerializer.Deserialize<SuperLikePayload>(evt.Payload)
                     ?? throw new InvalidOperationException("Invalid SuperLikeTokenDeduction payload.");
 
-                var user = await usersContext.Users
-                    .FirstOrDefaultAsync(u => u.UserId == payload.UserId, ct);
+                var affected = await usersContext.Database.ExecuteSqlRawAsync(
+                    "UPDATE [users].[Users] SET TokenBalance = TokenBalance - 1 WHERE UserId = {0} AND TokenBalance >= 1",
+                    payload.UserId);
 
-                if (user == null || user.TokenBalance < 1)
+                if (affected == 0)
                     throw new InvalidOperationException($"User {payload.UserId} not found or has insufficient tokens.");
-
-                user.TokenBalance--;
                 break;
 
             default:

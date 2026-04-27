@@ -9,4 +9,8 @@ public class SendMessageInputDto
     public int ReceiverId { get; set; }
     public string MessageText { get; set; } = string.Empty;
     public bool IsSuperLike { get; set; } = false;
+    public string? FileUrl { get; set; }
+    public string? FileName { get; set; }
+    public long? FileSize { get; set; }
+    public string? FileType { get; set; }
 }
