@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Lander.src.Common;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Payments.Models;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ namespace Lander.src.Modules.Payments.Implementation
             {
                 UserId = userId,
                 Amount = amount,
-                Status = "Pending",
+                Status = ApplicationStatuses.Pending,
                 OrderDescription = $"Subscription: {planType}"
             };
             
@@ -72,7 +73,7 @@ namespace Lander.src.Modules.Payments.Implementation
             transaction.Status = status;
 
             // 3. If success, activate subscription
-            if (status == "Success")
+            if (status == ApplicationStatuses.Success)
             {
                 // Parse plan from description (mock)
                 string planType = transaction.OrderDescription.Contains("Yearly") ? "Yearly" : "Monthly";

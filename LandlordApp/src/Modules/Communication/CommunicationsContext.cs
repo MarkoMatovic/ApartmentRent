@@ -1,5 +1,6 @@
 using System.Data;
 using Lander.Helpers;
+using Lander.src.Common;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -160,7 +161,7 @@ public class CommunicationsContext : DbContext, IUnitOfWork
             entity.Property(e => e.ReportedByUserId).IsRequired();
             entity.Property(e => e.ReportedUserId).IsRequired();
             entity.Property(e => e.Reason).HasMaxLength(1000).IsRequired();
-            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue(ApplicationStatuses.Pending);
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(getutcdate())")
                 .HasColumnType("datetime");

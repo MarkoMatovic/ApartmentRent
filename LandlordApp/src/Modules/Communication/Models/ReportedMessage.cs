@@ -1,3 +1,4 @@
+using Lander.src.Common;
 namespace Lander.src.Modules.Communication.Models;
 
 public class ReportedMessage
@@ -7,7 +8,7 @@ public class ReportedMessage
     public int ReportedByUserId { get; set; }
     public int ReportedUserId { get; set; }
     public string Reason { get; set; } = string.Empty;
-    public string Status { get; set; } = "Pending"; // Pending, Reviewed, Resolved
+    public string Status { get; set; } = ApplicationStatuses.Pending;
     public Guid? CreatedByGuid { get; set; }
     public DateTime? CreatedDate { get; set; }
     public int? ReviewedByAdminId { get; set; }

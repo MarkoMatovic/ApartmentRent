@@ -1,3 +1,4 @@
+using Lander.src.Common;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
@@ -79,7 +80,7 @@ public class ReportService : IReportService
         var report = await _context.ReportedMessages.FindAsync(reportId);
         if (report == null) return false;
 
-        report.Status = "Reviewed";
+        report.Status = ApplicationStatuses.Reviewed;
         report.ReviewedByAdminId = adminId;
         report.ReviewedDate = DateTime.UtcNow;
         report.AdminNotes = dto.AdminNotes;
@@ -94,7 +95,7 @@ public class ReportService : IReportService
         var report = await _context.ReportedMessages.FindAsync(reportId);
         if (report == null) return false;
 
-        report.Status = "Resolved";
+        report.Status = ApplicationStatuses.Resolved;
         report.ReviewedByAdminId = adminId;
         report.ReviewedDate = DateTime.UtcNow;
         report.AdminNotes = dto.AdminNotes;
