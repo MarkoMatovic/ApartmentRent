@@ -175,10 +175,21 @@ public class PricePredictionService : IPricePredictionService
             LastTrainedDate = null
         };
     }
-    private float EncodeCitySimple(string? city)
+    // Stable ordinal encoding — add cities as they appear in your market.
+    // GetHashCode() is NOT stable across process restarts, so we use an explicit map.
+    private static readonly Dictionary<string, float> _cityEncoding = new(StringComparer.OrdinalIgnoreCase)
     {
-        if (string.IsNullOrEmpty(city))
-            return 0;
-        return Math.Abs(city.ToLower().GetHashCode() % 1000);
+        ["sarajevo"]  = 1, ["banja luka"] = 2, ["tuzla"]    = 3,
+        ["mostar"]    = 4, ["zenica"]     = 5, ["bihac"]    = 6,
+        ["bijeljina"] = 7, ["trebinje"]   = 8, ["doboj"]    = 9,
+        ["zagreb"]    = 10, ["split"]     = 11, ["rijeka"]  = 12,
+        ["beograd"]   = 13, ["novi sad"]  = 14, ["nis"]     = 15,
+        ["ljubljana"] = 16,
+    };
+
+    private static float EncodeCitySimple(string? city)
+    {
+        if (string.IsNullOrEmpty(city)) return 0;
+        return _cityEncoding.TryGetValue(city.Trim(), out var code) ? code : 99; // 99 = other
     }
 }

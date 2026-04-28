@@ -74,7 +74,7 @@ const AnalyticsDashboardPage: React.FC = () => {
         return (
             <Container maxWidth="xl" sx={{ mt: 4 }}>
                 <Alert severity="error">
-                    Error loading analytics: {(summaryError as any).message}
+                    Error loading analytics: {summaryError instanceof Error ? summaryError.message : 'Unknown error'}
                 </Alert>
             </Container>
         );

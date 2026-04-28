@@ -1,3 +1,4 @@
+using Lander.src.Common;
 using Lander.src.Modules.ApartmentApplications.Interfaces;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +20,7 @@ public class ApplicationApprovalService : IApplicationApprovalService
             .FirstOrDefaultAsync(a => 
                 a.UserId == userId && 
                 a.ApartmentId == apartmentId && 
-                a.Status == "Approved");
+                a.Status == ApplicationStatuses.Approved);
 
         return application != null;
     }
@@ -40,7 +41,7 @@ public class ApplicationApprovalService : IApplicationApprovalService
                 a.ApartmentId == apartmentId);
 
         return new ApprovalStatusResult(
-            HasApprovedApplication: application?.Status == "Approved",
+            HasApprovedApplication: application?.Status == ApplicationStatuses.Approved,
             ApplicationStatus: application?.Status,
             ApplicationId: application?.ApplicationId);
     }

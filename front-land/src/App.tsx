@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './shared/context/AuthContext';
 import { ThemeProvider } from './shared/context/ThemeContext';
 import { NotificationProvider } from './shared/context/NotificationContext';
@@ -41,6 +42,17 @@ import RoommateMatchesPage from './pages/RoommateMatchesPage';
 import { AdminRoute } from './shared/components/AdminRoute';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 
+/**
+ * Wraps the route tree in an ErrorBoundary that automatically resets whenever
+ * the user navigates to a different path.  This means a crash on page A is
+ * isolated — navigating to page B clears the error state without a full reload.
+ * Must be rendered inside <Router> so that useLocation() is available.
+ */
+const PageErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>;
+};
+
 function App() {
   return (
     <ErrorBoundary>
@@ -50,6 +62,7 @@ function App() {
             <Router>
               <ScrollToTop />
               <Layout>
+              <PageErrorBoundary>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/apartments" element={<ApartmentListPage />} />
@@ -93,6 +106,7 @@ function App() {
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </PageErrorBoundary>
               </Layout>
             </Router>
           </NotificationProvider>

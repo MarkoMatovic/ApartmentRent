@@ -140,6 +140,9 @@ public class ListingsContext : DbContext, IUnitOfWork
                   .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
             entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.City })
                   .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
+            // IsFeatured is used in ORDER BY on every listing query — needs its own index
+            entity.HasIndex(e => new { e.IsFeatured, e.IsActive, e.IsDeleted, e.CreatedDate })
+                  .HasDatabaseName("IX_Apartments_IsFeatured_IsActive_IsDeleted_CreatedDate");
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>

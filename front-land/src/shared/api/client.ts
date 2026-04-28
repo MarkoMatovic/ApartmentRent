@@ -9,6 +9,13 @@ if (!API_BASE_URL) {
 }
 const _baseUrl = API_BASE_URL ?? 'https://localhost:7092';
 
+/**
+ * The resolved API base URL.  Always use this instead of re-reading
+ * `import.meta.env.VITE_API_URL` so the dev-fallback and production guard
+ * only live in one place.
+ */
+export const apiBaseUrl = _baseUrl;
+
 export const apiClient = axios.create({
   baseURL: _baseUrl,
   headers: {

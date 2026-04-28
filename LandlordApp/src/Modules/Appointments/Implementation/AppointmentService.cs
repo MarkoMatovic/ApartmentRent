@@ -19,6 +19,7 @@ namespace Lander.src.Modules.Appointments.Implementation
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<AppointmentService> _logger;
         private readonly Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService _approvalService;
+        private readonly IConfiguration _configuration;
 
         public AppointmentService(
             AppointmentsContext context,
@@ -27,7 +28,8 @@ namespace Lander.src.Modules.Appointments.Implementation
             IEmailService emailService,
             IHttpContextAccessor httpContextAccessor,
             ILogger<AppointmentService> logger,
-            Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService approvalService)
+            Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService approvalService,
+            IConfiguration configuration)
         {
             _context = context;
             _listingsContext = listingsContext;
@@ -36,6 +38,7 @@ namespace Lander.src.Modules.Appointments.Implementation
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
             _approvalService = approvalService;
+            _configuration = configuration;
         }
 
         private int GetCurrentUserId()
@@ -151,39 +154,81 @@ namespace Lander.src.Modules.Appointments.Implementation
             var userId = GetCurrentUserId();
 
             var appointments = await _context.Appointments
+                .AsNoTracking()
                 .Where(a => a.TenantId == userId)
                 .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
 
-            var dtos = new List<AppointmentDto>();
-            foreach (var appointment in appointments)
-            {
-                dtos.Add(await MapToDto(appointment));
-            }
-
-            return dtos;
+            return await MapToDtosBatchAsync(appointments);
         }
 
         public async Task<List<AppointmentDto>> GetLandlordAppointmentsAsync()
         {
             var userId = GetCurrentUserId();
-            
+
             _logger.LogInformation("Getting landlord appointments for userId: {UserId}", userId);
 
             var appointments = await _context.Appointments
+                .AsNoTracking()
                 .Where(a => a.LandlordId == userId)
                 .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
-                
+
             _logger.LogInformation("Found {Count} appointments for landlord userId: {UserId}", appointments.Count, userId);
 
-            var dtos = new List<AppointmentDto>();
-            foreach (var appointment in appointments)
-            {
-                dtos.Add(await MapToDto(appointment));
-            }
+            return await MapToDtosBatchAsync(appointments);
+        }
 
-            return dtos;
+        /// <summary>
+        /// Batch-loads apartments and users for a list of appointments — avoids N+1.
+        /// </summary>
+        private async Task<List<AppointmentDto>> MapToDtosBatchAsync(List<Appointment> appointments)
+        {
+            if (appointments.Count == 0) return new List<AppointmentDto>();
+
+            var apartmentIds = appointments.Select(a => a.ApartmentId).Distinct().ToList();
+            var userIds = appointments
+                .SelectMany(a => new[] { a.TenantId, a.LandlordId })
+                .Distinct()
+                .ToList();
+
+            var aptDict = await _listingsContext.Apartments
+                .AsNoTracking()
+                .Where(a => apartmentIds.Contains(a.ApartmentId))
+                .ToDictionaryAsync(a => a.ApartmentId);
+
+            var userDict = await _usersContext.Users
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.UserId))
+                .ToDictionaryAsync(u => u.UserId);
+
+            return appointments.Select(appointment =>
+            {
+                aptDict.TryGetValue(appointment.ApartmentId, out var apt);
+                userDict.TryGetValue(appointment.TenantId, out var tenant);
+                userDict.TryGetValue(appointment.LandlordId, out var landlord);
+
+                return new AppointmentDto
+                {
+                    AppointmentId = appointment.AppointmentId,
+                    AppointmentGuid = appointment.AppointmentGuid,
+                    ApartmentId = appointment.ApartmentId,
+                    ApartmentTitle = apt?.Title,
+                    ApartmentAddress = apt?.Address,
+                    TenantId = appointment.TenantId,
+                    TenantName = tenant != null ? $"{tenant.FirstName} {tenant.LastName}" : null,
+                    TenantEmail = tenant?.Email,
+                    LandlordId = appointment.LandlordId,
+                    LandlordName = landlord != null ? $"{landlord.FirstName} {landlord.LastName}" : null,
+                    LandlordEmail = landlord?.Email,
+                    AppointmentDate = appointment.AppointmentDate,
+                    Duration = appointment.Duration,
+                    Status = appointment.Status,
+                    TenantNotes = appointment.TenantNotes,
+                    LandlordNotes = appointment.LandlordNotes,
+                    CreatedDate = appointment.CreatedDate
+                };
+            }).ToList();
         }
 
         public async Task<List<AvailableSlotDto>> GetAvailableSlotsAsync(int apartmentId, DateTime date)
@@ -200,7 +245,7 @@ namespace Lander.src.Modules.Appointments.Implementation
                 }
 
                 var slots = new List<AvailableSlotDto>();
-                var slotDuration = 30; // minutes
+                var slotDuration = _configuration.GetValue<int>("Appointments:DefaultSlotDurationMinutes", 30);
 
                 // Get landlord availability for given day of week
                 var dayOfWeek = date.DayOfWeek;
@@ -222,10 +267,12 @@ namespace Lander.src.Modules.Appointments.Implementation
                     }
                 }
 
-                // Fallback: 9:00 – 17:00 if landlord has no availability set
+                // Fallback: configurable workday hours if landlord has no availability set
                 if (!availabilityWindows.Any())
                 {
-                    availabilityWindows.Add((new TimeSpan(9, 0, 0), new TimeSpan(17, 0, 0)));
+                    var startHour = _configuration.GetValue<int>("Appointments:DefaultWorkdayStartHour", 9);
+                    var endHour = _configuration.GetValue<int>("Appointments:DefaultWorkdayEndHour", 17);
+                    availabilityWindows.Add((new TimeSpan(startHour, 0, 0), new TimeSpan(endHour, 0, 0)));
                 }
 
                 // Get existing booked appointments for this day

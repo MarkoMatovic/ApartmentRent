@@ -23,7 +23,7 @@ const PaymentSuccessPage: React.FC = () => {
                     if (parts.length === 3) {
                         const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
                         updateUser({
-                            userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
+                            userId: parseInt(payload.userId || payload.nameid || payload.id) || -1,
                             userGuid: payload.sub || '',
                             firstName: payload.given_name || '',
                             lastName: payload.family_name || '',

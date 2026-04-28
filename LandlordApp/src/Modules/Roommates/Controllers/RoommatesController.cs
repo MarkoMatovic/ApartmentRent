@@ -70,6 +70,14 @@ public class RoommatesController : ApiControllerBase
 
         var roommate = await _roommateService.GetRoommateByIdAsync(id);
         if (roommate == null) return NotFound();
+
+        // Strip PII for unauthenticated callers — phone and DOB are private
+        if (!User.Identity?.IsAuthenticated ?? true)
+        {
+            roommate.PhoneNumber = null;
+            roommate.DateOfBirth = null;
+        }
+
         return Ok(roommate);
     }
 

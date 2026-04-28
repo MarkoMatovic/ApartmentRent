@@ -87,10 +87,14 @@ public class SavedSearchService : ISavedSearchService
     public async Task<SavedSearchDto> UpdateSavedSearchAsync(int id, int userId, SavedSearchInputDto input)
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
+        // First check if the record exists at all (NotFoundException),
+        // then check ownership separately (ForbiddenException)
         var savedSearch = await _context.SavedSearches
-            .FirstOrDefaultAsync(ss => ss.SavedSearchId == id && ss.UserId == userId);
+            .FirstOrDefaultAsync(ss => ss.SavedSearchId == id);
         if (savedSearch == null)
-            throw new NotFoundException("Saved search not found or you don't have permission to update it");
+            throw new NotFoundException($"Saved search {id} not found.");
+        if (savedSearch.UserId != userId)
+            throw new ForbiddenException("You do not have permission to update this saved search.");
         savedSearch.Name = input.Name;
         savedSearch.SearchType = input.SearchType;
         savedSearch.FiltersJson = input.FiltersJson;

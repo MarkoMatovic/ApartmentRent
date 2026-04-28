@@ -1,4 +1,5 @@
 using FluentValidation;
+using Lander.src.Common;
 using Lander.src.Modules.ApartmentApplications.Dtos.InputDto;
 
 namespace Lander.src.Modules.ApartmentApplications.Validators;
@@ -7,7 +8,9 @@ public class UpdateApplicationStatusInputDtoValidator : AbstractValidator<Update
 {
     private static readonly HashSet<string> AllowedStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Pending", "Approved", "Rejected"
+        ApplicationStatuses.Pending,
+        ApplicationStatuses.Approved,
+        ApplicationStatuses.Rejected
     };
 
     public UpdateApplicationStatusInputDtoValidator()

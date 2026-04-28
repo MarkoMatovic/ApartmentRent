@@ -97,6 +97,9 @@ public class AnalyticsContext : DbContext, IUnitOfWork
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.CreatedDate);
             entity.HasIndex(e => new { e.EventType, e.CreatedDate });
+            // Covers user-specific analytics queries: GetUserRoommateSummary, GetUserTopApartments etc.
+            entity.HasIndex(e => new { e.UserId, e.EventType, e.CreatedDate })
+                  .HasDatabaseName("IX_AnalyticsEvents_UserId_EventType_CreatedDate");
         });
     }
 }

@@ -56,7 +56,7 @@ const CreateRoommatePage: React.FC = () => {
   // Proveri da li korisnik već ima roommate karticu
   const { data: existingRoommate, isLoading: isLoadingRoommate } = useQuery({
     queryKey: ['roommate', user?.userId],
-    queryFn: () => roommatesApi.getByUserId(user?.userId || 0),
+    queryFn: () => roommatesApi.getByUserId(user!.userId),
     enabled: !!user?.userId,
     retry: false,
   });

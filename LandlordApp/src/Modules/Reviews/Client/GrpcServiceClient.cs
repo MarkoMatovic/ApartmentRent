@@ -34,19 +34,21 @@ public class GrpcServiceClient : IGrpcServiceClient
         };
         return await _client.GetReviewsByApartmentIdAsync(request);
     }
-    public async Task<DeleteResponse> DeleteReviewAsync(int reviewId)
+    public async Task<DeleteResponse> DeleteReviewAsync(int reviewId, string callerGuid)
     {
         var request = new DeleteReviewRequest
         {
-            ReviewId = reviewId
+            ReviewId = reviewId,
+            RequestUserGuid = callerGuid
         };
         return await _client.DeleteReviewAsync(request);
     }
-    public async Task<DeleteResponse> DeleteFavoriteAsync(int favoriteId)
+    public async Task<DeleteResponse> DeleteFavoriteAsync(int favoriteId, string callerGuid)
     {
         var request = new DeleteFavoriteRequest
         {
-            FavoriteId = favoriteId
+            FavoriteId = favoriteId,
+            RequestUserGuid = callerGuid
         };
         return await _client.DeleteFavoriteAsync(request);
     }

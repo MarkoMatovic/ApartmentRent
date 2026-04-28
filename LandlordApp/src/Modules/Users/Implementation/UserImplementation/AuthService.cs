@@ -69,9 +69,11 @@ public class AuthService : IAuthService
                 "UPDATE [users].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
                 user.UserId);
             await _context.Entry(user).ReloadAsync();
-            if (user.FailedLoginAttempts >= 5)
+            var maxAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);
+            var lockoutMinutes = _configuration.GetValue<int>("Security:LockoutMinutes", 15);
+            if (user.FailedLoginAttempts >= maxAttempts)
             {
-                user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(15);
+                user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(lockoutMinutes);
                 await _context.SaveEntitiesAsync();
                 _logger.LogWarning("Account locked: {Email} after {Attempts} failed attempts",
                     user.Email, user.FailedLoginAttempts);

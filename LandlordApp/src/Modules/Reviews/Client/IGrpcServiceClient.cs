@@ -11,7 +11,7 @@ public interface IGrpcServiceClient
     Task<ReviewResponse> CreateReviewAsync(CreateReviewRequest request);
     Task<ReviewResponse> GetReviewByIdAsync(int reviewId);
     Task<GetReviewsResponse> GetReviewsByApartmentIdAsync(int apartmentId);
-    Task<DeleteResponse> DeleteReviewAsync(int reviewId);
-    Task<DeleteResponse> DeleteFavoriteAsync(int favoriteId);
+    Task<DeleteResponse> DeleteReviewAsync(int reviewId, string callerGuid);
+    Task<DeleteResponse> DeleteFavoriteAsync(int favoriteId, string callerGuid);
     Task<GetFavoritesResponse> GetUserFavoritesAsync(int userId);
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Container,
   Grid,
@@ -22,7 +22,7 @@ import { useAuth } from '../shared/context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { roommatesApi } from '../shared/api/roommates';
-import { mlApi } from '../shared/api/analytics';
+import { mlApi, analyticsApi } from '../shared/api/analytics';
 import { RoommateFilters } from '../shared/types/roommate';
 import RoommateCard from '../components/Roommate/RoommateCard';
 
@@ -64,6 +64,26 @@ const RoommateListPage: React.FC = () => {
   const handleFilterChange = (field: keyof RoommateFilters, value: any) => {
     setFilters({ ...filters, [field]: value });
   };
+
+  // Track search event (debounced 2 s) when a meaningful roommate filter is active
+  useEffect(() => {
+    const hasActiveFilter = filters.location?.trim() || filters.minBudget || filters.maxBudget ||
+      filters.smokingAllowed !== undefined || filters.petFriendly !== undefined;
+    if (!hasActiveFilter) return;
+
+    const timeout = setTimeout(() => {
+      analyticsApi.trackEvent(
+        'RoommateSearch',
+        'Roommates',
+        undefined,
+        undefined,
+        filters.location?.trim() || undefined
+      );
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [filters.location, filters.minBudget, filters.maxBudget,
+      filters.smokingAllowed, filters.petFriendly]);
 
   // Merge roommates with match scores
   const roommatesWithScores = useMemo(() => {

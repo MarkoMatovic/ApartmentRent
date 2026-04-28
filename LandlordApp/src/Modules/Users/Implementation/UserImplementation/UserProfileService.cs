@@ -104,18 +104,8 @@ public class UserProfileService : IUserProfileService
         user.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var upMg) ? upMg : null;
         user.ModifiedDate = DateTime.UtcNow;
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
-        {
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in UpdateUserProfileAsync");
-            _context.RollBackTransaction();
-            throw;
-        }
+        // Single-entity update — no explicit transaction needed
+        await _context.SaveEntitiesAsync();
 
         return new UserProfileDto
         {
@@ -150,18 +140,8 @@ public class UserProfileService : IUserProfileService
         user.IsIncognito = dto.IsIncognito;
         user.ModifiedDate = DateTime.UtcNow;
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
-        {
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in UpdatePrivacySettingsAsync");
-            _context.RollBackTransaction();
-            throw;
-        }
+        // Single-entity update — no explicit transaction needed
+        await _context.SaveEntitiesAsync();
 
         return new UserProfileDto
         {
@@ -190,19 +170,8 @@ public class UserProfileService : IUserProfileService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == dto.UserGuid);
         if (user == null) return;
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
-        {
-            user.IsActive = false;
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in DeactivateUserAsync");
-            _context.RollBackTransaction();
-            throw;
-        }
+        user.IsActive = false;
+        await _context.SaveEntitiesAsync();
     }
 
     public async Task ReactivateUserAsync(ReactivateUserInputDto dto)
@@ -210,19 +179,8 @@ public class UserProfileService : IUserProfileService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == dto.UserGuid);
         if (user == null) return;
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
-        {
-            user.IsActive = true;
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in ReactivateUserAsync");
-            _context.RollBackTransaction();
-            throw;
-        }
+        user.IsActive = true;
+        await _context.SaveEntitiesAsync();
     }
 
     public async Task<bool> DeleteUserAsync(DeleteUserInputDto dto)
@@ -254,20 +212,10 @@ public class UserProfileService : IUserProfileService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == dto.UserGuid);
         if (user == null) return;
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
-        {
-            user.IsLookingForRoommate = dto.IsLookingForRoommate;
-            user.ModifiedDate = DateTime.UtcNow;
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in UpdateRoommateStatusAsync");
-            _context.RollBackTransaction();
-            throw;
-        }
+        // Single-entity update — no transaction needed; SaveEntitiesAsync is atomic for one row
+        user.IsLookingForRoommate = dto.IsLookingForRoommate;
+        user.ModifiedDate = DateTime.UtcNow;
+        await _context.SaveEntitiesAsync();
     }
 
     public async Task<UserExportDto> ExportUserDataAsync(int userId)

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Container,
   Typography,
@@ -61,7 +61,7 @@ const ApartmentDetailPage: React.FC = () => {
 
   const { data: roommatesLookingForThisApartment } = useQuery({
     queryKey: ['roommates', 'apartment', id],
-    queryFn: () => roommatesApi.getAll({ apartmentId: Number(id) } as any),
+    queryFn: () => roommatesApi.getAll({ apartmentId: Number(id) }),
     enabled: !!id,
   });
 
@@ -82,17 +82,15 @@ const ApartmentDetailPage: React.FC = () => {
     onError: () => {}, // silently ignore — button is hidden when not logged in
   });
 
-  // Track apartment view when component mounts and apartment data is loaded
+  // Track view only once per navigation, and only after the apartment is confirmed
+  // to exist. Using a ref prevents double-tracking if React Query re-fetches the data.
+  const viewTrackedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (id) {
-      analyticsApi.trackEvent(
-        'ApartmentView',
-        'Listings',
-        Number(id),
-        'Apartment'
-      );
+    if (id && apartment && viewTrackedRef.current !== id) {
+      viewTrackedRef.current = id;
+      analyticsApi.trackEvent('ApartmentView', 'Listings', Number(id), 'Apartment');
     }
-  }, [id]);
+  }, [id, apartment]);
 
   if (isLoading) {
     return (

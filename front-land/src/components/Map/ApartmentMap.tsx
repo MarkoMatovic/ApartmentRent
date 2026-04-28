@@ -4,7 +4,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Box } from '@mui/material';
 
-// Fix for default marker icon
+// Fix for default marker icon — Leaflet's _getIconUrl is an internal property
+// not exposed in the type definitions; the cast is intentional and unavoidable.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',

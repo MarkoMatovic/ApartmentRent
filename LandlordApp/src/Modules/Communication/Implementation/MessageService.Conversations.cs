@@ -7,6 +7,7 @@ public partial class MessageService
     public async Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50)
     {
         var query = _context.Messages
+            .AsNoTracking()
             .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
                        (m.SenderId == userId2 && m.ReceiverId == userId1))
             .OrderByDescending(m => m.SentAt);
@@ -27,6 +28,7 @@ public partial class MessageService
             .ToListAsync();
         var userIds = new[] { userId1, userId2 };
         var users = await _usersContext.Users
+            .AsNoTracking()
             .Where(u => userIds.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId);
         foreach (var msg in messages)
@@ -54,6 +56,7 @@ public partial class MessageService
     public async Task<List<ConversationDto>> GetUserConversationsAsync(int userId)
     {
         var conversations = await _context.Messages
+            .AsNoTracking()
             .Where(m => m.SenderId == userId || m.ReceiverId == userId)
             .GroupBy(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
             .Select(g => new
@@ -149,6 +152,7 @@ public partial class MessageService
     public async Task<int> GetUnreadCountAsync(int userId)
     {
         return await _context.Messages
+            .AsNoTracking()
             .Where(m => m.ReceiverId == userId && m.IsRead == false)
             .CountAsync();
     }

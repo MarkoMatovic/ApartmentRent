@@ -4,6 +4,7 @@ using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace Lander.src.Modules.Communication.Controllers;
@@ -63,6 +64,7 @@ public class MessagesController : ControllerBase
 
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> UploadFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
@@ -88,6 +90,7 @@ public class MessagesController : ControllerBase
     }
 
     [HttpPost(ApiActionsV1.SendMessage, Name = nameof(ApiActionsV1.SendMessage))]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
         var senderId = GetCurrentUserId();
