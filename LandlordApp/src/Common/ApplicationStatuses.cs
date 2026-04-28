@@ -14,4 +14,8 @@ public static class ApplicationStatuses
     public const string Confirmed = "Confirmed";
     public const string Success   = "Success";
     public const string Failed    = "Failed";
+
+    // Report-specific statuses (ReportedMessage.Status)
+    public const string Reviewed  = "Reviewed";
+    public const string Resolved  = "Resolved";
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.src.Common;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
@@ -151,7 +152,7 @@ public partial class MessageService
             ReportedByUserId = reportedByUserId,
             ReportedUserId = reportDto.ReportedUserId,
             Reason = reportDto.Reason,
-            Status = "Pending",
+            Status = ApplicationStatuses.Pending,
             CreatedByGuid = Guid.TryParse(currentUserGuid, out var reporterGuid) ? reporterGuid : null,
             CreatedDate = DateTime.UtcNow
         };
