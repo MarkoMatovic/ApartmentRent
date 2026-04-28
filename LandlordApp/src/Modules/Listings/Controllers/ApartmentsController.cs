@@ -61,7 +61,14 @@ public partial class ApartmentsController : ControllerBase
     [OutputCache(PolicyName = "ApartmentDetail")]
     public async Task<ActionResult<GetApartmentDto>> GetApartment([FromQuery] int id)
     {
-        return Ok(await _apartmentService.GetApartmentByIdAsync(id));
+        var apartment = await _apartmentService.GetApartmentByIdAsync(id);
+        if (apartment == null) return NotFound();
+
+        // Hide landlord email from unauthenticated callers to prevent scraping
+        if (!User.Identity?.IsAuthenticated ?? true)
+            apartment.LandlordEmail = null;
+
+        return Ok(apartment);
     }
     [HttpPut(ApiActionsV1.UpdateApartment, Name = nameof(ApiActionsV1.UpdateApartment))]
     [Authorize]

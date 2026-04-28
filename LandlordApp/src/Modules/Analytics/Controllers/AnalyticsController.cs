@@ -24,6 +24,7 @@ public class AnalyticsController : ApiControllerBase
     }
 
     [HttpPost(ApiActionsV1.TrackEvent, Name = nameof(ApiActionsV1.TrackEvent))]
+    [AllowAnonymous] // Views must be tracked for both logged-in and anonymous visitors
     public async Task<IActionResult> TrackEvent([FromBody] TrackEventInputDto input)
     {
         await _analyticsService.TrackEventAsync(

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { MessageDto } from '../api/messagesApi';
+import { apiBaseUrl } from '../shared/api/client';
 
 export const useChatSignalR = (userId: number | null) => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
@@ -9,11 +10,12 @@ export const useChatSignalR = (userId: number | null) => {
   const [messageRead, setMessageRead] = useState<number | null>(null);
   const [userTyping, setUserTyping] = useState<number | null>(null);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    const chatHubUrl = (import.meta.env.VITE_API_URL || 'https://localhost:7092') + '/chatHub';
+    const chatHubUrl = apiBaseUrl + '/chatHub';
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(chatHubUrl, {
         accessTokenFactory: () => {
@@ -47,7 +49,14 @@ export const useChatSignalR = (userId: number | null) => {
 
         newConnection.on('UserTyping', (data: { userId: number }) => {
           setUserTyping(data.userId);
-          setTimeout(() => setUserTyping(null), 3000);
+          // Clear any previous typing timeout before starting a new one
+          if (typingTimeoutRef.current !== null) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setUserTyping(null);
+            typingTimeoutRef.current = null;
+          }, 3000);
         });
       })
       .catch(() => {
@@ -55,6 +64,11 @@ export const useChatSignalR = (userId: number | null) => {
       });
 
     return () => {
+      // Cancel pending typing-indicator timeout to avoid setState on unmounted component
+      if (typingTimeoutRef.current !== null) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
       if (connectionRef.current) {
         connectionRef.current.stop();
       }

@@ -96,6 +96,9 @@ public partial class NotificationContext : DbContext, IUnitOfWork
 
             entity.HasIndex(e => e.RecipientUserId);
             entity.HasIndex(e => e.SenderUserId);
+            // Covers: GetUserNotifications (RecipientUserId + IsRead + CreatedDate DESC)
+            entity.HasIndex(e => new { e.RecipientUserId, e.IsRead, e.CreatedDate })
+                  .HasDatabaseName("IX_Notifications_RecipientUserId_IsRead_CreatedDate");
         });
 
         modelBuilder.Entity<ReadNotification>(entity =>

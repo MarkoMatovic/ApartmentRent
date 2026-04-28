@@ -318,10 +318,15 @@ public partial class ApartmentService
     }
 
     // .NET 10 Feature: Vector Search implementation
+    // Only loads active, non-deleted listings and caps at 1 000 rows to avoid
+    // materialising the entire table into memory during embedding comparison.
     public async Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync()
     {
         var apartments = await _context.Apartments
             .AsNoTracking()
+            .Where(a => !a.IsDeleted && a.IsActive)
+            .OrderByDescending(a => a.CreatedDate)
+            .Take(1000)
             .Select(a => new ApartmentDto
             {
                 ApartmentId = a.ApartmentId,

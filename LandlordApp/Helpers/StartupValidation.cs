@@ -7,6 +7,7 @@ public static class StartupValidation
         "REPLACE_WITH_YOUR_AUTHENTICITY_TOKEN",
         "REPLACE_WITH_YOUR_MERCHANT_KEY",
         "YOUR_SENDGRID_API_KEY_HERE",
+        "YOUR_BREVO_API_KEY_HERE",
         "YourSuperSecretKeyForJWTTokenGenerationMustBeAtLeast32CharactersLong",
         "sk_test_replace_me",
         "whsec_replace_me",
@@ -17,7 +18,7 @@ public static class StartupValidation
         "Jwt:Secret",
         "Jwt:Issuer",
         "Jwt:Audience",
-        "SendGrid:ApiKey",
+        "Brevo:ApiKey",       // actual email provider used by EmailService
         "Monri:AuthenticityToken",
         "Monri:MerchantKey",
         "ConnectionStrings:DefaultConnection",

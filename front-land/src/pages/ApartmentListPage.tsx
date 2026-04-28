@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Grid,
@@ -29,6 +29,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
+import { analyticsApi } from '../shared/api/analytics';
 import ApartmentCard from '../components/Apartment/ApartmentCard';
 
 const ApartmentListPage: React.FC = () => {
@@ -63,6 +64,28 @@ const ApartmentListPage: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [page]);
+
+  // Track search event (debounced 2 s) whenever a meaningful filter is active.
+  // Only fires after user stops changing filters — avoids spamming on every keystroke.
+  useEffect(() => {
+    const hasActiveFilter = filters.city.trim() || filters.minRent || filters.maxRent ||
+      filters.numberOfRooms || filters.isFurnished || filters.hasParking ||
+      filters.hasBalcony || filters.isPetFriendly;
+    if (!hasActiveFilter) return;
+
+    const timeout = setTimeout(() => {
+      analyticsApi.trackEvent(
+        'ApartmentSearch',
+        'Listings',
+        undefined,
+        undefined,
+        filters.city.trim() || undefined
+      );
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [filters.city, filters.minRent, filters.maxRent, filters.numberOfRooms,
+      filters.isFurnished, filters.hasParking, filters.hasBalcony, filters.isPetFriendly]);
 
   const { data: response, isLoading } = useQuery({
     queryKey: ['apartments', filters, page],

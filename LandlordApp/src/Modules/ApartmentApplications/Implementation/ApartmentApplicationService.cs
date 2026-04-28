@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.src.Common;
 using Lander.src.Modules.ApartmentApplications.Interfaces;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.ApartmentApplications.Dtos.Dto;
@@ -59,7 +60,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
             UserId = userId,
             ApartmentId = apartmentId,
             ApplicationDate = DateTime.UtcNow,
-            Status = "Pending",
+            Status = ApplicationStatuses.Pending,
             IsPriority = isPriority,
             CreatedDate = DateTime.UtcNow,
             CreatedByGuid = Guid.TryParse(
@@ -240,7 +241,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 : null;
             var aptTitle = apartment?.Title ?? "the apartment";
 
-            if (status == "Approved")
+            if (status == ApplicationStatuses.Approved)
             {
                 await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
                     "ReceiveNotification",
@@ -248,7 +249,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
                     $"Congratulations! Your application for '{aptTitle}' has been approved. You can now schedule a viewing.",
                     "success");
             }
-            else if (status == "Rejected")
+            else if (status == ApplicationStatuses.Rejected)
             {
                 var metadata = System.Text.Json.JsonSerializer.Serialize(new
                 {

@@ -25,7 +25,7 @@ public class MachineLearningController : ApiControllerBase
     }
 
     [HttpPost(ApiActionsV1.PredictPrice, Name = nameof(ApiActionsV1.PredictPrice))]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<ActionResult<PricePredictionResponseDto>> PredictPrice([FromBody] PricePredictionRequestDto request)
     {
         var prediction = await _pricePredictionService.PredictPriceAsync(request);

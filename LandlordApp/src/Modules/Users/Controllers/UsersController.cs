@@ -85,11 +85,11 @@ namespace Lander.src.Modules.Users.Controllers
         }
         [HttpDelete(ApiActionsV1.DeleteUser, Name = nameof(ApiActionsV1.DeleteUser))]
         [Authorize]
-        public async Task<ActionResult<bool>> DeleteUser(DeleteUserInputDto deleteUserInputDto)
+        public async Task<ActionResult<bool>> DeleteUser([FromRoute] Guid userGuid)
         {
             if (!Guid.TryParse(User.FindFirstValue("sub"), out var callerGuid) ||
-                (callerGuid != deleteUserInputDto.UserGuid && !User.IsInRole("Admin"))) return Forbid();
-            await _userInterface.DeleteUserAsync(deleteUserInputDto);
+                (callerGuid != userGuid && !User.IsInRole("Admin"))) return Forbid();
+            await _userInterface.DeleteUserAsync(new DeleteUserInputDto { UserGuid = userGuid });
             return Ok(true);
         }
         [HttpPost(ApiActionsV1.DeactivateUser, Name = nameof(ApiActionsV1.DeactivateUser))]
@@ -118,11 +118,32 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok("Roommate status updated successfully.");
         }
         [HttpGet(ApiActionsV1.GetUserProfile, Name = nameof(ApiActionsV1.GetUserProfile))]
+        [Authorize]
         public async Task<ActionResult<UserProfileDto>> GetUserProfile([FromRoute] int userId)
         {
             var profile = await _userInterface.GetUserProfileAsync(userId);
             if (profile == null)
                 return NotFound("User not found");
+
+            // Own profile or Admin → full data
+            if (!int.TryParse(User.FindFirstValue("userId"), out var callerId) || callerId != userId)
+            {
+                if (!User.IsInRole("Admin"))
+                {
+                    // Sanitize PII from other users' profiles
+                    profile.Email = string.Empty;
+                    profile.PhoneNumber = null;
+                    profile.DateOfBirth = null;
+                    profile.UserGuid = Guid.Empty;
+                    profile.TokenBalance = 0;
+                    profile.AnalyticsConsent = false;
+                    profile.ChatHistoryConsent = false;
+                    profile.UserRoleId = null;
+                    profile.RoleName = null;
+                    profile.CreatedDate = null;
+                }
+            }
+
             return Ok(profile);
         }
         [HttpPut(ApiActionsV1.UpdateUserProfile, Name = nameof(ApiActionsV1.UpdateUserProfile))]

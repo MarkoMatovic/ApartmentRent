@@ -1,20 +1,21 @@
 using Lander.src.Modules.MachineLearning.Dtos;
 using Lander.src.Modules.MachineLearning.Interfaces;
-using Lander.src.Modules.Roommates.Interfaces;
+using Lander.src.Modules.Roommates.Dtos.Dto;
+using Lander.src.Modules.Roommates.Models;
 using Microsoft.EntityFrameworkCore;
 namespace Lander.src.Modules.MachineLearning.Implementation;
 public class RoommateMatchingService : IRoommateMatchingService
 {
     private readonly RoommatesContext _roommatesContext;
-    private readonly IRoommateService _roommateService;
+    private readonly UsersContext _usersContext;
     private const float BUDGET_WEIGHT = 0.30f;
     private const float LIFESTYLE_WEIGHT = 0.25f;
     private const float PREFERENCES_WEIGHT = 0.25f;
     private const float LOCATION_WEIGHT = 0.20f;
-    public RoommateMatchingService(RoommatesContext roommatesContext, IRoommateService roommateService)
+    public RoommateMatchingService(RoommatesContext roommatesContext, UsersContext usersContext)
     {
         _roommatesContext = roommatesContext;
-        _roommateService = roommateService;
+        _usersContext = usersContext;
     }
     public async Task<List<RoommateMatchScoreDto>> GetMatchesForUserAsync(int userId, int topN = 10)
     {
@@ -47,9 +48,25 @@ public class RoommateMatchingService : IRoommateMatchingService
             .OrderByDescending(m => m.MatchPercentage)
             .Take(topN)
             .ToList();
+
+        // Batch-load top roommates + their users in two queries — avoids N*2 FindAsync calls
+        var topRoommateIds = topMatches.Select(m => m.RoommateId).ToList();
+        var roommateMap = await _roommatesContext.Roommates
+            .AsNoTracking()
+            .Where(r => topRoommateIds.Contains(r.RoommateId))
+            .ToDictionaryAsync(r => r.RoommateId);
+
+        var userIds = roommateMap.Values.Select(r => r.UserId).Distinct().ToList();
+        var userMap = await _usersContext.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId);
+
         foreach (var match in topMatches)
         {
-            match.Roommate = await _roommateService.GetRoommateByIdAsync(match.RoommateId);
+            if (!roommateMap.TryGetValue(match.RoommateId, out var r)) continue;
+            if (!userMap.TryGetValue(r.UserId, out var u)) continue;
+            match.Roommate = MapToRoommateDto(r, u);
         }
         return topMatches;
     }
@@ -162,6 +179,37 @@ public class RoommateMatchingService : IRoommateMatchingService
         }
         return StringSimilarity(user.PreferredLocation, candidate.PreferredLocation);
     }
+    private static RoommateDto MapToRoommateDto(Roommate r, Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User u) =>
+        new RoommateDto
+        {
+            RoommateId = r.RoommateId,
+            UserId = r.UserId,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            ProfilePicture = u.ProfilePicture,
+            DateOfBirth = u.DateOfBirth,
+            PhoneNumber = u.PhoneNumber,
+            Bio = r.Bio,
+            Hobbies = r.Hobbies,
+            Profession = r.Profession,
+            SmokingAllowed = r.SmokingAllowed,
+            PetFriendly = r.PetFriendly,
+            Lifestyle = r.Lifestyle,
+            Cleanliness = r.Cleanliness,
+            GuestsAllowed = r.GuestsAllowed,
+            BudgetMin = r.BudgetMin,
+            BudgetMax = r.BudgetMax,
+            BudgetIncludes = r.BudgetIncludes,
+            AvailableFrom = r.AvailableFrom,
+            AvailableUntil = r.AvailableUntil,
+            MinimumStayMonths = r.MinimumStayMonths,
+            MaximumStayMonths = r.MaximumStayMonths,
+            LookingForRoomType = r.LookingForRoomType,
+            LookingForApartmentType = r.LookingForApartmentType,
+            PreferredLocation = r.PreferredLocation,
+            IsActive = r.IsActive
+        };
+
     private float StringSimilarity(string str1, string str2)
     {
         if (string.IsNullOrEmpty(str1) || string.IsNullOrEmpty(str2))

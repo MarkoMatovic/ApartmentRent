@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Container,
   Typography,
@@ -57,15 +57,13 @@ const RoommateDetailPage: React.FC = () => {
     },
   });
 
-  // Track roommate view when component mounts and roommate data is loaded
+  // Track view only once per navigation, after roommate data is confirmed to exist.
+  // Ref prevents double-tracking when React Query re-fetches in the background.
+  const viewTrackedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (roommate && id) {
-      analyticsApi.trackEvent(
-        'RoommateView',
-        'Roommates',
-        roommate.roommateId,
-        'Roommate'
-      );
+    if (roommate && id && viewTrackedRef.current !== id) {
+      viewTrackedRef.current = id;
+      analyticsApi.trackEvent('RoommateView', 'Roommates', roommate.roommateId, 'Roommate');
     }
   }, [roommate, id]);
 

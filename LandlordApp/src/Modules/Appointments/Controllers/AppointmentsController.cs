@@ -20,8 +20,15 @@ public class AppointmentsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AppointmentDto>> CreateAppointment([FromBody] CreateAppointmentDto dto)
     {
-        var appointment = await _appointmentService.CreateAppointmentAsync(dto);
-        return Ok(appointment);
+        try
+        {
+            var appointment = await _appointmentService.CreateAppointmentAsync(dto);
+            return Ok(appointment);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("my-appointments")]
@@ -53,15 +60,29 @@ public class AppointmentsController : ControllerBase
         int id,
         [FromBody] UpdateAppointmentStatusDto dto)
     {
-        var appointment = await _appointmentService.UpdateAppointmentStatusAsync(id, dto);
-        return Ok(appointment);
+        try
+        {
+            var appointment = await _appointmentService.UpdateAppointmentStatusAsync(id, dto);
+            return Ok(appointment);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpDelete("{id}")]
     public async Task<ActionResult> CancelAppointment(int id)
     {
-        await _appointmentService.CancelAppointmentAsync(id);
-        return NoContent();
+        try
+        {
+            await _appointmentService.CancelAppointmentAsync(id);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("{id}")]

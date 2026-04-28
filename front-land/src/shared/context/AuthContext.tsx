@@ -51,7 +51,7 @@ const decodeToken = (token: string): User | null => {
     }
 
     return {
-      userId: parseInt(payload.userId || payload.nameid || payload.id) || 0,
+      userId: parseInt(payload.userId || payload.nameid || payload.id) || -1,
       userGuid: payload.sub || payload.nameid || '',
       firstName: payload.given_name || payload.givenName || payload.first_name || '',
       lastName: payload.family_name || payload.familyName || payload.last_name || '',

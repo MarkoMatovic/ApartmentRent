@@ -4,6 +4,7 @@ using Lander;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lander.Migrations.Communications
 {
     [DbContext(typeof(CommunicationsContext))]
-    partial class CommunicationsContextModelSnapshot : ModelSnapshot
+    [Migration("20260428063914_AddPerformanceIndexes_Messages")]
+    partial class AddPerformanceIndexes_Messages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -148,7 +151,7 @@ namespace Lander.Migrations.Communications
                     b.Property<DateTime?>("CreatedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
-                        .HasDefaultValueSql("(GETUTCDATE())");
+                        .HasDefaultValueSql("(getdate())");
 
                     b.Property<string>("FileName")
                         .HasMaxLength(255)
@@ -194,7 +197,7 @@ namespace Lander.Migrations.Communications
                     b.Property<DateTime?>("SentAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
-                        .HasDefaultValueSql("(GETUTCDATE())");
+                        .HasDefaultValueSql("(getdate())");
 
                     b.HasKey("MessageId")
                         .HasName("PK__Messages__C87C0C9CEDE67554");

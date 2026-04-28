@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { messagesApi } from '../../api/messagesApi';
 import RejectionDialog from '../../components/Dialogs/RejectionDialog';
+import { apiBaseUrl } from '../api/client';
 
 interface Notification {
   id: string;
@@ -32,8 +33,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const [rejectionInfo, setRejectionInfo] = useState<{ apartmentTitle: string; apartmentId: number } | null>(null);
 
-  // Učitaj broj nepročitanih poruka
-  const refreshUnreadMessagesCount = async () => {
+  // Učitaj broj nepročitanih poruka — memoised so consumers get a stable reference
+  const refreshUnreadMessagesCount = useCallback(async () => {
     try {
       const token = sessionStorage.getItem('authToken');
       if (!token) return;
@@ -49,11 +50,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     } catch (error) {
       // Ignoriši greške
     }
-  };
+  }, []);
 
   useEffect(() => {
+    const notificationHubUrl = import.meta.env.VITE_SIGNALR_URL || (apiBaseUrl + '/notificationHub');
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(import.meta.env.VITE_SIGNALR_URL || 'https://localhost:7092/notificationHub')
+      .withUrl(notificationHubUrl)
       .withAutomaticReconnect()
       .build();
 
@@ -98,7 +100,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (!userId) return;
 
-      const chatHubUrl = (import.meta.env.VITE_API_URL || 'https://localhost:7092') + '/chatHub';
+      const chatHubUrl = apiBaseUrl + '/chatHub';
       const newChatConnection = new signalR.HubConnectionBuilder()
         .withUrl(chatHubUrl, {
           accessTokenFactory: () => token

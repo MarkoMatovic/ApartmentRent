@@ -85,13 +85,13 @@ public class CommunicationsContext : DbContext, IUnitOfWork
             entity.ToTable("Messages", "Communication");
 
             entity.Property(e => e.CreatedDate)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(GETUTCDATE())")
                 .HasColumnType("datetime");
             entity.Property(e => e.IsRead).HasDefaultValue(false);
             entity.Property(e => e.MessageText).HasColumnType("text");
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.SentAt)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(GETUTCDATE())")
                 .HasColumnType("datetime");
 
             entity.Property(e => e.FileUrl).HasMaxLength(500);
@@ -104,6 +104,12 @@ public class CommunicationsContext : DbContext, IUnitOfWork
             // User entities are in UsersRoles schema, not Communication schema
             entity.Ignore(e => e.Sender);
             entity.Ignore(e => e.Receiver);
+
+            // Composite indexes for conversation queries (covers GetConversation + GetUserConversations)
+            entity.HasIndex(e => new { e.SenderId, e.ReceiverId, e.SentAt })
+                  .HasDatabaseName("IX_Messages_SenderId_ReceiverId_SentAt");
+            entity.HasIndex(e => new { e.ReceiverId, e.IsRead })
+                  .HasDatabaseName("IX_Messages_ReceiverId_IsRead");
         });
 
         modelBuilder.Entity<EmailLog>(entity =>

@@ -11,7 +11,7 @@ public static class ApiActionsV1
     public const string Register = "register";
     public const string Login = "login";
     public const string Logout = "logout";
-    public const string DeleteUser = "delete-user";
+    public const string DeleteUser = "delete-user/{userGuid}";
     public const string DeactivateUser = "deactivate-user";
     public const string ReactivateUser = "reactivate-user";
     public const string ChangePassword = "change-password";

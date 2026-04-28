@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import {
     Box,
     Button,
@@ -96,7 +97,7 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
 
                 {predictMutation.isError && (
                     <Alert severity="error">
-                        Failed to get price suggestion. {(predictMutation.error as any)?.response?.data?.message || 'Please try again.'}
+                        Failed to get price suggestion. {(predictMutation.error as AxiosError<{ message?: string }>)?.response?.data?.message || 'Please try again.'}
                     </Alert>
                 )}
 

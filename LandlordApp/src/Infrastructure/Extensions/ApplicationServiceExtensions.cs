@@ -95,6 +95,10 @@ public static class ApplicationServiceExtensions
         // User deletion handlers (decoupled cleanup via IUserDeletedHandler)
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Roommates.Implementation.RoommateUserDeletedHandler>();
+        services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Communication.Implementation.MessageUserDeletedHandler>();
+        services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Notifications.NotificationUserDeletedHandler>();
+        services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Analytics.AnalyticsUserDeletedHandler>();
+        services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.ApartmentApplications.ApplicationUserDeletedHandler>();
 
         // gRPC client for Reviews/Favorites microservice
         services.AddScoped<IGrpcServiceClient>(sp =>
