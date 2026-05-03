@@ -145,8 +145,23 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendApplicationStatusEmailAsync(string to, string tenantName, string apartmentTitle, string status)
     {
-        var subject = $"Application Status Update - {apartmentTitle}";
-        var templateData = new { TenantName = tenantName, ApartmentTitle = apartmentTitle, Status = status };
+        var statusLabel = status switch
+        {
+            "Approved"  => "Prijava odobrena",
+            "Rejected"  => "Prijava odbijena",
+            "Pending"   => "Prijava na cekanju",
+            "Cancelled" => "Prijava otkazana",
+            _           => status
+        };
+        var subject = $"Status prijave: {apartmentTitle}";
+        var templateData = new
+        {
+            TenantName     = tenantName,
+            ApartmentTitle = apartmentTitle,
+            Status         = status,
+            StatusLower    = status.ToLowerInvariant(),   // used for CSS class
+            StatusLabel    = statusLabel                   // localised display text
+        };
         return await SendTemplatedEmailAsync(to, subject, "ApplicationStatusEmail", templateData);
     }
 

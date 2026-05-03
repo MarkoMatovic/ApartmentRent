@@ -117,9 +117,7 @@ public class AuthService : IAuthService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
 
-        if (_timeProvider.GetUtcNow().UtcDateTime.AddYears(-18) < dto.DateOfBirth)
-            throw new ArgumentException("User must be at least 18 years old.");
-
+        
         var existingUser = await _context.Users.AnyAsync(u => u.Email == dto.Email);
         if (existingUser)
             throw new ConflictException("User with this email already exists.");

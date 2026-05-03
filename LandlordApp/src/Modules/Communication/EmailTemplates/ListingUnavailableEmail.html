@@ -1,39 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="bs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Listing Update</title>
+    <title>Oglas vise nije dostupan – TuRentaj</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background-color: #1976d2; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; background-color: #f9f9f9; }
-        .alert-box { background-color: #fff3e0; padding: 20px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #ff9800; }
-        .apartment-title { font-size: 22px; font-weight: bold; color: #333; }
-        .reason { color: #666; font-size: 14px; }
-        .button { display: inline-block; padding: 12px 24px; background-color: #1976d2; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
-        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f0f2f5; }
+        .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .header { background-color: #546e7a; color: white; padding: 32px 24px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 32px 24px; }
+        .info-box { background: #eceff1; border-radius: 6px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid #78909c; }
+        .button-wrap { text-align: center; margin: 28px 0; }
+        .button { display: inline-block; padding: 14px 32px; background-color: #1976d2; color: white !important; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: bold; }
+        .footer { text-align: center; padding: 20px 24px; font-size: 12px; color: #888; border-top: 1px solid #eee; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Listing Status Update</h1>
+            <h1>Oglas vise nije dostupan</h1>
         </div>
         <div class="content">
-            <h2>Hello {{UserName}},</h2>
-            <p>We wanted to let you know about a change to a listing you have saved:</p>
-            <div class="alert-box">
-                <div class="apartment-title">{{ApartmentTitle}}</div>
-                <p class="reason">{{Reason}}</p>
+            <p>Zdravo <strong>{{UserName}}</strong>,</p>
+            <p>Oglas koji ste sacuvali ili za koji ste se prijavili vise nije dostupan:</p>
+            <div class="info-box">
+                <p><strong>Stan:</strong> {{ApartmentTitle}}</p>
+                <p><strong>Razlog:</strong> {{Reason}}</p>
             </div>
-            <p>You may want to browse other available listings that match your criteria.</p>
-            <a href="https://landlander.com/apartments" class="button">Browse Listings</a>
+            <p>Ne brinite — ima jos mnogo dostupnih stanova. Pretrazite nase oglase i pronadjite novi dom!</p>
+            <div class="button-wrap">
+                <a href="https://turentaj.com/apartments" class="button">Pretrazi oglase</a>
+            </div>
         </div>
         <div class="footer">
-            <p>&copy; 2024 Landlander Platform. All rights reserved.</p>
-            <p>You can manage your saved searches and email preferences in your account settings.</p>
+            <p>&copy; 2026 TuRentaj. Sva prava zadrzana.</p>
+            <p>Pitanja? Pisite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
         </div>
     </div>
 </body>
