@@ -73,4 +73,11 @@
     <Folder Include="src\Modules\ApartmentApplications\Implementation\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Copy email templates to output directory so EmailTemplateRenderer can find them at runtime -->
+    <Content Include="src\Modules\Communication\EmailTemplates\*.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
