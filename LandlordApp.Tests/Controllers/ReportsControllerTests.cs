@@ -93,7 +93,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ReviewReportAsync(1, dto, AdminUserId))
             .ReturnsAsync(true);
 
-        var result = await _controller.ReviewReport(1, dto, AdminUserId);
+        var result = await _controller.ReviewReport(1, dto);
 
         result.Should().BeOfType<OkResult>();
     }
@@ -105,7 +105,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ReviewReportAsync(999, dto, AdminUserId))
             .ReturnsAsync(false);
 
-        var result = await _controller.ReviewReport(999, dto, AdminUserId);
+        var result = await _controller.ReviewReport(999, dto);
 
         result.Should().BeOfType<NotFoundResult>();
     }
@@ -117,7 +117,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ReviewReportAsync(It.IsAny<int>(), It.IsAny<UpdateReportStatusDto>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("Review failed"));
 
-        Func<Task> act = async () => await _controller.ReviewReport(1, dto, AdminUserId);
+        Func<Task> act = async () => await _controller.ReviewReport(1, dto);
 
         await act.Should().ThrowAsync<Exception>().WithMessage("Review failed");
     }
@@ -131,7 +131,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ResolveReportAsync(1, dto, AdminUserId))
             .ReturnsAsync(true);
 
-        var result = await _controller.ResolveReport(1, dto, AdminUserId);
+        var result = await _controller.ResolveReport(1, dto);
 
         result.Should().BeOfType<OkResult>();
     }
@@ -143,7 +143,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ResolveReportAsync(999, dto, AdminUserId))
             .ReturnsAsync(false);
 
-        var result = await _controller.ResolveReport(999, dto, AdminUserId);
+        var result = await _controller.ResolveReport(999, dto);
 
         result.Should().BeOfType<NotFoundResult>();
     }
@@ -155,7 +155,7 @@ public class ReportsControllerTests
         _mockReportService.Setup(s => s.ResolveReportAsync(It.IsAny<int>(), It.IsAny<UpdateReportStatusDto>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("Resolve failed"));
 
-        Func<Task> act = async () => await _controller.ResolveReport(1, dto, AdminUserId);
+        Func<Task> act = async () => await _controller.ResolveReport(1, dto);
 
         await act.Should().ThrowAsync<Exception>().WithMessage("Resolve failed");
     }

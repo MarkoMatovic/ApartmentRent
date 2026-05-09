@@ -55,11 +55,26 @@ public class ApartmentApplicationServiceTests : IDisposable
             .Setup(x => x.GetApartmentsByLandlordIdAsync(LandlordUserId))
             .ReturnsAsync(new List<ApartmentDto> { new() { ApartmentId = ApartmentId, Title = "Test Apartment" } });
 
+        var listingsOptions = new DbContextOptionsBuilder<ListingsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var usersOptions = new DbContextOptionsBuilder<UsersContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var listingsContext = new ListingsContext(listingsOptions);
+        var usersContext    = new UsersContext(usersOptions);
+
+        var mockHttp = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+        mockHttp.Setup(x => x.HttpContext).Returns(new Microsoft.AspNetCore.Http.DefaultHttpContext());
+
         _service = new ApartmentApplicationService(
             _context,
+            listingsContext,
+            usersContext,
             _mockApartmentService.Object,
             _mockNotificationHub.Object,
-            _mockUserService.Object);
+            _mockUserService.Object,
+            mockHttp.Object);
     }
 
     public void Dispose()

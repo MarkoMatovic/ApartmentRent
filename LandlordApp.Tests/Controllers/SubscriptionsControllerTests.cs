@@ -3,11 +3,16 @@ using Moq;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.IO;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Payments.Models;
 using Lander.src.Modules.Payments.Controllers;
-using static Lander.src.Modules.Payments.Controllers.SubscriptionsController;
+using Lander.src.Modules.Payments.Dtos;
 
 namespace LandlordApp.Tests.Controllers;
 
@@ -29,8 +34,10 @@ public class SubscriptionsControllerTests
     public SubscriptionsControllerTests()
     {
         _mockPaymentService = new Mock<IPaymentService>();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var logger = new Mock<ILogger<SubscriptionsController>>().Object;
 
-        _controller = new SubscriptionsController(_mockPaymentService.Object);
+        _controller = new SubscriptionsController(_mockPaymentService.Object, config, logger);
         _controller.ControllerContext = MakeAuthContext();
     }
 
@@ -39,7 +46,9 @@ public class SubscriptionsControllerTests
     [Fact]
     public async Task Checkout_NoUserIdClaim_ReturnsUnauthorized()
     {
-        var controller = new SubscriptionsController(_mockPaymentService.Object);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+        var logger = new Mock<ILogger<SubscriptionsController>>().Object;
+        var controller = new SubscriptionsController(_mockPaymentService.Object, config, logger);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -48,7 +57,7 @@ public class SubscriptionsControllerTests
             }
         };
 
-        var result = await controller.Checkout(new CheckoutRequest { PlanType = "Monthly", Amount = 9.99m });
+        var result = await controller.Checkout(new CheckoutRequestDto { PlanType = "Monthly", Amount = 9.99m });
 
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
@@ -56,7 +65,7 @@ public class SubscriptionsControllerTests
     [Fact]
     public async Task Checkout_ReturnsOkWithCheckoutUrl()
     {
-        var request = new CheckoutRequest { PlanType = "Monthly", Amount = 9.99m };
+        var request = new CheckoutRequestDto { PlanType = "Monthly", Amount = 9.99m };
         _mockPaymentService.Setup(s => s.InitiateCheckoutAsync(1, "Monthly", 9.99m))
             .ReturnsAsync("https://checkout.example.com/session");
 
@@ -69,7 +78,7 @@ public class SubscriptionsControllerTests
     [Fact]
     public async Task Checkout_ServiceThrows_Throws()
     {
-        var request = new CheckoutRequest { PlanType = "Monthly", Amount = 9.99m };
+        var request = new CheckoutRequestDto { PlanType = "Monthly", Amount = 9.99m };
         _mockPaymentService.Setup(s => s.InitiateCheckoutAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<decimal>()))
             .ThrowsAsync(new Exception("Payment gateway error"));
 
@@ -79,43 +88,55 @@ public class SubscriptionsControllerTests
     }
 
     // ─── Webhook ──────────────────────────────────────────────────────────────
+    // Webhook() reads raw body — no secret configured in tests → HMAC check skipped.
 
     [Fact]
     public async Task Webhook_Success_ReturnsOk()
     {
-        var payload = new PaytenWebhookPayload { TransactionId = "txn-123", Status = "approved" };
         _mockPaymentService.Setup(s => s.ProcessWebhookAsync("txn-123", "approved"))
             .ReturnsAsync(true);
+        SetupWebhookBody(new { transactionId = "txn-123", status = "approved" });
 
-        var result = await _controller.Webhook(payload);
+        var result = await _controller.Webhook();
 
         result.Should().BeOfType<OkResult>();
     }
 
     [Fact]
-    public async Task Webhook_ProcessReturnsFalse_ReturnsBadRequest()
+    public async Task Webhook_ProcessReturnsFalse_StillReturnsOk()
     {
-        var payload = new PaytenWebhookPayload { TransactionId = "txn-404", Status = "declined" };
+        // Controller does not inspect the return value of ProcessWebhookAsync.
         _mockPaymentService.Setup(s => s.ProcessWebhookAsync("txn-404", "declined"))
             .ReturnsAsync(false);
+        SetupWebhookBody(new { transactionId = "txn-404", status = "declined" });
 
-        var result = await _controller.Webhook(payload);
+        var result = await _controller.Webhook();
 
-        // The controller currently returns Ok() regardless; adjust expectation to match actual implementation.
-        // The controller does not check the return value of ProcessWebhookAsync, so it always returns Ok.
         result.Should().BeOfType<OkResult>();
     }
 
     [Fact]
     public async Task Webhook_ServiceThrows_Throws()
     {
-        var payload = new PaytenWebhookPayload { TransactionId = "txn-err", Status = "error" };
         _mockPaymentService.Setup(s => s.ProcessWebhookAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("Webhook processing failed"));
+        SetupWebhookBody(new { transactionId = "txn-err", status = "error" });
 
-        var act = async () => await _controller.Webhook(payload);
+        var act = async () => await _controller.Webhook();
 
         await act.Should().ThrowAsync<Exception>();
+    }
+
+    /// <summary>Sets the controller's Request.Body to a seekable MemoryStream with the JSON-serialized payload.
+    /// No webhook secret is configured so the HMAC check is skipped automatically.</summary>
+    private void SetupWebhookBody(object payload)
+    {
+        var json  = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes(json);
+        var ctx   = _controller.ControllerContext.HttpContext;
+        ctx.Request.Body          = new MemoryStream(bytes);
+        ctx.Request.ContentType   = "application/json";
+        ctx.Request.ContentLength = bytes.Length;
     }
 
     // ─── GetStatus ────────────────────────────────────────────────────────────

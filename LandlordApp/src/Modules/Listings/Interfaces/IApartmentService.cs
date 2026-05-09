@@ -1,24 +1,17 @@
-using Lander.src.Common;
-using Lander.src.Modules.Listings.Dtos.Dto;
-using Lander.src.Modules.Listings.Dtos.InputDto;
-using Lander.src.Modules.MachineLearning.Services;
 namespace Lander.src.Modules.Listings.Interfaces;
-public interface IApartmentService
-{
-    Task<ApartmentDto> CreateApartmentAsync(ApartmentInputDto apartmentInputDto);
-    Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId);
-    Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync();
-    Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters);
-    Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync();
-    Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto);
-    Task<bool> DeleteApartmentAsync(int apartmentId);
-    Task<bool> ActivateApartmentAsync(int apartmentId);
-    Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId);
-    Task DeleteApartmentsByLandlordIdAsync(int landlordId);
-    
-    Task<KeysetPagedResult<ApartmentDto>> GetAllApartmentsKeysetAsync(ApartmentFilterDto filters, int? afterId, int pageSize = 20);
 
-    // .NET 10 Feature: Vector Search methods
-    Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync();
-    Task<int> GenerateEmbeddingsForAllApartmentsAsync(SimpleEmbeddingService embeddingService);
+/// <summary>
+/// Unified apartment service interface — extends both the query and command sub-interfaces
+/// so existing consumers (controllers, tests) continue to work without changes.
+///
+/// New consumers should prefer the narrower <see cref="IApartmentQueryService"/> or
+/// <see cref="IApartmentCommandService"/> interfaces directly.
+///
+/// Implementation: <see cref="Lander.src.Modules.Listings.Implementation.ApartmentService"/>
+/// (composed of three partial classes: .cs / .Queries.cs / .Commands.cs)
+/// </summary>
+public interface IApartmentService : IApartmentQueryService, IApartmentCommandService
+{
+    // All members inherited from the two sub-interfaces.
+    // No additional members — this interface is intentionally a seam only.
 }

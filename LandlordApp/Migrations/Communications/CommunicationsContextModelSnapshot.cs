@@ -131,6 +131,9 @@ namespace Lander.Migrations.Communications
                     b.HasKey("EmailLogId")
                         .HasName("PK__EmailLogs__C87C0C9D");
 
+                    b.HasIndex("SentAt")
+                        .HasDatabaseName("IX_EmailLogs_SentAt");
+
                     b.ToTable("EmailLogs", "Communication");
                 });
 

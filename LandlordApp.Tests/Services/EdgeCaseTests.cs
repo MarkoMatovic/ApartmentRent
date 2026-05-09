@@ -212,12 +212,16 @@ public class AppointmentServiceConflictTests : IDisposable
         var mockApproval = new Mock<IApplicationApprovalService>();
         mockApproval.Setup(x => x.HasApprovedApplicationAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
 
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+
         _service = new AppointmentService(
             _appointments, _listings, _users,
             new Mock<IEmailService>().Object,
             _mockHttp.Object,
             new Mock<ILogger<AppointmentService>>().Object,
-            mockApproval.Object);
+            mockApproval.Object,
+            config);
     }
 
     public void Dispose()
@@ -342,11 +346,27 @@ public class ApartmentServiceFeaturesTests : IDisposable
         var mockHub = new Mock<IHubContext<NotificationHub>>();
         mockHub.Setup(h => h.Clients).Returns(mockHubClients.Object);
 
+        var mockReviewStats2 = new Mock<IReviewStatsProvider>();
+        mockReviewStats2
+            .Setup(r => r.GetBatchAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, ReviewStats>());
+        mockReviewStats2
+            .Setup(r => r.GetForApartmentAsync(It.IsAny<int>()))
+            .ReturnsAsync((ReviewStats?)null);
+
+        var mockUserLookup2 = new Mock<IListingsUserLookup>();
+        mockUserLookup2
+            .Setup(u => u.GetUserIdByGuidAsync(It.IsAny<Guid>()))
+            .ReturnsAsync((int?)null);
+        mockUserLookup2
+            .Setup(u => u.GetLandlordBriefAsync(It.IsAny<int>()))
+            .ReturnsAsync((LandlordBrief?)null);
+
         _service = new ApartmentService(
             _context,
-            _usersContext,
+            mockReviewStats2.Object,
+            mockUserLookup2.Object,
             new Mock<Microsoft.Extensions.Caching.Hybrid.HybridCache>().Object,
-            reviewsCtx,
             new Mock<Lander.src.Modules.Listings.Services.IApartmentNotificationService>().Object,
             new Mock<Lander.src.Modules.Users.Services.IUserRoleUpgradeService>().Object,
             mockHttp.Object,
@@ -356,7 +376,8 @@ public class ApartmentServiceFeaturesTests : IDisposable
             new Lander.src.Modules.Listings.Services.ApartmentCacheVersionService(),
             new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
-            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object);
+            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
+            new Mock<IConfiguration>().Object);
     }
 
     public void Dispose()

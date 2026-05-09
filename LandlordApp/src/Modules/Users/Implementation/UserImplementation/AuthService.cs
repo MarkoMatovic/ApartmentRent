@@ -54,7 +54,14 @@ public class AuthService : IAuthService
         var user = await _context.Users
             .Include(u => u.UserRole)
             .FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null) return null;
+
+        // Dummy verify kada korisnik ne postoji — sprečava timing attack koji bi otkrio
+        // koje email adrese su registrovane (S-4 fix)
+        if (user == null)
+        {
+            BCrypt.Net.BCrypt.Verify(dto.Password, "$2a$12$dummyhashfortimingneutralityxxxxxxxxxxxxxxxxxxxxxxx.");
+            return null;
+        }
 
         if (user.LockoutUntil.HasValue && user.LockoutUntil.Value > _timeProvider.GetUtcNow().UtcDateTime)
         {
@@ -66,7 +73,7 @@ public class AuthService : IAuthService
         {
             // Atomic increment to avoid lost-update race on concurrent login attempts
             await _context.Database.ExecuteSqlRawAsync(
-                "UPDATE [users].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
+                "UPDATE [UsersRoles].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
                 user.UserId);
             await _context.Entry(user).ReloadAsync();
             var maxAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);

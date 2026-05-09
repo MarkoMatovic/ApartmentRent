@@ -4,10 +4,7 @@ using Lander.src.Modules.Roommates.Dtos.InputDto;
 namespace Lander.src.Modules.Roommates.Interfaces;
 public interface IRoommateService
 {
-    Task<IEnumerable<RoommateDto>> GetAllRoommatesAsync(string? location = null, decimal? minBudget = null, decimal? maxBudget = null, 
-        bool? smokingAllowed = null, bool? petFriendly = null, string? lifestyle = null, string? profession = null, DateOnly? availableFrom = null, 
-        int? stayDuration = null, int? apartmentId = null);
-    Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(string? location, decimal? minBudget, decimal? maxBudget, 
+    Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(string? location, decimal? minBudget, decimal? maxBudget,
         bool? smokingAllowed, bool? petFriendly, string? lifestyle, string? profession, DateOnly? availableFrom, int? stayDuration, 
         int? apartmentId, int page, int pageSize);
     Task<RoommateDto?> GetRoommateByIdAsync(int id);

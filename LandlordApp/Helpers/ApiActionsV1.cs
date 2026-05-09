@@ -1,6 +1,4 @@
-﻿using Microsoft.Identity.Client;
-
-namespace Lander.Helpers;
+﻿namespace Lander.Helpers;
 
 public static class ApiActionsV1
 {

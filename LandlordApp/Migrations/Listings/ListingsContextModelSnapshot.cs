@@ -105,6 +105,9 @@ namespace Lander.Migrations.Listings
                     b.Property<decimal?>("Latitude")
                         .HasColumnType("decimal(9,6)");
 
+                    b.Property<DateTime?>("ListingExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ListingType")
                         .HasColumnType("int");
 
@@ -132,6 +135,9 @@ namespace Lander.Migrations.Listings
 
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(10, 2)");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("Rent")
                         .HasColumnType("decimal(10, 2)");
@@ -167,6 +173,9 @@ namespace Lander.Migrations.Listings
                     b.HasIndex("IsImmediatelyAvailable");
 
                     b.HasIndex("LandlordId");
+
+                    b.HasIndex("ListingExpiresAt")
+                        .HasDatabaseName("IX_Apartments_ListingExpiresAt");
 
                     b.HasIndex("ListingType");
 

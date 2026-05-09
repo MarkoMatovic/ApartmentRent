@@ -3,6 +3,7 @@ using Lander.src.Common;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
+using Lander.src.Modules.Listings.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -10,28 +11,6 @@ namespace Lander.src.Modules.Listings.Implementation;
 
 public partial class ApartmentService
 {
-    public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync()
-    {
-        var apartments = await _context.Apartments
-            .Include(a => a.ApartmentImages)
-            // Named query filter automatically applies: !a.IsDeleted && a.IsActive
-            .AsNoTracking()
-            .AsSplitQuery()
-            .OrderByDescending(a => a.IsFeatured)
-            .ThenBy(a => a.Rent)
-            .Take(100)
-            .ToListAsync();
-
-        var apartmentDtos = apartments.Select(a => a.ToDto()).ToList();
-        return new PagedResult<ApartmentDto>
-        {
-            Items = apartmentDtos,
-            TotalCount = apartmentDtos.Count,
-            Page = 1,
-            PageSize = 100
-        };
-    }
-
     public async Task<PagedResult<ApartmentDto>> GetAllApartmentsAsync(ApartmentFilterDto filters)
     {
         if (filters.City != null || filters.MinRent.HasValue || filters.MaxRent.HasValue || filters.ListingType.HasValue)
@@ -71,17 +50,7 @@ public partial class ApartmentService
                     filters.Page, filters.PageSize, totalCount);
 
                 var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
-                var reviewStats = await _reviewsContext.Reviews
-                    .AsNoTracking()
-                    .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
-                    .GroupBy(r => r.ApartmentId)
-                    .Select(g => new
-                    {
-                        ApartmentId = g.Key,
-                        AverageRating = g.Average(r => (decimal?)r.Rating),
-                        ReviewCount = g.Count()
-                    })
-                    .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x, ct);
+                var reviewStats = await _reviewStats.GetBatchAsync(apartmentIds, ct);
 
                 var items = apartments
                     .Select(a =>
@@ -129,17 +98,7 @@ public partial class ApartmentService
 
         var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
 
-        var reviewStats = await _reviewsContext.Reviews
-            .AsNoTracking()
-            .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
-            .GroupBy(r => r.ApartmentId)
-            .Select(g => new
-            {
-                ApartmentId = g.Key,
-                AverageRating = g.Average(r => (decimal?)r.Rating),
-                ReviewCount = g.Count()
-            })
-            .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
+        var reviewStats = await _reviewStats.GetBatchAsync(apartmentIds);
 
         var dtoQuery = apartments
             .OrderBy(a => a.ApartmentId)
@@ -159,11 +118,7 @@ public partial class ApartmentService
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         int? landlordId = null;
         if (currentUserGuid != null && Guid.TryParse(currentUserGuid, out Guid parsedGuid))
-        {
-            var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-            if (user != null)
-                landlordId = user.UserId;
-        }
+            landlordId = await _userLookup.GetUserIdByGuidAsync(parsedGuid);
         if (!landlordId.HasValue)
         {
             return new PagedResult<ApartmentDto>
@@ -174,25 +129,29 @@ public partial class ApartmentService
                 PageSize = 20
             };
         }
+        // IgnoreQueryFilters: landlords must see ALL their own listings including inactive ones
+        // (e.g. a temporarily deactivated listing they want to reactivate).
+        // The IsDeleted guard is re-applied manually so deleted items stay hidden.
+        // The filtered Include keeps its explicit guard because IgnoreQueryFilters() also
+        // suppresses the ApartmentImage global query filter on the same query.
+
+        // Hard cap: even a very prolific landlord should not be able to cause a
+        // response that serialises thousands of apartments in one shot.
+        const int HardCap = 200;
+
         var query = _context.Apartments
+            .IgnoreQueryFilters()
             .Where(a => !a.IsDeleted && a.LandlordId == landlordId.Value)
             .AsNoTracking();
         var totalCount = await query.CountAsync();
         var apartments = await query
             .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
             .OrderByDescending(a => a.CreatedDate)
+            .AsSplitQuery()   // avoids cartesian join explosion when many images per apartment
+            .Take(HardCap)
             .ToListAsync();
         var apartmentIds = apartments.Select(a => a.ApartmentId).ToList();
-        var reviewStats = await _reviewsContext.Reviews
-            .Where(r => r.ApartmentId.HasValue && apartmentIds.Contains(r.ApartmentId.Value) && r.IsPublic)
-            .GroupBy(r => r.ApartmentId)
-            .Select(g => new
-            {
-                ApartmentId = g.Key,
-                AverageRating = g.Average(r => (decimal?)r.Rating),
-                ReviewCount = g.Count()
-            })
-            .ToDictionaryAsync(x => x.ApartmentId ?? 0, x => x);
+        var reviewStats = await _reviewStats.GetBatchAsync(apartmentIds);
 
         var items = apartments
             .Select(a =>
@@ -202,12 +161,17 @@ public partial class ApartmentService
             })
             .ToList();
 
+        if (totalCount > HardCap)
+            _logger.LogWarning(
+                "GetMyApartmentsAsync: landlord {LandlordId} has {Total} apartments; response capped at {Cap}.",
+                landlordId.Value, totalCount, HardCap);
+
         return new PagedResult<ApartmentDto>
         {
             Items = items,
             TotalCount = totalCount,
             Page = 1,
-            PageSize = totalCount
+            PageSize = Math.Min(totalCount, HardCap)
         };
     }
 
@@ -217,30 +181,21 @@ public partial class ApartmentService
         var userIdClaim = ctx?.User?.FindFirstValue("userId");
         int? userId = int.TryParse(userIdClaim, out var parsedId) ? parsedId : null;
 
+        // Global query filters cover: !a.IsDeleted && a.IsActive (Apartment)
+        //                             !img.IsDeleted           (ApartmentImage)
         var apartment = await _context.Apartments
-            .Include(a => a.ApartmentImages.Where(img => !img.IsDeleted))
+            .Include(a => a.ApartmentImages)
             .AsNoTracking()
-            .Where(a => a.ApartmentId == apartmentId && !a.IsDeleted)
+            .Where(a => a.ApartmentId == apartmentId)
             .FirstOrDefaultAsync();
         if (apartment == null)
             return null;
 
-        Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User? landlord = null;
+        LandlordBrief? landlord = null;
         if (apartment.LandlordId.HasValue)
-        {
-            landlord = await _usersContext.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserId == apartment.LandlordId.Value);
-        }
-        var reviewStats = await _reviewsContext.Reviews
-            .Where(r => r.ApartmentId == apartmentId && r.IsPublic)
-            .GroupBy(r => r.ApartmentId)
-            .Select(g => new
-            {
-                AverageRating = g.Average(r => (decimal?)r.Rating),
-                ReviewCount = g.Count()
-            })
-            .FirstOrDefaultAsync();
+            landlord = await _userLookup.GetLandlordBriefAsync(apartment.LandlordId.Value);
+
+        var reviewStats = await _reviewStats.GetForApartmentAsync(apartmentId);
 
         // Fire-and-forget AFTER all DB queries — avoids concurrent scoped DbContext access.
         _ = _analyticsService.TrackEventAsync(
@@ -291,7 +246,6 @@ public partial class ApartmentService
             AverageRating = reviewStats?.AverageRating ?? 0,
             ReviewCount = reviewStats?.ReviewCount ?? 0,
             ApartmentImages = apartment.ApartmentImages?
-                .Where(img => !img.IsDeleted)
                 .OrderBy(img => img.DisplayOrder)
                 .Select(img => new ApartmentImageDto
                 {
@@ -307,11 +261,14 @@ public partial class ApartmentService
 
     public async Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId)
     {
+        // Global query filter handles !a.IsDeleted && a.IsActive — no manual check needed.
         var apartments = await _context.Apartments
             .Include(a => a.ApartmentImages)
             .AsNoTracking()
-            .Where(a => a.LandlordId == landlordId && !a.IsDeleted)
+            .AsSplitQuery()
+            .Where(a => a.LandlordId == landlordId)
             .OrderByDescending(a => a.CreatedDate)
+            .Take(500) // safety cap — covers even very prolific landlords
             .ToListAsync();
 
         return apartments.Select(a => a.ToDto(imageLimit: 0)).ToList();
@@ -322,9 +279,9 @@ public partial class ApartmentService
     // materialising the entire table into memory during embedding comparison.
     public async Task<List<ApartmentDto>> GetAllApartmentsForSemanticSearchAsync()
     {
+        // Global query filter automatically applies: !a.IsDeleted && a.IsActive
         var apartments = await _context.Apartments
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && a.IsActive)
             .OrderByDescending(a => a.CreatedDate)
             .Take(1000)
             .Select(a => new ApartmentDto

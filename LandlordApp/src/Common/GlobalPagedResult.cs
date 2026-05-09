@@ -19,8 +19,22 @@ public static class KeysetPagedResultExtensions
     {
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
-        var items = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-            .ToListAsync(source.Take(pageSize + 1), ct);
+
+        var limited = source.Take(pageSize + 1);
+
+        // EF Core-backed IQueryable<T> implements IAsyncEnumerable<T>.
+        // In-memory IQueryable (e.g. List.AsQueryable()) does NOT — use sync ToList() there.
+        List<T> items;
+        if (limited is IAsyncEnumerable<T> asyncEnum)
+        {
+            items = new List<T>();
+            await foreach (var item in asyncEnum.WithCancellation(ct))
+                items.Add(item);
+        }
+        else
+        {
+            items = limited.ToList();
+        }
 
         string? nextPageToken = null;
         if (items.Count > pageSize)

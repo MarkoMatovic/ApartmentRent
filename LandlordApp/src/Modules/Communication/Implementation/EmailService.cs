@@ -17,6 +17,10 @@ namespace Lander.src.Modules.Communication.Implementation;
 
 public class EmailService : IEmailService
 {
+    // NOTE: sib_api_v3_sdk uses a global static Configuration.Default.  In a future
+    // refactoring this should be replaced with a per-request ApiClient instance that
+    // accepts the API key in its constructor so multi-tenant scenarios are safe.
+    // For now, the key is set once at startup in the constructor (idempotent).
     private static readonly ResiliencePipeline _pipeline = new ResiliencePipelineBuilder()
         .AddRetry(new Polly.Retry.RetryStrategyOptions
         {
@@ -53,14 +57,29 @@ public class EmailService : IEmailService
         _httpContextAccessor = httpContextAccessor;
         _templateRenderer = templateRenderer;
         _logger = logger;
-        Configuration.Default.AddApiKey("api-key", _settings.ApiKey);
+        // Guard: warn early if key is missing rather than getting cryptic 401s later.
+        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+            logger.LogWarning("Brevo API key is not configured — email sending will fail.");
+        // Note: the legacy global Configuration.Default is intentionally NOT used here.
+        // Each send call creates its own Configuration instance (see CreateApiConfiguration).
+    }
+
+    /// <summary>
+    /// Creates a per-call Brevo configuration so the API key is never shared via the
+    /// static Configuration.Default — safe in multi-tenant and concurrent scenarios.
+    /// </summary>
+    private Configuration CreateApiConfiguration()
+    {
+        var config = new Configuration();
+        config.AddApiKey("api-key", _settings.ApiKey ?? string.Empty);
+        return config;
     }
 
     public async Task<bool> SendEmailAsync(string to, string subject, string htmlContent)
     {
         try
         {
-            var apiInstance = new TransactionalEmailsApi();
+            var apiInstance = new TransactionalEmailsApi(CreateApiConfiguration());
 
             var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
             var toList = new List<SendSmtpEmailTo> { new SendSmtpEmailTo(to) };
@@ -97,7 +116,7 @@ public class EmailService : IEmailService
     {
         try
         {
-            var apiInstance = new TransactionalEmailsApi();
+            var apiInstance = new TransactionalEmailsApi(CreateApiConfiguration());
 
             var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
             var toList = recipients.Select(r => new SendSmtpEmailTo(r)).ToList();
@@ -109,7 +128,8 @@ public class EmailService : IEmailService
                 htmlContent: htmlContent
             );
 
-            var result = await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail));
+            var result = await _pipeline.ExecuteAsync(async ct =>
+                await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail), ct));
             var messageId = result?.MessageId;
 
             foreach (var recipient in recipients)
@@ -215,7 +235,10 @@ public class EmailService : IEmailService
             UserId = userId,
             RecipientEmail = recipientEmail,
             Subject = subject,
-            HtmlContent = htmlContent,
+            // Do NOT persist the full HTML body — it can be kilobytes per email and accumulates
+            // to gigabytes over time. It also contains PII (names, links with tokens) which
+            // creates a GDPR retention problem. Log only what is needed for delivery tracing.
+            HtmlContent = null,
             TemplateId = templateId,
             SentAt = DateTime.UtcNow,
             IsDelivered = isDelivered,

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, RegisterRequest } from '../types/user';
 import { Permission } from '../types/permission';
 import { authApi } from '../api/auth';
+import { apiClient } from '../api/client';
+import { setAccessToken } from '../api/tokenStore';
 
 interface AuthContextType {
   user: User | null;
@@ -42,7 +44,6 @@ const decodeToken = (token: string): User | null => {
 
     const payload = JSON.parse(jsonPayload);
 
-    // Extract permissions from claims (can be array or single value)
     let permissions: string[] = [];
     if (payload.permission) {
       permissions = Array.isArray(payload.permission)
@@ -89,61 +90,69 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = sessionStorage.getItem('authToken');
+      // Access token živi samo u memoriji (ne sessionStorage) zbog XSS zaštite.
+      // Na svakom page load-u tiho refreshujemo token koristeći httpOnly refresh cookie.
+      // Ako refresh cookie ne postoji ili je istekao, korisnik ostaje odjavljen.
       const storedUser = sessionStorage.getItem('user');
 
-      if (storedToken && !isTokenExpired(storedToken)) {
-        setToken(storedToken);
+      try {
+        const { data } = await apiClient.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
+
+        const newToken = data.accessToken;
+        setAccessToken(newToken);
+        setToken(newToken);
+
         if (storedUser) {
           try {
             setUser(JSON.parse(storedUser));
-          } catch (e) {
-            const decodedUser = decodeToken(storedToken);
-            if (decodedUser) {
-              setUser(decodedUser);
-              sessionStorage.setItem('user', JSON.stringify(decodedUser));
+          } catch {
+            const decoded = decodeToken(newToken);
+            if (decoded) {
+              setUser(decoded);
+              sessionStorage.setItem('user', JSON.stringify(decoded));
             }
           }
         } else {
-          const decodedUser = decodeToken(storedToken);
-          if (decodedUser) {
-            setUser(decodedUser);
-            sessionStorage.setItem('user', JSON.stringify(decodedUser));
-            // Pošalji custom event da se osveži broj nepročitanih poruka
-            window.dispatchEvent(new Event('authTokenChanged'));
+          const decoded = decodeToken(newToken);
+          if (decoded) {
+            setUser(decoded);
+            sessionStorage.setItem('user', JSON.stringify(decoded));
           }
         }
+
+        window.dispatchEvent(new Event('authTokenChanged'));
+      } catch {
+        // Refresh cookie ne postoji ili je istekao — korisnik nije ulogovan
+        setAccessToken(null);
+        sessionStorage.removeItem('user');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      const tokenResult = await authApi.login({ email, password });
+    const tokenResult = await authApi.login({ email, password });
 
-      if (!tokenResult?.accessToken || tokenResult.accessToken.split('.').length !== 3) {
-        throw new Error('Neispravan format tokena sa servera');
-      }
+    if (!tokenResult?.accessToken || tokenResult.accessToken.split('.').length !== 3) {
+      throw new Error('Neispravan format tokena sa servera');
+    }
 
-      setToken(tokenResult.accessToken);
-      sessionStorage.setItem('authToken', tokenResult.accessToken);
-      // Note: refresh token is stored in httpOnly cookie by the server — not handled here
+    // Token čuvamo samo u memoriji — ne u sessionStorage (S-6 fix)
+    setAccessToken(tokenResult.accessToken);
+    setToken(tokenResult.accessToken);
+    // Note: refresh token je httpOnly cookie, server ga postavlja automatski
 
-      // Pošalji custom event da se osveži broj nepročitanih poruka
-      window.dispatchEvent(new Event('authTokenChanged'));
+    window.dispatchEvent(new Event('authTokenChanged'));
 
-      const decodedUser = decodeToken(tokenResult.accessToken);
-      if (decodedUser) {
-        setUser(decodedUser);
-        sessionStorage.setItem('user', JSON.stringify(decodedUser));
-      } else {
-        throw new Error('Problem sa dekodiranjem korisničkih podataka');
-      }
-    } catch (error) {
-      throw error;
+    const decodedUser = decodeToken(tokenResult.accessToken);
+    if (decodedUser) {
+      setUser(decodedUser);
+      sessionStorage.setItem('user', JSON.stringify(decodedUser));
+    } else {
+      throw new Error('Problem sa dekodiranjem korisničkih podataka');
     }
   };
 
@@ -155,14 +164,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      // Refresh token is sent automatically via httpOnly cookie; no need to read it from storage
       await authApi.logout();
-    } catch (error) {
+    } catch {
       // Ignore logout errors — always clear local state
     } finally {
       setUser(null);
       setToken(null);
-      sessionStorage.removeItem('authToken');
+      setAccessToken(null);
       sessionStorage.removeItem('user');
     }
   };

@@ -1,3 +1,4 @@
+using Lander.src.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Lander;
@@ -8,41 +9,53 @@ public static class DatabaseServiceExtensions
 {
     public static IServiceCollection AddDatabaseContexts(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<UsersContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<UsersContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<ApplicationsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<ApplicationsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<ListingsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<ListingsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<NotificationContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<NotificationContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<ReviewsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<ReviewsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<CommunicationsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<CommunicationsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<RoommatesContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<RoommatesContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<SearchRequestsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<SearchRequestsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<SavedSearchesContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<SavedSearchesContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<AnalyticsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<AnalyticsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<Lander.src.Modules.Appointments.AppointmentsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
-        services.AddDbContext<Lander.src.Modules.Payments.PaymentsContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience()));
+        services.AddDbContext<Lander.src.Modules.Payments.PaymentsContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
         return services;
     }

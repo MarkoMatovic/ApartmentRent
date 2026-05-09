@@ -8,13 +8,17 @@ using Lander.src.Notifications.Dtos.Dto;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
+using Lander.src.Modules.Users.Interfaces.UserInterface;
+using System.Security.Claims;
 
 namespace LandlordApp.Tests.Controllers;
 
 public class NotificationsControllerTests
 {
     private readonly Mock<INotificationService> _mockService;
+    private readonly Mock<IUserInterface> _mockUserService;
     private readonly NotificationsController _controller;
+    private const int CurrentUserId = 5;
 
     private static readonly NotificationDto SampleNotification = new()
     {
@@ -24,11 +28,19 @@ public class NotificationsControllerTests
     public NotificationsControllerTests()
     {
         _mockService = new Mock<INotificationService>();
-        _controller = new NotificationsController(_mockService.Object);
-        _controller.ControllerContext = new ControllerContext
+        _mockUserService = new Mock<IUserInterface>();
+        _controller = new NotificationsController(_mockService.Object, _mockUserService.Object);
+        _controller.ControllerContext = MakeAuthContext(CurrentUserId);
+    }
+
+    private static ControllerContext MakeAuthContext(int userId)
+    {
+        var claims = new List<Claim> { new("userId", userId.ToString()) };
+        var httpContext = new DefaultHttpContext
         {
-            HttpContext = new DefaultHttpContext()
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
         };
+        return new ControllerContext { HttpContext = httpContext };
     }
 
     // ─── GetUserNotifications ─────────────────────────────────────────────────
@@ -143,9 +155,9 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAllAsRead_ReturnsOk()
     {
-        _mockService.Setup(s => s.MarkAllAsReadAsync(5)).ReturnsAsync(true);
+        _mockService.Setup(s => s.MarkAllAsReadAsync(CurrentUserId)).ReturnsAsync(true);
 
-        var result = await _controller.MarkAllAsRead(5);
+        var result = await _controller.MarkAllAsRead();
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(true);
     }
@@ -153,9 +165,9 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkAllAsRead_ReturnsFalse_ReturnsOkFalse()
     {
-        _mockService.Setup(s => s.MarkAllAsReadAsync(5)).ReturnsAsync(false);
+        _mockService.Setup(s => s.MarkAllAsReadAsync(CurrentUserId)).ReturnsAsync(false);
 
-        var result = await _controller.MarkAllAsRead(5);
+        var result = await _controller.MarkAllAsRead();
 
         result.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(false);
     }

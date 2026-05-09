@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
@@ -22,6 +23,7 @@ public class UserProfileService : IUserProfileService
     private readonly IEnumerable<IUserDeletedHandler> _deletionHandlers;
     private readonly IUserRoleUpgradeService _roleUpgradeService;
     private readonly ILogger<UserProfileService> _logger;
+    private readonly IAuditLogService _auditLog;
 
     public UserProfileService(
         UsersContext context,
@@ -31,7 +33,8 @@ public class UserProfileService : IUserProfileService
         IRoommateService roommateService,
         IEnumerable<IUserDeletedHandler> deletionHandlers,
         IUserRoleUpgradeService roleUpgradeService,
-        ILogger<UserProfileService> logger)
+        ILogger<UserProfileService> logger,
+        IAuditLogService auditLog)
     {
         _context = context;
         _reviewsContext = reviewsContext;
@@ -41,6 +44,7 @@ public class UserProfileService : IUserProfileService
         _deletionHandlers = deletionHandlers;
         _roleUpgradeService = roleUpgradeService;
         _logger = logger;
+        _auditLog = auditLog;
     }
 
     public async Task<User?> GetUserByGuidAsync(Guid userGuid)
@@ -106,6 +110,7 @@ public class UserProfileService : IUserProfileService
 
         // Single-entity update — no explicit transaction needed
         await _context.SaveEntitiesAsync();
+        _auditLog.Log("UpdateUserProfile", "User", userId, currentUserGuid);
 
         return new UserProfileDto
         {
@@ -191,6 +196,7 @@ public class UserProfileService : IUserProfileService
         foreach (var handler in _deletionHandlers)
             await handler.HandleAsync(user.UserId);
 
+        var callerGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
         var transaction = await _context.BeginTransactionAsync();
         try
         {
@@ -204,6 +210,7 @@ public class UserProfileService : IUserProfileService
             _context.RollBackTransaction();
             throw;
         }
+        _auditLog.Log("DeleteUser", "User", dto.UserGuid, callerGuid);
         return true;
     }
 

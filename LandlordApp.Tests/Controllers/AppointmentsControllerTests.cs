@@ -28,7 +28,7 @@ public class AppointmentsControllerTests
         _mockService = new Mock<IAppointmentService>();
         _mockLogger = new Mock<ILogger<AppointmentsController>>();
 
-        _controller = new AppointmentsController(_mockService.Object, _mockLogger.Object);
+        _controller = new AppointmentsController(_mockService.Object);
         _controller.ControllerContext = MakeAuthContext(1);
     }
 

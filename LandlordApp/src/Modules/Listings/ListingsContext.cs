@@ -143,6 +143,13 @@ public class ListingsContext : DbContext, IUnitOfWork
             // IsFeatured is used in ORDER BY on every listing query — needs its own index
             entity.HasIndex(e => new { e.IsFeatured, e.IsActive, e.IsDeleted, e.CreatedDate })
                   .HasDatabaseName("IX_Apartments_IsFeatured_IsActive_IsDeleted_CreatedDate");
+
+            // Listing expiration columns
+            entity.Property(e => e.ListingExpiresAt).HasColumnType("datetime2");
+            entity.Property(e => e.ReminderSentAt).HasColumnType("datetime2");
+            // The expiration background-service queries by ListingExpiresAt on every tick — needs an index.
+            entity.HasIndex(e => e.ListingExpiresAt)
+                  .HasDatabaseName("IX_Apartments_ListingExpiresAt");
         });
 
         modelBuilder.Entity<ApartmentImage>(entity =>
@@ -150,6 +157,10 @@ public class ListingsContext : DbContext, IUnitOfWork
             entity.HasKey(e => e.ImageId).HasName("PK__Apartmen__7516F70CD829ACA5");
 
             entity.ToTable("ApartmentImages", "Listings");
+
+            // Global filter — soft-deleted images never appear in query results.
+            // Use .IgnoreQueryFilters() when you explicitly need to see deleted images (e.g. audit).
+            entity.HasQueryFilter(img => !img.IsDeleted);
 
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(getdate())")

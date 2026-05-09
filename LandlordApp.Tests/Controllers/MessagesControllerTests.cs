@@ -32,8 +32,7 @@ public class MessagesControllerTests
             It.IsAny<string?>(), It.IsAny<string?>()))
             .Returns(Task.CompletedTask);
 
-        var logger = new Mock<ILogger<MessagesController>>().Object;
-        _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object, logger);
+        _controller = new MessagesController(_mockMessageService.Object, _mockAnalytics.Object);
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 

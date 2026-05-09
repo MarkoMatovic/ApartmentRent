@@ -26,7 +26,7 @@ public static class StartupValidation
 
     public static void ValidateSecrets(IConfiguration configuration, IWebHostEnvironment env)
     {
-        if (env.IsDevelopment()) return; // development koristi dotnet user-secrets
+        if (env.IsDevelopment() || env.IsEnvironment("Testing") || env.IsEnvironment("E2eTesting")) return;
 
         var missing = new List<string>();
         foreach (var key in RequiredKeys)
