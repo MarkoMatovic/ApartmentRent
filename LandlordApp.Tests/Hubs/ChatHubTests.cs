@@ -25,6 +25,16 @@ public class ChatHubTests
         _mockContext        = new Mock<HubCallerContext>();
 
         _mockContext.Setup(c => c.ConnectionId).Returns("conn-1");
+
+        // GetCurrentUserId() reads the "userId" claim from Context.User
+        var claims = new List<System.Security.Claims.Claim>
+        {
+            new("userId", "1")
+        };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+        _mockContext.Setup(c => c.User).Returns(principal);
+
         _mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(_mockClientProxy.Object);
         _mockGroups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -83,7 +93,7 @@ public class ChatHubTests
         _mockMessageService.Setup(s => s.SendMessageAsync(1, 2, "Hello", false))
             .ReturnsAsync(dto);
 
-        await _hub.SendMessage(1, 2, "Hello");
+        await _hub.SendMessage(2, "Hello");
 
         _mockMessageService.Verify(s => s.SendMessageAsync(1, 2, "Hello", false), Times.Once);
 
@@ -96,11 +106,11 @@ public class ChatHubTests
     [Fact]
     public async Task SendMessage_SendsReceiveMessageEventToReceiverGroup()
     {
-        var dto = MakeMessageDto(senderId: 3, receiverId: 7);
-        _mockMessageService.Setup(s => s.SendMessageAsync(3, 7, "Test", false))
+        var dto = MakeMessageDto(senderId: 1, receiverId: 7);
+        _mockMessageService.Setup(s => s.SendMessageAsync(1, 7, "Test", false))
             .ReturnsAsync(dto);
 
-        await _hub.SendMessage(3, 7, "Test");
+        await _hub.SendMessage(7, "Test");
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync("ReceiveMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
@@ -110,11 +120,11 @@ public class ChatHubTests
     [Fact]
     public async Task SendMessage_SendsMessageSentEventToSenderGroup()
     {
-        var dto = MakeMessageDto(senderId: 3, receiverId: 7);
-        _mockMessageService.Setup(s => s.SendMessageAsync(3, 7, "Test", false))
+        var dto = MakeMessageDto(senderId: 1, receiverId: 7);
+        _mockMessageService.Setup(s => s.SendMessageAsync(1, 7, "Test", false))
             .ReturnsAsync(dto);
 
-        await _hub.SendMessage(3, 7, "Test");
+        await _hub.SendMessage(7, "Test");
 
         _mockClientProxy.Verify(
             c => c.SendCoreAsync("MessageSent", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
@@ -127,6 +137,7 @@ public class ChatHubTests
     public async Task MarkMessageAsRead_CallsMarkAsReadOnService()
     {
         var dto = MakeMessageDto(senderId: 1, receiverId: 2);
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(10, 1)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(10)).Returns(Task.CompletedTask);
         _mockMessageService.Setup(s => s.GetMessageByIdAsync(10)).ReturnsAsync(dto);
 
@@ -139,6 +150,7 @@ public class ChatHubTests
     public async Task MarkMessageAsRead_MessageFound_BroadcastsMessageReadEvent()
     {
         var dto = MakeMessageDto(senderId: 5, receiverId: 2);
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(10, 1)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(10)).Returns(Task.CompletedTask);
         _mockMessageService.Setup(s => s.GetMessageByIdAsync(10)).ReturnsAsync(dto);
 
@@ -153,6 +165,7 @@ public class ChatHubTests
     [Fact]
     public async Task MarkMessageAsRead_MessageNotFound_DoesNotBroadcast()
     {
+        _mockMessageService.Setup(s => s.IsMessageRecipientAsync(999, 1)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(999)).Returns(Task.CompletedTask);
         _mockMessageService.Setup(s => s.GetMessageByIdAsync(999)).ReturnsAsync((MessageDto?)null);
 

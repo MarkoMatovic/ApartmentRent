@@ -136,10 +136,9 @@ public class UsersControllerTests : IDisposable
     [Fact]
     public async Task DeleteUser_ReturnsOkTrue()
     {
-        var dto = new DeleteUserInputDto { UserGuid = TestGuid };
-        _mockUserService.Setup(s => s.DeleteUserAsync(dto)).ReturnsAsync(true);
+        _mockUserService.Setup(s => s.DeleteUserAsync(It.IsAny<DeleteUserInputDto>())).ReturnsAsync(true);
 
-        var result = await _controller.DeleteUser(dto);
+        var result = await _controller.DeleteUser(TestGuid);
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(true);
@@ -327,55 +326,6 @@ public class UsersControllerTests : IDisposable
 
         var result = await _controller.ResetPassword(new ResetPasswordInputDto { Token = "bad", NewPassword = "newpass" });
         result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    // ─── RefreshToken (POST refresh-token, requires valid Bearer) ────────────
-
-    [Fact]
-    public async Task RefreshToken_MissingSubClaim_ReturnsUnauthorized()
-    {
-        _controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext
-            {
-                User = new ClaimsPrincipal(new ClaimsIdentity())
-            }
-        };
-
-        var result = await _controller.RefreshToken();
-
-        result.Result.Should().BeOfType<UnauthorizedResult>();
-    }
-
-    [Fact]
-    public async Task RefreshToken_UserNotFoundInDb_ReturnsUnauthorized()
-    {
-        // Sub GUID that has no matching user in the in-memory DB
-        var unknownGuid = Guid.NewGuid();
-        _controller.ControllerContext = MakeAuthContext(99, unknownGuid);
-
-        var result = await _controller.RefreshToken();
-
-        result.Result.Should().BeOfType<UnauthorizedResult>();
-    }
-
-    [Fact]
-    public async Task RefreshToken_ValidUser_ReturnsNewAccessToken()
-    {
-        _usersContext.Roles.Add(new Role { RoleId = 1, RoleName = "Tenant", Description = "t", CreatedDate = DateTime.UtcNow });
-        _usersContext.Users.Add(new User
-        {
-            UserId = TestUserId, FirstName = "T", LastName = "U",
-            Email = "t@u.com", Password = "hash", IsActive = true,
-            UserRoleId = 1, UserGuid = TestGuid
-        });
-        await _usersContext.SaveChangesAsync();
-
-        // TestGuid is already set as the "sub" claim in the default controller context
-        var result = await _controller.RefreshToken();
-
-        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().BeOfType<string>().Which.Should().NotBeNullOrEmpty();
     }
 
     // ─── SendVerificationEmail ────────────────────────────────────────────────

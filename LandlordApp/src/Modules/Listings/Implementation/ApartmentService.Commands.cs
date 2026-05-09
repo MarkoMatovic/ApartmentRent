@@ -52,14 +52,9 @@ public partial class ApartmentService
         int? landlordId = null;
         if (callerGuid.HasValue)
         {
-            var user = await _usersContext.Users
-                .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-
-            if (user != null)
-            {
-                landlordId = user.UserId;
-                await _roleUpgradeService.AutoUpgradeOnFirstListingAsync(user.UserId);
-            }
+            landlordId = await _userLookup.GetUserIdByGuidAsync(parsedGuid);
+            if (landlordId.HasValue)
+                await _roleUpgradeService.AutoUpgradeOnFirstListingAsync(landlordId.Value);
         }
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var apartment = new Apartment
@@ -99,7 +94,8 @@ public partial class ApartmentService
             CreatedByGuid = callerGuid,
             CreatedDate = now,
             ModifiedByGuid = callerGuid,
-            ModifiedDate = now
+            ModifiedDate = now,
+            ListingExpiresAt = now.AddDays(_configuration.GetValue<int>("Listings:ExpirationDays", 30))
         };
         // Serijalizacija features u JSON kolonu (NotMapped properties se ne čuvaju direktno)
         apartment.Features = ApartmentFeaturesHelper.Serialize(
@@ -113,18 +109,20 @@ public partial class ApartmentService
             await _context.SaveEntitiesAsync(); // Save apartment first to get ApartmentId
             if (apartmentInputDto.ImageUrls != null && apartmentInputDto.ImageUrls.Any())
             {
-                var apartmentImages = apartmentInputDto.ImageUrls.Select((url, index) => new ApartmentImage
-                {
-                    ApartmentId = apartment.ApartmentId,
-                    ImageUrl = url,
-                    DisplayOrder = index,
-                    IsPrimary = index == 0,
-                    IsDeleted = false,
-                    CreatedByGuid = callerGuid,
-                    CreatedDate = now,
-                    ModifiedByGuid = callerGuid,
-                    ModifiedDate = now
-                }).ToList();
+                var apartmentImages = apartmentInputDto.ImageUrls
+                    .Where(IsAllowedImageUrl)
+                    .Select((url, index) => new ApartmentImage
+                    {
+                        ApartmentId = apartment.ApartmentId,
+                        ImageUrl = url,
+                        DisplayOrder = index,
+                        IsPrimary = index == 0,
+                        IsDeleted = false,
+                        CreatedByGuid = callerGuid,
+                        CreatedDate = now,
+                        ModifiedByGuid = callerGuid,
+                        ModifiedDate = now
+                    }).ToList();
                 _context.ApartmentImages.AddRange(apartmentImages);
                 await _context.SaveEntitiesAsync(); // Save images
             }
@@ -137,6 +135,7 @@ public partial class ApartmentService
         }
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
+        _auditLog.Log("CreateApartment", "Apartment", apartment.ApartmentId, currentUserGuid);
 
         if (apartment.IsActive)
             await _notificationService.NotifyNewListingAsync(apartment.Title, apartment.City ?? string.Empty);
@@ -163,7 +162,11 @@ public partial class ApartmentService
     {
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        // IgnoreQueryFilters: the global filter requires IsActive=true, but we must be
+        // able to soft-delete a listing that was already deactivated.
+        // The manual !a.IsDeleted guard prevents double-deleting an already deleted record.
         var apartment = await _context.Apartments
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null) return false;
 
@@ -195,7 +198,10 @@ public partial class ApartmentService
 
     public async Task DeleteApartmentsByLandlordIdAsync(int landlordId)
     {
+        // IgnoreQueryFilters: must soft-delete inactive listings too (IsActive=false
+        // would otherwise be hidden by the global query filter).
         var apartments = await _context.Apartments
+            .IgnoreQueryFilters()
             .Where(a => a.LandlordId == landlordId && !a.IsDeleted)
             .ToListAsync();
 
@@ -227,7 +233,9 @@ public partial class ApartmentService
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
             ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         Guid? callerGuid = Guid.TryParse(currentUserGuid, out var cg) ? cg : null;
+        // IgnoreQueryFilters: allow editing a deactivated (IsActive=false) listing.
         var apartment = await _context.Apartments
+            .IgnoreQueryFilters()
             .Include(a => a.ApartmentImages)
             .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId && !a.IsDeleted);
         if (apartment == null)
@@ -282,17 +290,19 @@ public partial class ApartmentService
                 img.ModifiedByGuid = callerGuid;
                 img.ModifiedDate = now;
             }
-            var newImages = updateDto.ImageUrls.Select((url, index) => new ApartmentImage
-            {
-                ApartmentId = apartment.ApartmentId,
-                ImageUrl = url,
-                DisplayOrder = index,
-                IsPrimary = index == 0,
-                CreatedByGuid = callerGuid,
-                CreatedDate = now,
-                ModifiedByGuid = callerGuid,
-                ModifiedDate = now
-            }).ToList();
+            var newImages = updateDto.ImageUrls
+                .Where(IsAllowedImageUrl)
+                .Select((url, index) => new ApartmentImage
+                {
+                    ApartmentId = apartment.ApartmentId,
+                    ImageUrl = url,
+                    DisplayOrder = index,
+                    IsPrimary = index == 0,
+                    CreatedByGuid = callerGuid,
+                    CreatedDate = now,
+                    ModifiedByGuid = callerGuid,
+                    ModifiedDate = now
+                }).ToList();
             _context.ApartmentImages.AddRange(newImages);
         }
         var transaction = await _context.BeginTransactionAsync();
@@ -308,6 +318,7 @@ public partial class ApartmentService
         }
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
+        _auditLog.Log("UpdateApartment", "Apartment", apartmentId, currentUserGuid);
         return new ApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
@@ -346,6 +357,15 @@ public partial class ApartmentService
 
         await _context.SaveChangesAsync();
         return count;
+    }
+
+    // Dopušta samo URL-ove koji pokazuju na naš lokalni upload direktorijum (S-7 fix)
+    private static bool IsAllowedImageUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+        return uri.AbsolutePath.StartsWith("/uploads/apartments/", StringComparison.OrdinalIgnoreCase)
+            && !uri.AbsolutePath.Contains("..");
     }
 
     private async Task RequireOwnerAsync(Apartment apartment)

@@ -19,79 +19,6 @@ public class SearchRequestService : ISearchRequestService
         _usersContext = usersContext;
         _httpContextAccessor = httpContextAccessor;
     }
-    public async Task<IEnumerable<SearchRequestDto>> GetAllSearchRequestsAsync(
-        SearchRequestType? requestType = null,
-        string? city = null,
-        decimal? minBudget = null,
-        decimal? maxBudget = null)
-    {
-        var query = _context.SearchRequests
-            .Where(sr => sr.IsActive)
-            .AsNoTracking();
-        if (requestType.HasValue)
-        {
-            query = query.Where(sr => sr.RequestType == requestType.Value);
-        }
-        if (!string.IsNullOrEmpty(city))
-        {
-            query = query.Where(sr => sr.City != null && sr.City.Contains(city));
-        }
-        if (minBudget.HasValue)
-        {
-            query = query.Where(sr => sr.BudgetMax == null || sr.BudgetMax >= minBudget.Value);
-        }
-        if (maxBudget.HasValue)
-        {
-            query = query.Where(sr => sr.BudgetMin == null || sr.BudgetMin <= maxBudget.Value);
-        }
-       
-        var searchRequests = await query.OrderByDescending(sr => sr.CreatedDate).ToListAsync();
-        
-       
-        var userIds = searchRequests.Select(sr => sr.UserId).Distinct().ToList();
-        var users = await _usersContext.Users
-            .Where(u => userIds.Contains(u.UserId))
-            .AsNoTracking()
-            .ToListAsync();
-        
-        
-        var result = searchRequests.Select(sr =>
-        {
-            var user = users.FirstOrDefault(u => u.UserId == sr.UserId);
-            return new SearchRequestDto
-            {
-                SearchRequestId = sr.SearchRequestId,
-                UserId = sr.UserId,
-                FirstName = user?.FirstName ?? string.Empty,
-                LastName = user?.LastName ?? string.Empty,
-                ProfilePicture = user?.ProfilePicture,
-                RequestType = sr.RequestType,
-                Title = sr.Title,
-                Description = sr.Description,
-                City = sr.City,
-                PostalCode = sr.PostalCode,
-                PreferredLocation = sr.PreferredLocation,
-                BudgetMin = sr.BudgetMin,
-                BudgetMax = sr.BudgetMax,
-                NumberOfRooms = sr.NumberOfRooms,
-                SizeSquareMeters = sr.SizeSquareMeters,
-                IsFurnished = sr.IsFurnished,
-                HasParking = sr.HasParking,
-                HasBalcony = sr.HasBalcony,
-                PetFriendly = sr.PetFriendly,
-                SmokingAllowed = sr.SmokingAllowed,
-                AvailableFrom = sr.AvailableFrom,
-                AvailableUntil = sr.AvailableUntil,
-                LookingForSmokingAllowed = sr.LookingForSmokingAllowed,
-                LookingForPetFriendly = sr.LookingForPetFriendly,
-                PreferredLifestyle = sr.PreferredLifestyle,
-                IsActive = sr.IsActive,
-                CreatedDate = sr.CreatedDate
-            };
-        }).ToList();
-        
-        return result;
-    }
     public async Task<PagedResult<SearchRequestDto>> GetAllSearchRequestsAsync(
         SearchRequestType? requestType,
         string? city,
@@ -100,6 +27,10 @@ public class SearchRequestService : ISearchRequestService
         int page = 1,
         int pageSize = 20)
     {
+        // Clamp to prevent DoS via oversized page requests
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize < 1 ? 20 : pageSize > 100 ? 100 : pageSize;
+
         var query = _context.SearchRequests
             .Where(sr => sr.IsActive)
             .AsNoTracking();
@@ -129,14 +60,14 @@ public class SearchRequestService : ISearchRequestService
             .ToListAsync();
         
         var userIds = searchRequests.Select(sr => sr.UserId).Distinct().ToList();
-        var users = await _usersContext.Users
+        var userMap = await _usersContext.Users
             .Where(u => userIds.Contains(u.UserId))
             .AsNoTracking()
-            .ToListAsync();
-        
+            .ToDictionaryAsync(u => u.UserId);
+
         var result = searchRequests.Select(sr =>
         {
-            var user = users.FirstOrDefault(u => u.UserId == sr.UserId);
+            userMap.TryGetValue(sr.UserId, out var user);
             return new SearchRequestDto
             {
                 SearchRequestId = sr.SearchRequestId,
@@ -218,7 +149,7 @@ public class SearchRequestService : ISearchRequestService
             CreatedDate = searchRequest.CreatedDate
         };
     }
-    public async Task<IEnumerable<SearchRequestDto>> GetSearchRequestsByUserIdAsync(int userId)
+    public async Task<List<SearchRequestDto>> GetSearchRequestsByUserIdAsync(int userId)
     {
        
         var searchRequests = await _context.SearchRequests

@@ -53,8 +53,12 @@ public class RoommatesControllerTests
     public async Task GetAllRoommates_NoParams_ReturnsOkList()
     {
         _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            null, null, null, null, null, null, null, null, null, null))
-            .ReturnsAsync(new List<RoommateDto> { SampleRoommate });
+            null, null, null, null, null, null, null, null, null, null, 1, 20))
+            .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
+            {
+                Items = new List<RoommateDto> { SampleRoommate },
+                TotalCount = 1, Page = 1, PageSize = 20
+            });
 
         var result = await _controller.GetAllRoommates();
 
@@ -67,8 +71,12 @@ public class RoommatesControllerTests
         _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
             It.IsAny<string?>(), It.IsAny<decimal?>(), It.IsAny<decimal?>(),
             It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string?>(),
-            It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>()))
-            .ReturnsAsync(new List<RoommateDto>());
+            It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
+            {
+                Items = new List<RoommateDto>(), TotalCount = 0, Page = 1, PageSize = 20
+            });
 
         await _controller.GetAllRoommates(location: "Sarajevo", lifestyle: "active");
 

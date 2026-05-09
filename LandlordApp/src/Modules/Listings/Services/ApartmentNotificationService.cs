@@ -39,32 +39,32 @@ public class ApartmentNotificationService : IApartmentNotificationService
     {
         try
         {
-            var allSavedSearches = await _savedSearchesContext.SavedSearches
-                .Where(ss => ss.IsActive && ss.EmailNotificationsEnabled)
-                .ToListAsync();
-
-            var affectedUserIds = allSavedSearches
-                .Where(ss => ss.FiltersJson != null &&
-                             ss.FiltersJson.Contains($"\"apartmentId\":{apartmentId}",
-                                 StringComparison.OrdinalIgnoreCase))
+            // Filter in SQL — avoid loading the entire SavedSearches table into memory.
+            var affectedUserIds = await _savedSearchesContext.SavedSearches
+                .AsNoTracking()
+                .Where(ss => ss.IsActive &&
+                             ss.EmailNotificationsEnabled &&
+                             ss.FiltersJson != null &&
+                             ss.FiltersJson.Contains($"\"apartmentId\":{apartmentId}"))
                 .Select(ss => ss.UserId)
                 .Distinct()
-                .ToList();
+                .ToListAsync();
 
             if (!affectedUserIds.Any()) return;
 
             var usersToNotify = await _usersContext.Users
+                .AsNoTracking()
                 .Where(u => affectedUserIds.Contains(u.UserId) && u.IsActive)
                 .ToListAsync();
 
-            foreach (var user in usersToNotify)
-            {
-                _ = _emailService.SendListingUnavailableEmailAsync(
+            var emailTasks = usersToNotify.Select(user =>
+                _emailService.SendListingUnavailableEmailAsync(
                     user.Email,
                     user.FirstName,
                     title,
-                    "This listing has been removed by the landlord.");
-            }
+                    "This listing has been removed by the landlord."));
+
+            await Task.WhenAll(emailTasks);
 
             _logger.LogInformation(
                 "Sent listing unavailable notifications to {Count} user(s) for apartment {ApartmentId}",

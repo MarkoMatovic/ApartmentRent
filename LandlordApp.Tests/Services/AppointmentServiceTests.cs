@@ -3,6 +3,7 @@ using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using Lander;
@@ -71,6 +72,9 @@ public class AppointmentServiceTests : IDisposable
         SetupUserContext(_testTenantId, _testTenantGuid);
 
         // Create service instance
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>()).Build();
+
         _appointmentService = new AppointmentService(
             _appointmentsContext,
             _listingsContext,
@@ -78,7 +82,8 @@ public class AppointmentServiceTests : IDisposable
             _mockEmailService.Object,
             _mockHttpContextAccessor.Object,
             _mockLogger.Object,
-            _mockApprovalService.Object
+            _mockApprovalService.Object,
+            config
         );
 
         // Seed test data

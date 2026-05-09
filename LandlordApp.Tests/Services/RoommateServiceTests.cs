@@ -141,9 +141,14 @@ public class RoommateServiceTests : IDisposable
         );
         await _roommatesContext.SaveChangesAsync();
 
-        var results = await _roommateService.GetAllRoommatesAsync(location: "A", maxBudget: 150, smokingAllowed: false);
-        results.Should().HaveCount(1);
-        results.First().UserId.Should().Be(1);
+        // Note: non-paginated overload removed — use paginated version (page=1, pageSize=20)
+        var pagedResults = await _roommateService.GetAllRoommatesAsync(
+            location: "A", minBudget: null, maxBudget: 150,
+            smokingAllowed: false, petFriendly: null, lifestyle: null,
+            profession: null, availableFrom: null, stayDuration: null,
+            apartmentId: null, page: 1, pageSize: 20);
+        pagedResults.Items.Should().HaveCount(1);
+        pagedResults.Items.First().UserId.Should().Be(1);
     }
 
     #endregion

@@ -7,6 +7,11 @@ using Lander.src.Infrastructure.Extensions;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Reviews.Implementation;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Prometheus;
 using Serilog;
 using Serilog.Events;
 
@@ -46,6 +51,18 @@ builder.Host.UseSerilog((ctx, svc, cfg) =>
            retainedFileCountLimit: 14,
            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}");
 
+    // ─── Centralized log sink: Seq ────────────────────────────────────────────
+    // Set Serilog:Seq:ServerUrl in appsettings / env to ship all structured logs
+    // to a Seq instance (local dev: http://localhost:5341, prod: your Seq URL).
+    // Seq is free for single-developer use; self-host or use Datalust Cloud.
+    // For Azure Log Analytics instead, replace this block with Serilog.Sinks.AzureAnalytics.
+    var seqUrl = ctx.Configuration["Serilog:Seq:ServerUrl"];
+    if (!string.IsNullOrWhiteSpace(seqUrl))
+    {
+        var seqApiKey = ctx.Configuration["Serilog:Seq:ApiKey"]; // optional
+        cfg.WriteTo.Seq(seqUrl, apiKey: string.IsNullOrWhiteSpace(seqApiKey) ? null : seqApiKey);
+    }
+
     var aiKey = ctx.Configuration["ApplicationInsights:InstrumentationKey"];
     if (!string.IsNullOrWhiteSpace(aiKey))
         cfg.WriteTo.ApplicationInsights(
@@ -57,6 +74,37 @@ builder.Services.AddDatabaseContexts(builder.Configuration);
 
 builder.Services.AddApplicationInsightsTelemetry();
 
+// ─── OpenTelemetry distributed tracing ───────────────────────────────────────
+// Instruments ASP.NET Core requests, outgoing HTTP calls, and SQL queries so
+// every cross-service hop has a shared trace-id and parent-span relationship.
+// In production export to OTLP (e.g. Azure Monitor, Jaeger, Seq) by setting
+// OpenTelemetry:OtlpEndpoint in appsettings / env.  Console exporter is active
+// in Development so traces appear in the local run output immediately.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddSource("Landlander")
+            .ConfigureResource(r => r.AddService("Landlander", serviceVersion: "1.0"))
+            .AddAspNetCoreInstrumentation(o =>
+            {
+                o.RecordException = true;
+                // Exclude noisy health/static endpoints from traces
+                o.Filter = ctx =>
+                    !ctx.Request.Path.StartsWithSegments("/health") &&
+                    !ctx.Request.Path.StartsWithSegments("/metrics") &&
+                    !ctx.Request.Path.StartsWithSegments("/favicon");
+            })
+            .AddHttpClientInstrumentation()
+            .AddSqlClientInstrumentation(o => o.SetDbStatementForText = true);
+
+        var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+        else if (builder.Environment.IsDevelopment())
+            tracing.AddConsoleExporter();
+    });
+
 var allowedOrigins = builder.Configuration.GetSection("App:AllowedOrigins").Get<string[]>()
     ?? ["http://localhost:5173", "http://127.0.0.1:5173", "https://localhost:5173"];
 
@@ -65,8 +113,16 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(allowedOrigins)
-              .AllowAnyMethod()
-              .AllowAnyHeader()
+              // Explicit method/header allowlist instead of AllowAny* — reduces attack surface.
+              // SignalR negotiate + WebSocket require GET/POST and the listed headers.
+              .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+              .WithHeaders(
+                  "Content-Type",
+                  "Authorization",
+                  "X-Requested-With",
+                  "X-Idempotency-Key",
+                  "Accept",
+                  "Origin")
               .AllowCredentials();
     });
 });
@@ -76,6 +132,10 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        // Serialize/deserialize enum values as their string names (e.g. "Confirmed"
+        // instead of 1). Applies to all enums including AppointmentStatus.
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
 // Add FluentValidation
@@ -85,7 +145,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithAuth();
-builder.Services.AddSignalR();
 builder.Services.AddGrpc();
 
 builder.Services.AddResponseCompression(options =>
@@ -109,6 +168,10 @@ builder.Services.AddApiRateLimiting();
 
 builder.Services.AddMemoryCache();
 
+// ─── Prometheus metrics ───────────────────────────────────────────────────────
+// Exposes /metrics for Prometheus scraping (HTTP duration, status code, GC/CLR).
+// Middleware wired via app.UseHttpMetrics() below; endpoint via app.MapMetrics().
+
 var redisConnectionString = builder.Configuration["Redis:Configuration"];
 if (!string.IsNullOrWhiteSpace(redisConnectionString))
 {
@@ -117,10 +180,21 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
         opts.Configuration = redisConnectionString;
         opts.InstanceName = "Landlander:";
     });
+
+    // SignalR Redis backplane — all horizontal instances share the same pub/sub bus.
+    // Without this every app instance has an isolated in-memory hub and users on
+    // different pods cannot receive each other's chat messages or notifications.
+    builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString, options =>
+    {
+        options.Configuration.ChannelPrefix =
+            new StackExchange.Redis.RedisChannel("Landlander:", StackExchange.Redis.RedisChannel.PatternMode.Literal);
+    });
 }
 else
 {
     builder.Services.AddDistributedMemoryCache();
+    // No Redis — single-instance mode (development / local). SignalR runs in-memory only.
+    builder.Services.AddSignalR();
 }
 
 builder.Services.AddSingleton<IdempotencyService>();
@@ -165,8 +239,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseResponseCompression();
+app.UseHttpMetrics(); // prometheus-net: captures HTTP request duration / status code metrics
 app.UseOutputCache();
-app.UseRateLimiter();
+if (!app.Environment.IsEnvironment("E2eTesting"))
+    app.UseRateLimiter();
 app.UseSerilogRequestLogging(opts =>
 {
     opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0}ms)";
@@ -225,8 +301,13 @@ app.UseAuthorization();
 app.MapGrpcService<ReviewFavoriteService>();
 
 app.MapControllers();
-app.MapHub<NotificationHub>("/notificationHub");
-app.MapHub<ChatHub>("/chatHub");
+app.MapHub<NotificationHub>("/notificationHub").RequireRateLimiting("signalr");
+app.MapHub<ChatHub>("/chatHub").RequireRateLimiting("signalr");
 app.MapHealthChecks("/health");
+// Prometheus scrape endpoint — restrict to internal network at the reverse-proxy level in prod.
+app.MapMetrics("/metrics");
 
 app.Run();
+
+// Required for WebApplicationFactory<Program> in integration tests
+public partial class Program { }

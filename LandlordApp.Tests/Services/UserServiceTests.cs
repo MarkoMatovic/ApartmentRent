@@ -538,7 +538,8 @@ public class UserServiceTests : IDisposable
             roommateService,
             deletionHandlers,
             new UserRoleUpgradeService(context, new Mock<ILogger<UserRoleUpgradeService>>().Object, TimeProvider.System),
-            new Mock<ILogger<UserProfileService>>().Object);
+            new Mock<ILogger<UserProfileService>>().Object,
+            new Mock<IAuditLogService>().Object);
 
         return new UserService(authService, passwordService, profileService);
     }

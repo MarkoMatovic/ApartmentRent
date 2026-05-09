@@ -15,7 +15,7 @@ public partial class MessageService
         if (settings == null)
         {
             var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            settings = new ConversationSettings
+            var candidate = new ConversationSettings
             {
                 UserId = userId,
                 OtherUserId = otherUserId,
@@ -25,60 +25,51 @@ public partial class MessageService
                 CreatedByGuid = Guid.TryParse(currentUserGuid, out var settingsGuid) ? settingsGuid : null,
                 CreatedDate = DateTime.UtcNow
             };
-            _context.ConversationSettings.Add(settings);
-            await _context.SaveEntitiesAsync();
+            _context.ConversationSettings.Add(candidate);
+            try
+            {
+                await _context.SaveEntitiesAsync();
+                settings = candidate;
+            }
+            catch (DbUpdateException)
+            {
+                // Another concurrent request inserted the row first — fetch the winner
+                _context.ConversationSettings.Remove(candidate);
+                settings = await _context.ConversationSettings
+                    .FirstOrDefaultAsync(s => s.UserId == userId && s.OtherUserId == otherUserId)
+                    ?? throw new InvalidOperationException(
+                        $"ConversationSettings for ({userId},{otherUserId}) missing after conflict.");
+            }
         }
 
         return settings;
     }
 
-    public async Task ArchiveConversationAsync(int userId, int otherUserId)
+    private async Task UpdateConversationSettingAsync(int userId, int otherUserId, Action<ConversationSettings> apply)
     {
         var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
-        settings.IsArchived = true;
+        apply(settings);
         settings.ModifiedDate = DateTime.UtcNow;
         await _context.SaveEntitiesAsync();
     }
 
-    public async Task UnarchiveConversationAsync(int userId, int otherUserId)
-    {
-        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
-        settings.IsArchived = false;
-        settings.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveEntitiesAsync();
-    }
+    public Task ArchiveConversationAsync(int userId, int otherUserId)
+        => UpdateConversationSettingAsync(userId, otherUserId, s => s.IsArchived = true);
 
-    public async Task MuteConversationAsync(int userId, int otherUserId)
-    {
-        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
-        settings.IsMuted = true;
-        settings.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveEntitiesAsync();
-    }
+    public Task UnarchiveConversationAsync(int userId, int otherUserId)
+        => UpdateConversationSettingAsync(userId, otherUserId, s => s.IsArchived = false);
 
-    public async Task UnmuteConversationAsync(int userId, int otherUserId)
-    {
-        var settings = await GetOrCreateSettingsAsync(userId, otherUserId);
-        settings.IsMuted = false;
-        settings.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveEntitiesAsync();
-    }
+    public Task MuteConversationAsync(int userId, int otherUserId)
+        => UpdateConversationSettingAsync(userId, otherUserId, s => s.IsMuted = true);
 
-    public async Task BlockUserAsync(int userId, int blockedUserId)
-    {
-        var settings = await GetOrCreateSettingsAsync(userId, blockedUserId);
-        settings.IsBlocked = true;
-        settings.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveEntitiesAsync();
-    }
+    public Task UnmuteConversationAsync(int userId, int otherUserId)
+        => UpdateConversationSettingAsync(userId, otherUserId, s => s.IsMuted = false);
 
-    public async Task UnblockUserAsync(int userId, int blockedUserId)
-    {
-        var settings = await GetOrCreateSettingsAsync(userId, blockedUserId);
-        settings.IsBlocked = false;
-        settings.ModifiedDate = DateTime.UtcNow;
-        await _context.SaveEntitiesAsync();
-    }
+    public Task BlockUserAsync(int userId, int blockedUserId)
+        => UpdateConversationSettingAsync(userId, blockedUserId, s => s.IsBlocked = true);
+
+    public Task UnblockUserAsync(int userId, int blockedUserId)
+        => UpdateConversationSettingAsync(userId, blockedUserId, s => s.IsBlocked = false);
 
     public async Task<bool> IsUserBlockedAsync(int userId, int otherUserId)
     {

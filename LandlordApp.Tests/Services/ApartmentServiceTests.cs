@@ -5,12 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Json;
 using Lander;
 using Lander.src.Modules.Listings.Implementation;
+using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Dtos.Dto;
@@ -108,12 +110,23 @@ public class ApartmentServiceTests : IDisposable
         // Setup default user context
         SetupUserContext(_testLandlordId, _testLandlordGuid);
 
-        // Create service instance
-        var reviewsOptions = new DbContextOptionsBuilder<ReviewsContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-            .Options;
-        var reviewsContext = new ReviewsContext(reviewsOptions);
+        // Create service instance — bounded context isolation: use interface mocks
+        // instead of raw ReviewsContext / UsersContext (Tasks 4 & 5 refactoring).
+        var mockReviewStats = new Mock<IReviewStatsProvider>();
+        mockReviewStats
+            .Setup(r => r.GetBatchAsync(It.IsAny<IEnumerable<int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, ReviewStats>());
+        mockReviewStats
+            .Setup(r => r.GetForApartmentAsync(It.IsAny<int>()))
+            .ReturnsAsync((ReviewStats?)null);
+
+        var mockUserLookup = new Mock<IListingsUserLookup>();
+        mockUserLookup
+            .Setup(u => u.GetUserIdByGuidAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(_testLandlordId);
+        mockUserLookup
+            .Setup(u => u.GetLandlordBriefAsync(It.IsAny<int>()))
+            .ReturnsAsync(new LandlordBrief("Landlord", "User", "landlord@test.com"));
 
         var notificationService = new Lander.src.Modules.Listings.Services.ApartmentNotificationService(
             _mockHubContext.Object,
@@ -124,9 +137,9 @@ public class ApartmentServiceTests : IDisposable
 
         _apartmentService = new ApartmentService(
             _context,
-            _usersContext,
+            mockReviewStats.Object,
+            mockUserLookup.Object,
             new PassThroughHybridCache(),
-            reviewsContext,
             notificationService,
             new Mock<Lander.src.Modules.Users.Services.IUserRoleUpgradeService>().Object,
             _mockHttpContextAccessor.Object,
@@ -136,7 +149,8 @@ public class ApartmentServiceTests : IDisposable
             new Lander.src.Modules.Listings.Services.ApartmentCacheVersionService(),
             new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
-            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object
+            new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
+            new Mock<IConfiguration>().Object
         );
     }
 
@@ -327,8 +341,8 @@ public class ApartmentServiceTests : IDisposable
         // Arrange
         await SeedTestApartments();
 
-        // Act
-        var result = await _apartmentService.GetAllApartmentsAsync();
+        // Act — non-paginated overload removed; use paginated with default filter
+        var result = await _apartmentService.GetAllApartmentsAsync(new ApartmentFilterDto { Page = 1, PageSize = 100 });
 
         // Assert
         result.Should().NotBeNull();

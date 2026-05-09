@@ -53,7 +53,11 @@ namespace Lander.src.Modules.Appointments.Implementation
 
         private Guid GetCurrentUserGuid()
         {
-            var userGuidClaim = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            // With MapInboundClaims = false the "sub" claim is NOT remapped to
+            // ClaimTypes.NameIdentifier, so we must read "sub" directly (matching
+            // the same convention used by ApartmentOwnerHandler).
+            var userGuidClaim = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
+                ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userGuidClaim) || !Guid.TryParse(userGuidClaim, out var userGuid))
             {
                 throw new UnauthorizedAccessException("User not authenticated");
@@ -131,22 +135,34 @@ namespace Lander.src.Modules.Appointments.Implementation
                 throw;
             }
 
-            // Get tenant and landlord info for email
-            var tenant = await _usersContext.Users.FindAsync(tenantId);
-            var landlord = await _usersContext.Users.FindAsync(apartment.LandlordId);
+            // Load tenant and landlord for email + DTO (2 queries, no N+1)
+            var userIds = new[] { tenantId, apartment.LandlordId!.Value }.Distinct().ToList();
+            var userMap = await _usersContext.Users
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.UserId))
+                .ToDictionaryAsync(u => u.UserId);
+            userMap.TryGetValue(tenantId, out var tenant);
+            userMap.TryGetValue(apartment.LandlordId.Value, out var landlord);
 
-            // Send email to landlord
+            // Send email to landlord (awaited so errors are surfaced; non-fatal)
             if (landlord != null && tenant != null)
             {
-                _ = _emailService.SendAppointmentConfirmationEmailAsync(
-                    landlord.Email,
-                    landlord.FirstName,
-                    appointment.AppointmentDate,
-                    apartment.Title
-                );
+                try
+                {
+                    await _emailService.SendAppointmentConfirmationEmailAsync(
+                        landlord.Email,
+                        landlord.FirstName,
+                        appointment.AppointmentDate,
+                        apartment.Title
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send appointment confirmation email to landlord {LandlordId}", landlord.UserId);
+                }
             }
 
-            return await MapToDto(appointment);
+            return MapToDtoFromEntities(appointment, apartment, tenant, landlord);
         }
 
         public async Task<List<AppointmentDto>> GetMyAppointmentsAsync()
@@ -207,29 +223,38 @@ namespace Lander.src.Modules.Appointments.Implementation
                 aptDict.TryGetValue(appointment.ApartmentId, out var apt);
                 userDict.TryGetValue(appointment.TenantId, out var tenant);
                 userDict.TryGetValue(appointment.LandlordId, out var landlord);
-
-                return new AppointmentDto
-                {
-                    AppointmentId = appointment.AppointmentId,
-                    AppointmentGuid = appointment.AppointmentGuid,
-                    ApartmentId = appointment.ApartmentId,
-                    ApartmentTitle = apt?.Title,
-                    ApartmentAddress = apt?.Address,
-                    TenantId = appointment.TenantId,
-                    TenantName = tenant != null ? $"{tenant.FirstName} {tenant.LastName}" : null,
-                    TenantEmail = tenant?.Email,
-                    LandlordId = appointment.LandlordId,
-                    LandlordName = landlord != null ? $"{landlord.FirstName} {landlord.LastName}" : null,
-                    LandlordEmail = landlord?.Email,
-                    AppointmentDate = appointment.AppointmentDate,
-                    Duration = appointment.Duration,
-                    Status = appointment.Status,
-                    TenantNotes = appointment.TenantNotes,
-                    LandlordNotes = appointment.LandlordNotes,
-                    CreatedDate = appointment.CreatedDate
-                };
+                return MapToDtoFromEntities(appointment, apt, tenant, landlord);
             }).ToList();
         }
+
+        /// <summary>
+        /// Synchronous mapping from pre-loaded entities — zero extra DB round-trips.
+        /// </summary>
+        private static AppointmentDto MapToDtoFromEntities(
+            Appointment appointment,
+            Lander.src.Modules.Listings.Models.Apartment? apartment,
+            Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User? tenant,
+            Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate.User? landlord) =>
+            new AppointmentDto
+            {
+                AppointmentId    = appointment.AppointmentId,
+                AppointmentGuid  = appointment.AppointmentGuid,
+                ApartmentId      = appointment.ApartmentId,
+                ApartmentTitle   = apartment?.Title,
+                ApartmentAddress = apartment?.Address,
+                TenantId         = appointment.TenantId,
+                TenantName       = tenant != null ? $"{tenant.FirstName} {tenant.LastName}" : null,
+                TenantEmail      = tenant?.Email,
+                LandlordId       = appointment.LandlordId,
+                LandlordName     = landlord != null ? $"{landlord.FirstName} {landlord.LastName}" : null,
+                LandlordEmail    = landlord?.Email,
+                AppointmentDate  = appointment.AppointmentDate,
+                Duration         = appointment.Duration,
+                Status           = appointment.Status,
+                TenantNotes      = appointment.TenantNotes,
+                LandlordNotes    = appointment.LandlordNotes,
+                CreatedDate      = appointment.CreatedDate
+            };
 
         public async Task<List<AvailableSlotDto>> GetAvailableSlotsAsync(int apartmentId, DateTime date)
         {
@@ -353,29 +378,41 @@ namespace Lander.src.Modules.Appointments.Implementation
 
             await _context.SaveEntitiesAsync();
 
-            // Send email to tenant
-            var tenant = await _usersContext.Users.FindAsync(appointment.TenantId);
-            var apartment = await _listingsContext.Apartments.FindAsync(appointment.ApartmentId);
+            // Load apartment, tenant and landlord in two queries (no N+1)
+            var aptDict = await _listingsContext.Apartments
+                .AsNoTracking()
+                .Where(a => a.ApartmentId == appointment.ApartmentId)
+                .ToDictionaryAsync(a => a.ApartmentId);
 
+            var usrIds = new[] { appointment.TenantId, appointment.LandlordId }.Distinct().ToList();
+            var usrMap = await _usersContext.Users
+                .AsNoTracking()
+                .Where(u => usrIds.Contains(u.UserId))
+                .ToDictionaryAsync(u => u.UserId);
+
+            aptDict.TryGetValue(appointment.ApartmentId, out var apartment);
+            usrMap.TryGetValue(appointment.TenantId, out var tenant);
+            usrMap.TryGetValue(appointment.LandlordId, out var landlord);
+
+            // Send email to tenant (awaited so errors are surfaced; non-fatal)
             if (tenant != null && apartment != null)
             {
-                var statusText = dto.Status switch
+                try
                 {
-                    AppointmentStatus.Confirmed => "confirmed",
-                    AppointmentStatus.Rejected => "rejected",
-                    AppointmentStatus.Cancelled => "cancelled",
-                    _ => "updated"
-                };
-
-                _ = _emailService.SendAppointmentConfirmationEmailAsync(
-                    tenant.Email,
-                    tenant.FirstName,
-                    appointment.AppointmentDate,
-                    apartment.Title
-                );
+                    await _emailService.SendAppointmentConfirmationEmailAsync(
+                        tenant.Email,
+                        tenant.FirstName,
+                        appointment.AppointmentDate,
+                        apartment.Title
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send appointment status email to tenant {TenantId}", tenant.UserId);
+                }
             }
 
-            return await MapToDto(appointment);
+            return MapToDtoFromEntities(appointment, apartment, tenant, landlord);
         }
 
         public async Task<bool> CancelAppointmentAsync(int appointmentId)
@@ -419,7 +456,7 @@ namespace Lander.src.Modules.Appointments.Implementation
             if (appointment.TenantId != userId && appointment.LandlordId != userId)
                 throw new UnauthorizedAccessException("You don't have permission to view this appointment");
 
-            return await MapToDto(appointment);
+            return (await MapToDtosBatchAsync(new List<Appointment> { appointment })).First();
         }
 
         public async Task<List<LandlordAvailabilityDto>> GetMyAvailabilityAsync()
@@ -427,6 +464,7 @@ namespace Lander.src.Modules.Appointments.Implementation
             var landlordId = GetCurrentUserId();
 
             var availability = await _context.LandlordAvailabilities
+                .AsNoTracking()
                 .Where(la => la.LandlordId == landlordId && la.IsActive)
                 .OrderBy(la => la.DayOfWeek)
                 .ThenBy(la => la.StartTime)
@@ -447,26 +485,37 @@ namespace Lander.src.Modules.Appointments.Implementation
         {
             var landlordId = GetCurrentUserId();
 
-            // Remove existing availability for this landlord
-            var existing = await _context.LandlordAvailabilities
-                .Where(la => la.LandlordId == landlordId)
-                .ToListAsync();
-
-            _context.LandlordAvailabilities.RemoveRange(existing);
-
-            // Add new availability slots
-            var newSlots = dto.Slots.Select(s => new LandlordAvailability
+            // Delete-then-insert must be atomic — wrap in a transaction so a crash
+            // between the two operations doesn't leave the landlord with no slots.
+            var transaction = await _context.BeginTransactionAsync();
+            List<LandlordAvailability> newSlots;
+            try
             {
-                LandlordId = landlordId,
-                DayOfWeek = s.DayOfWeek,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                IsActive = true,
-                CreatedDate = DateTime.UtcNow
-            }).ToList();
+                var existing = await _context.LandlordAvailabilities
+                    .Where(la => la.LandlordId == landlordId)
+                    .ToListAsync();
 
-            _context.LandlordAvailabilities.AddRange(newSlots);
-            await _context.SaveEntitiesAsync();
+                _context.LandlordAvailabilities.RemoveRange(existing);
+
+                newSlots = dto.Slots.Select(s => new LandlordAvailability
+                {
+                    LandlordId  = landlordId,
+                    DayOfWeek   = s.DayOfWeek,
+                    StartTime   = s.StartTime,
+                    EndTime     = s.EndTime,
+                    IsActive    = true,
+                    CreatedDate = DateTime.UtcNow
+                }).ToList();
+
+                _context.LandlordAvailabilities.AddRange(newSlots);
+                await _context.SaveEntitiesAsync();
+                await _context.CommitTransactionAsync(transaction);
+            }
+            catch
+            {
+                _context.RollBackTransaction();
+                throw;
+            }
 
             _logger.LogInformation("Landlord {LandlordId} set {Count} availability slots", landlordId, newSlots.Count);
 
@@ -481,32 +530,5 @@ namespace Lander.src.Modules.Appointments.Implementation
             }).ToList();
         }
 
-        private async Task<AppointmentDto> MapToDto(Appointment appointment)
-        {
-            var apartment = await _listingsContext.Apartments.FindAsync(appointment.ApartmentId);
-            var tenant = await _usersContext.Users.FindAsync(appointment.TenantId);
-            var landlord = await _usersContext.Users.FindAsync(appointment.LandlordId);
-
-            return new AppointmentDto
-            {
-                AppointmentId = appointment.AppointmentId,
-                AppointmentGuid = appointment.AppointmentGuid,
-                ApartmentId = appointment.ApartmentId,
-                ApartmentTitle = apartment?.Title,
-                ApartmentAddress = apartment?.Address,
-                TenantId = appointment.TenantId,
-                TenantName = tenant != null ? $"{tenant.FirstName} {tenant.LastName}" : null,
-                TenantEmail = tenant?.Email,
-                LandlordId = appointment.LandlordId,
-                LandlordName = landlord != null ? $"{landlord.FirstName} {landlord.LastName}" : null,
-                LandlordEmail = landlord?.Email,
-                AppointmentDate = appointment.AppointmentDate,
-                Duration = appointment.Duration,
-                Status = appointment.Status,
-                TenantNotes = appointment.TenantNotes,
-                LandlordNotes = appointment.LandlordNotes,
-                CreatedDate = appointment.CreatedDate
-            };
-        }
     }
 }

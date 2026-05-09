@@ -58,14 +58,26 @@ public static class ApplicationServiceExtensions
         // --- Apartment notification service ---
         services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();
 
+        // Cross-module providers for Listings — isolate bounded context from raw DbContexts.
+        services.AddScoped<IReviewStatsProvider, ReviewStatsProvider>();
+        services.AddScoped<IListingsUserLookup, ListingsUserLookup>();
+
         services.AddSingleton<Lander.src.Modules.Listings.Services.ApartmentCacheVersionService>();
         services.AddScoped<Lander.src.Infrastructure.Services.IAuditLogService, Lander.src.Infrastructure.Services.AuditLogService>();
-        services.AddScoped<IApartmentService, ApartmentService>();
+        // Register ApartmentService under all three interfaces so consumers can inject
+        // the narrower IApartmentQueryService / IApartmentCommandService directly.
+        services.AddScoped<ApartmentService>();
+        services.AddScoped<IApartmentService>(sp => sp.GetRequiredService<ApartmentService>());
+        services.AddScoped<IApartmentQueryService>(sp => sp.GetRequiredService<ApartmentService>());
+        services.AddScoped<IApartmentCommandService>(sp => sp.GetRequiredService<ApartmentService>());
 
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
         services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
         services.AddHostedService<Lander.src.Modules.Communication.Services.OutboxProcessorService>();
         services.AddHostedService<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>();
+        // Nightly cleanup of EmailLog rows older than EmailLog:RetentionDays (default 90 days).
+        services.AddHostedService<Lander.src.Modules.Communication.Services.EmailLogCleanupService>();
+        services.AddHostedService<Lander.src.Modules.Listings.Services.ListingExpirationService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IRoommateService, RoommateService>();
         services.AddScoped<ISearchRequestService, SearchRequestService>();
@@ -120,6 +132,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<TokenProvider>();
         services.AddScoped<RefreshTokenService>();
         services.AddHttpContextAccessor();
+        services.AddSingleton<Lander.src.Infrastructure.Services.AuditSaveChangesInterceptor>();
 
         // RBAC: Authorization Infrastructure
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();

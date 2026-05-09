@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Lander.Helpers;
 using Lander.src.Modules.Payments.Implementation;
 using Lander.src.Modules.Payments.Interfaces;
@@ -44,9 +45,15 @@ public class MonriServiceTests
             _config,
             new Mock<ILogger<MonriPaymentFormService>>().Object);
 
+        var paymentsOptions = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<Lander.src.Modules.Payments.PaymentsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var paymentsContext = new Lander.src.Modules.Payments.PaymentsContext(paymentsOptions);
+
         var callbackHandler = new MonriCallbackHandler(
             _config,
             _mockUserService.Object,
+            paymentsContext,
             new Mock<ILogger<MonriCallbackHandler>>().Object,
             TimeProvider.System);
 

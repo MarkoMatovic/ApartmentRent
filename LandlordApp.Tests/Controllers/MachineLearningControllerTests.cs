@@ -7,6 +7,7 @@ using System.Security.Claims;
 using Lander.src.Modules.MachineLearning.Controllers;
 using Lander.src.Modules.MachineLearning.Dtos;
 using Lander.src.Modules.MachineLearning.Interfaces;
+using Lander.src.Modules.Users.Interfaces.UserInterface;
 
 namespace LandlordApp.Tests.Controllers;
 
@@ -14,6 +15,7 @@ public class MachineLearningControllerTests
 {
     private readonly Mock<IPricePredictionService> _mockPricePrediction;
     private readonly Mock<IRoommateMatchingService> _mockRoommateMatching;
+    private readonly Mock<IUserInterface> _mockUserService;
     private readonly MachineLearningController _controller;
     private const int CurrentUserId = 1;
 
@@ -21,10 +23,12 @@ public class MachineLearningControllerTests
     {
         _mockPricePrediction = new Mock<IPricePredictionService>();
         _mockRoommateMatching = new Mock<IRoommateMatchingService>();
+        _mockUserService = new Mock<IUserInterface>();
 
         _controller = new MachineLearningController(
             _mockPricePrediction.Object,
-            _mockRoommateMatching.Object);
+            _mockRoommateMatching.Object,
+            _mockUserService.Object);
         _controller.ControllerContext = MakeAuthContext(CurrentUserId);
     }
 

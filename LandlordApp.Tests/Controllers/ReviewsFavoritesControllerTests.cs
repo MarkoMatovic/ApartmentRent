@@ -125,7 +125,7 @@ public class ReviewsFavoritesControllerTests
     public async Task DeleteReview_ReturnsOk()
     {
         var response = new DeleteResponse { Success = true };
-        _mockGrpc.Setup(g => g.DeleteReviewAsync(4)).ReturnsAsync(response);
+        _mockGrpc.Setup(g => g.DeleteReviewAsync(4, It.IsAny<string>())).ReturnsAsync(response);
 
         var result = await _controller.DeleteReview(4);
 
@@ -135,7 +135,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task DeleteReview_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.DeleteReviewAsync(It.IsAny<int>()))
+        _mockGrpc.Setup(g => g.DeleteReviewAsync(It.IsAny<int>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.DeleteReview(4);
@@ -149,7 +149,7 @@ public class ReviewsFavoritesControllerTests
     public async Task DeleteFavorite_ReturnsOk()
     {
         var response = new DeleteResponse { Success = true };
-        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(9)).ReturnsAsync(response);
+        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(9, It.IsAny<string>())).ReturnsAsync(response);
 
         var result = await _controller.DeleteFavorite(9);
 
@@ -159,7 +159,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task DeleteFavorite_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(It.IsAny<int>()))
+        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(It.IsAny<int>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.DeleteFavorite(9);

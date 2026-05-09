@@ -25,10 +25,30 @@ public class RoommateMatchingService : IRoommateMatchingService
         {
             return new List<RoommateMatchScoreDto>();
         }
-        var otherRoommates = await _roommatesContext.Roommates
-            .Where(r => r.UserId != userId && r.IsActive)
+        // Pre-filter candidates in SQL: same city (when set) and overlapping budget range.
+        // This drastically reduces the in-memory set before scoring — avoids loading the
+        // entire table for every request.
+        var candidateQuery = _roommatesContext.Roommates
+            .AsNoTracking()
+            .Where(r => r.UserId != userId && r.IsActive);
+
+        if (!string.IsNullOrEmpty(userRoommate.PreferredLocation))
+            candidateQuery = candidateQuery
+                .Where(r => r.PreferredLocation == null ||
+                            r.PreferredLocation == userRoommate.PreferredLocation);
+
+        if (userRoommate.BudgetMin.HasValue && userRoommate.BudgetMax.HasValue)
+            candidateQuery = candidateQuery
+                .Where(r => (r.BudgetMin == null || r.BudgetMin <= userRoommate.BudgetMax) &&
+                            (r.BudgetMax == null || r.BudgetMax >= userRoommate.BudgetMin));
+
+        // Fetch at most topN * 5 candidates — enough headroom for scoring while keeping
+        // the result set bounded even on large datasets.
+        var otherRoommates = await candidateQuery
+            .Take(topN * 5)
             .ToListAsync();
-        var matchScores = new List<RoommateMatchScoreDto>();
+
+        var matchScores = new List<RoommateMatchScoreDto>(otherRoommates.Count);
         foreach (var candidate in otherRoommates)
         {
             var score = CalculateMatchScore(userRoommate, candidate);

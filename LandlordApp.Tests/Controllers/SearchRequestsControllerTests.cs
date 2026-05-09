@@ -84,10 +84,14 @@ public class SearchRequestsControllerTests
     [Fact]
     public async Task GetAllSearchRequests_WithFilters_ReturnsOk()
     {
-        var list = new List<SearchRequestDto> { SampleDto };
+        var pagedResult = new Lander.src.Common.PagedResult<SearchRequestDto>
+        {
+            Items = new List<SearchRequestDto> { SampleDto },
+            TotalCount = 1, Page = 1, PageSize = 20
+        };
         _mockService.Setup(s => s.GetAllSearchRequestsAsync(
-                SearchRequestType.LookingForApartment, "Sarajevo", 500m, 1500m))
-            .ReturnsAsync(list);
+                SearchRequestType.LookingForApartment, "Sarajevo", 500m, 1500m, 1, 20))
+            .ReturnsAsync(pagedResult);
 
         var result = await _controller.GetAllSearchRequests(
             requestType: SearchRequestType.LookingForApartment,

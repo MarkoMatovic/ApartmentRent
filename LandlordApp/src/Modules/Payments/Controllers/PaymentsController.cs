@@ -47,7 +47,8 @@ public class PaymentsController : ApiControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Callback()
     {
-        var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+        using var reader = new StreamReader(HttpContext.Request.Body);
+        var json = await reader.ReadToEndAsync();
         try
         {
             await _monriService.HandleCallbackAsync(json);

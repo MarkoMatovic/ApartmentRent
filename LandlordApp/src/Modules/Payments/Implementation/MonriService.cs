@@ -42,11 +42,12 @@ public class MonriService : IMonriService
             await _idempotencyService.IsDuplicateAsync($"payment:{userId}:{idempotencyKey}"))
             return null;
 
-        var userProfile = userId > 0 ? await _userService.GetUserProfileAsync(userId) : null;
-        var buyerEmail = userProfile?.Email ?? "k6-test@landlord-test.local";
-        var buyerName  = userProfile != null
-            ? $"{userProfile.FirstName} {userProfile.LastName}".Trim()
-            : "K6 Test";
+        var userProfile = await _userService.GetUserProfileAsync(userId);
+        if (userProfile == null)
+            throw new InvalidOperationException("Korisnički profil nije pronađen.");
+
+        var buyerEmail = userProfile.Email;
+        var buyerName  = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
 
         return _formService.CreatePaymentForm(planId, successUrl, failureUrl, userId, buyerEmail, buyerName);
     }

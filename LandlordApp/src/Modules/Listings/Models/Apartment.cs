@@ -68,6 +68,12 @@ public partial class Apartment
     public bool IsFeatured { get; set; } = false;
     public DateTime? FeaturedUntil { get; set; }
 
+    // Listing expiration
+    /// <summary>UTC timestamp when this listing expires (IsActive → false). Set at creation, reset on renewal.</summary>
+    public DateTime? ListingExpiresAt { get; set; }
+    /// <summary>UTC timestamp when the expiry-reminder notification was last sent. Prevents duplicate alerts.</summary>
+    public DateTime? ReminderSentAt { get; set; }
+
     [System.ComponentModel.DataAnnotations.Timestamp]
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }

@@ -22,105 +22,6 @@ public class RoommateService : IRoommateService
         _httpContextAccessor = httpContextAccessor;
         _cache = cache;
     }
-    public async Task<IEnumerable<RoommateDto>> GetAllRoommatesAsync(
-        string? location = null, 
-        decimal? minBudget = null, 
-        decimal? maxBudget = null,
-        bool? smokingAllowed = null, 
-        bool? petFriendly = null, 
-        string? lifestyle = null,
-        string? profession = null,
-        DateOnly? availableFrom = null,
-        int? stayDuration = null,
-        int? apartmentId = null)
-    {
-        var query = _context.Roommates
-            .Where(r => r.IsActive)
-            .AsNoTracking();
-        if (!string.IsNullOrEmpty(location))
-        {
-            query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(location));
-        }
-        if (minBudget.HasValue)
-        {
-            query = query.Where(r => r.BudgetMax == null || r.BudgetMax >= minBudget.Value);
-        }
-        if (maxBudget.HasValue)
-        {
-            query = query.Where(r => r.BudgetMin == null || r.BudgetMin <= maxBudget.Value);
-        }
-        if (smokingAllowed.HasValue)
-        {
-            query = query.Where(r => r.SmokingAllowed == smokingAllowed.Value);
-        }
-        if (petFriendly.HasValue)
-        {
-            query = query.Where(r => r.PetFriendly == petFriendly.Value);
-        }
-        if (!string.IsNullOrEmpty(lifestyle))
-        {
-            query = query.Where(r => r.Lifestyle == lifestyle);
-        }
-        if (!string.IsNullOrEmpty(profession))
-        {
-            query = query.Where(r => r.Profession != null && r.Profession.Contains(profession));
-        }
-        if (availableFrom.HasValue)
-        {
-            query = query.Where(r => r.AvailableFrom >= availableFrom.Value);
-        }
-        if (stayDuration.HasValue)
-        {
-            query = query.Where(r => (r.MinimumStayMonths == null || r.MinimumStayMonths <= stayDuration.Value) &&
-                                     (r.MaximumStayMonths == null || r.MaximumStayMonths >= stayDuration.Value));
-        }
-        if (apartmentId.HasValue)
-        {
-            query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
-        }
-        var roommates = await query.ToListAsync();
-        var userIds = roommates.Select(r => r.UserId).Distinct().ToList();
-        var users = await _usersContext.Users
-            .Where(u => userIds.Contains(u.UserId))
-            .AsNoTracking()
-            .ToListAsync();
-        var userDict = users.ToDictionary(u => u.UserId);
-        var result = roommates.Select(r =>
-        {
-            var user = userDict.GetValueOrDefault(r.UserId);
-            return new RoommateDto
-            {
-                RoommateId = r.RoommateId,
-                UserId = r.UserId,
-                FirstName = user?.FirstName ?? string.Empty,
-                LastName = user?.LastName ?? string.Empty,
-                ProfilePicture = user?.ProfilePicture,
-                DateOfBirth = user?.DateOfBirth,
-                PhoneNumber = user?.PhoneNumber,
-                Bio = r.Bio,
-                Hobbies = r.Hobbies,
-                Profession = r.Profession,
-                SmokingAllowed = r.SmokingAllowed,
-                PetFriendly = r.PetFriendly,
-                Lifestyle = r.Lifestyle,
-                Cleanliness = r.Cleanliness,
-                GuestsAllowed = r.GuestsAllowed,
-                BudgetMin = r.BudgetMin,
-                BudgetMax = r.BudgetMax,
-                BudgetIncludes = r.BudgetIncludes,
-                AvailableFrom = r.AvailableFrom,
-                AvailableUntil = r.AvailableUntil,
-                MinimumStayMonths = r.MinimumStayMonths,
-                MaximumStayMonths = r.MaximumStayMonths,
-                LookingForRoomType = r.LookingForRoomType,
-                LookingForApartmentType = r.LookingForApartmentType,
-                PreferredLocation = r.PreferredLocation,
-                LookingForApartmentId = r.LookingForApartmentId,
-                IsActive = r.IsActive
-            };
-        }).ToList();
-        return result;
-    }
     public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(
         string? location, 
         decimal? minBudget, 
@@ -135,6 +36,10 @@ public class RoommateService : IRoommateService
         int page = 1,
         int pageSize = 20)
     {
+        // Clamp to prevent DoS via oversized page requests
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize < 1 ? 20 : pageSize > 100 ? 100 : pageSize;
+
         var cacheKey = $"Roommates_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{page}_{pageSize}";
 
         if (_cache.TryGetValue(cacheKey, out PagedResult<RoommateDto>? cachedResult) && cachedResult != null)
@@ -291,11 +196,47 @@ public class RoommateService : IRoommateService
     }
     public async Task<RoommateDto?> GetRoommateByUserIdAsync(int userId)
     {
+        // Fetch roommate + user in 2 queries instead of 3
+        // (calling GetRoommateByIdAsync would re-fetch the roommate we already have)
         var roommate = await _context.Roommates
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
         if (roommate == null) return null;
-        return await GetRoommateByIdAsync(roommate.RoommateId);
+
+        var user = await _usersContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == roommate.UserId);
+        if (user == null) return null;
+
+        return new RoommateDto
+        {
+            RoommateId           = roommate.RoommateId,
+            UserId               = roommate.UserId,
+            FirstName            = user.FirstName,
+            LastName             = user.LastName,
+            ProfilePicture       = user.ProfilePicture,
+            DateOfBirth          = user.DateOfBirth,
+            PhoneNumber          = user.PhoneNumber,
+            Bio                  = roommate.Bio,
+            Hobbies              = roommate.Hobbies,
+            Profession           = roommate.Profession,
+            SmokingAllowed       = roommate.SmokingAllowed,
+            PetFriendly          = roommate.PetFriendly,
+            Lifestyle            = roommate.Lifestyle,
+            Cleanliness          = roommate.Cleanliness,
+            GuestsAllowed        = roommate.GuestsAllowed,
+            BudgetMin            = roommate.BudgetMin,
+            BudgetMax            = roommate.BudgetMax,
+            BudgetIncludes       = roommate.BudgetIncludes,
+            AvailableFrom        = roommate.AvailableFrom,
+            AvailableUntil       = roommate.AvailableUntil,
+            MinimumStayMonths    = roommate.MinimumStayMonths,
+            MaximumStayMonths    = roommate.MaximumStayMonths,
+            LookingForRoomType   = roommate.LookingForRoomType,
+            LookingForApartmentType = roommate.LookingForApartmentType,
+            PreferredLocation    = roommate.PreferredLocation,
+            IsActive             = roommate.IsActive
+        };
     }
     public async Task<RoommateDto> CreateRoommateAsync(int userId, RoommateInputDto input)
     {
@@ -446,7 +387,43 @@ public class RoommateService : IRoommateService
             _context.RollBackTransaction();
             throw;
         }
-        return await GetRoommateByIdAsync(roommate.RoommateId) ?? throw new InvalidOperationException("Failed to update roommate");
+
+        // Roommate is already up-to-date in memory — only load the user to build the DTO,
+        // avoiding an unnecessary re-fetch of the same roommate entity.
+        var user = await _usersContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == roommate.UserId)
+            ?? throw new InvalidOperationException("Failed to update roommate");
+
+        return new RoommateDto
+        {
+            RoommateId           = roommate.RoommateId,
+            UserId               = roommate.UserId,
+            FirstName            = user.FirstName,
+            LastName             = user.LastName,
+            ProfilePicture       = user.ProfilePicture,
+            DateOfBirth          = user.DateOfBirth,
+            PhoneNumber          = user.PhoneNumber,
+            Bio                  = roommate.Bio,
+            Hobbies              = roommate.Hobbies,
+            Profession           = roommate.Profession,
+            SmokingAllowed       = roommate.SmokingAllowed,
+            PetFriendly          = roommate.PetFriendly,
+            Lifestyle            = roommate.Lifestyle,
+            Cleanliness          = roommate.Cleanliness,
+            GuestsAllowed        = roommate.GuestsAllowed,
+            BudgetMin            = roommate.BudgetMin,
+            BudgetMax            = roommate.BudgetMax,
+            BudgetIncludes       = roommate.BudgetIncludes,
+            AvailableFrom        = roommate.AvailableFrom,
+            AvailableUntil       = roommate.AvailableUntil,
+            MinimumStayMonths    = roommate.MinimumStayMonths,
+            MaximumStayMonths    = roommate.MaximumStayMonths,
+            LookingForRoomType   = roommate.LookingForRoomType,
+            LookingForApartmentType = roommate.LookingForApartmentType,
+            PreferredLocation    = roommate.PreferredLocation,
+            IsActive             = roommate.IsActive
+        };
     }
     public async Task<bool> DeleteRoommateAsync(int id, int userId)
     {

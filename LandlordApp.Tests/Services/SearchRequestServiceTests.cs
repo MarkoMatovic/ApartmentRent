@@ -102,6 +102,9 @@ public class SearchRequestServiceTests : IDisposable
 
     #region GetAllSearchRequestsAsync Tests
 
+    // Note: non-paginated IEnumerable overload removed (dead code) — tests updated
+    // to use the paginated overload which is the only public API.
+
     [Fact]
     public async Task GetAllSearchRequestsAsync_NoFilters_ShouldReturnAllActive()
     {
@@ -111,10 +114,10 @@ public class SearchRequestServiceTests : IDisposable
         await SeedRequest(UserId1, "Nis", isActive: false);   // should be excluded
 
         // Act
-        var result = await _service.GetAllSearchRequestsAsync();
+        var result = await _service.GetAllSearchRequestsAsync(null, null, null, null, 1, 100);
 
         // Assert
-        result.Should().HaveCount(2);
+        result.Items.Should().HaveCount(2);
     }
 
     [Fact]
@@ -125,11 +128,11 @@ public class SearchRequestServiceTests : IDisposable
         await SeedRequest(UserId2, "Novi Sad");
 
         // Act
-        var result = await _service.GetAllSearchRequestsAsync(city: "Beograd");
+        var result = await _service.GetAllSearchRequestsAsync(null, "Beograd", null, null, 1, 20);
 
         // Assert
-        result.Should().HaveCount(1);
-        result.First().City.Should().Be("Beograd");
+        result.Items.Should().HaveCount(1);
+        result.Items.First().City.Should().Be("Beograd");
     }
 
     [Fact]
@@ -139,12 +142,12 @@ public class SearchRequestServiceTests : IDisposable
         await SeedRequest(UserId1, "Beograd", budgetMin: 200, budgetMax: 400);
         await SeedRequest(UserId2, "Novi Sad", budgetMin: 1000, budgetMax: 2000);
 
-        // Act — looking for requests where max budget >= 300 (tenant offers at least 300)
-        var result = await _service.GetAllSearchRequestsAsync(minBudget: 500);
+        // Act — looking for requests where max budget >= 500 (tenant offers at least 500)
+        var result = await _service.GetAllSearchRequestsAsync(null, null, 500m, null, 1, 20);
 
         // Assert
-        result.Should().HaveCount(1);
-        result.First().City.Should().Be("Novi Sad");
+        result.Items.Should().HaveCount(1);
+        result.Items.First().City.Should().Be("Novi Sad");
     }
 
     #endregion

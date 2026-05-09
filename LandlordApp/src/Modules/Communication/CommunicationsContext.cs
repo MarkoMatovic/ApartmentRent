@@ -131,6 +131,9 @@ public class CommunicationsContext : DbContext, IUnitOfWork
             entity.Property(e => e.CreatedDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            // Index used by the nightly EmailLogCleanupService DELETE sweep.
+            entity.HasIndex(e => e.SentAt).HasDatabaseName("IX_EmailLogs_SentAt");
         });
 
         modelBuilder.Entity<ConversationSettings>(entity =>

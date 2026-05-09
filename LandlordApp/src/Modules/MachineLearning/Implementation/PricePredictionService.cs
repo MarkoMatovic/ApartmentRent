@@ -8,23 +8,37 @@ namespace Lander.src.Modules.MachineLearning.Implementation;
 public class PricePredictionService : IPricePredictionService
 {
     private readonly ListingsContext _listingsContext;
-    private readonly IWebHostEnvironment _environment;
     private readonly string _modelPath;
     private readonly string _metricsPath;
     private MLContext _mlContext;
     private ITransformer? _trainedModel;
     // .NET 10 Feature: Modern Lock type for thread synchronization
     private static readonly Lock _lock = new();
-    public PricePredictionService(ListingsContext listingsContext, IWebHostEnvironment environment)
+
+    public PricePredictionService(
+        ListingsContext listingsContext,
+        IWebHostEnvironment environment,
+        IConfiguration configuration)
     {
         _listingsContext = listingsContext;
-        _environment = environment;
         _mlContext = new MLContext(seed: 0);
-        var mlModelsDir = Path.Combine(_environment.ContentRootPath, "MLModels");
+
+        // Resolve model storage directory.
+        // In multi-instance deployments (Azure App Service scale-out, Kubernetes) set
+        // ML:ModelBasePath to a shared mount (e.g. Azure Files / NFS) so all instances
+        // load and save the same model.zip.  An empty/missing value falls back to the
+        // local <ContentRoot>/MLModels directory (single-instance / dev).
+        var configuredPath = configuration["ML:ModelBasePath"];
+        var mlModelsDir = string.IsNullOrWhiteSpace(configuredPath)
+            ? Path.Combine(environment.ContentRootPath, "MLModels")
+            : configuredPath;
+
         if (!Directory.Exists(mlModelsDir))
             Directory.CreateDirectory(mlModelsDir);
-        _modelPath = Path.Combine(mlModelsDir, "price-prediction.zip");
+
+        _modelPath   = Path.Combine(mlModelsDir, "price-prediction.zip");
         _metricsPath = Path.Combine(mlModelsDir, "price-prediction-metrics.json");
+
         if (File.Exists(_modelPath))
         {
             _trainedModel = _mlContext.Model.Load(_modelPath, out var _);

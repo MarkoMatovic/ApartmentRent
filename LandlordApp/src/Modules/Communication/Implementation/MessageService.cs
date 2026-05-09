@@ -22,6 +22,7 @@ public partial class MessageService : IMessageService
     private readonly IHubContext<NotificationHub> _notificationHubContext;
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IdempotencyService _idempotencyService;
+    private readonly ILogger<MessageService> _logger;
 
     public MessageService(
         CommunicationsContext context,
@@ -31,7 +32,8 @@ public partial class MessageService : IMessageService
         IHubContext<ChatHub> chatHubContext,
         IHubContext<NotificationHub> notificationHubContext,
         IWebHostEnvironment webHostEnvironment,
-        IdempotencyService idempotencyService)
+        IdempotencyService idempotencyService,
+        ILogger<MessageService> logger)
     {
         _context = context;
         _usersContext = usersContext;
@@ -41,6 +43,7 @@ public partial class MessageService : IMessageService
         _notificationHubContext = notificationHubContext;
         _webHostEnvironment = webHostEnvironment;
         _idempotencyService = idempotencyService;
+        _logger = logger;
     }
 
     public async Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null,
@@ -49,6 +52,15 @@ public partial class MessageService : IMessageService
         if (idempotencyKey is not null &&
             await _idempotencyService.IsDuplicateAsync($"msg:{senderId}:{idempotencyKey}"))
             return null;
+
+        // Validacija fileUrl — samo interni upload putevi su dozvoljeni (S-8 fix)
+        if (fileUrl != null)
+        {
+            if (!Uri.TryCreate(fileUrl, UriKind.Absolute, out var parsedFileUrl) ||
+                !parsedFileUrl.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+                parsedFileUrl.AbsolutePath.Contains(".."))
+                throw new InvalidOperationException("Nevažeći URL fajla.");
+        }
 
         if (await IsUserBlockedAsync(receiverId, senderId))
             throw new InvalidOperationException("You cannot send messages to this user.");
@@ -117,7 +129,14 @@ public partial class MessageService : IMessageService
         {
             var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
             var preview = messageText.Length > 100 ? messageText.Substring(0, 100) + "..." : messageText;
-            _ = _emailService.SendNewMessageEmailAsync(receiver.Email, senderName, preview);
+            try
+            {
+                await _emailService.SendNewMessageEmailAsync(receiver.Email, senderName, preview);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send new-message email notification to receiver {ReceiverId}", receiverId);
+            }
         }
         var messageDto = new MessageDto
         {

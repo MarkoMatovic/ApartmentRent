@@ -15,9 +15,11 @@ namespace Lander.src.Modules.Listings.Implementation;
 public partial class ApartmentService : IApartmentService
 {
     private readonly ListingsContext _context;
-    private readonly UsersContext _usersContext;
+    // Cross-module data access via interfaces — ApartmentService no longer depends on
+    // ReviewsContext or UsersContext directly, preserving bounded context isolation.
+    private readonly IReviewStatsProvider _reviewStats;
+    private readonly IListingsUserLookup _userLookup;
     private readonly HybridCache _hybridCache;
-    private readonly ReviewsContext _reviewsContext;
     private readonly IApartmentNotificationService _notificationService;
     private readonly IUserRoleUpgradeService _roleUpgradeService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -28,12 +30,13 @@ public partial class ApartmentService : IApartmentService
     private readonly IAuditLogService _auditLog;
     private readonly IAnalyticsService _analyticsService;
     private readonly IOutputCacheStore _outputCacheStore;
+    private readonly IConfiguration _configuration;
 
     public ApartmentService(
         ListingsContext context,
-        UsersContext usersContext,
+        IReviewStatsProvider reviewStats,
+        IListingsUserLookup userLookup,
         HybridCache hybridCache,
-        ReviewsContext reviewsContext,
         IApartmentNotificationService notificationService,
         IUserRoleUpgradeService roleUpgradeService,
         IHttpContextAccessor httpContextAccessor,
@@ -43,12 +46,13 @@ public partial class ApartmentService : IApartmentService
         ApartmentCacheVersionService cacheVersion,
         IAuditLogService auditLog,
         IAnalyticsService analyticsService,
-        IOutputCacheStore outputCacheStore)
+        IOutputCacheStore outputCacheStore,
+        IConfiguration configuration)
     {
         _context = context;
-        _usersContext = usersContext;
+        _reviewStats = reviewStats;
+        _userLookup = userLookup;
         _hybridCache = hybridCache;
-        _reviewsContext = reviewsContext;
         _notificationService = notificationService;
         _roleUpgradeService = roleUpgradeService;
         _httpContextAccessor = httpContextAccessor;
@@ -59,5 +63,6 @@ public partial class ApartmentService : IApartmentService
         _auditLog = auditLog;
         _analyticsService = analyticsService;
         _outputCacheStore = outputCacheStore;
+        _configuration = configuration;
     }
 }

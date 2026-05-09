@@ -6,6 +6,20 @@ public partial class MessageService
 {
     public async Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50)
     {
+        var userIds = new[] { userId1, userId2 };
+        var users = await _usersContext.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId);
+
+        // If either participant has disabled chat history, return empty result
+        var chatHistoryBlocked =
+            (users.TryGetValue(userId1, out var u1) && !u1.ChatHistoryConsent) ||
+            (users.TryGetValue(userId2, out var u2) && !u2.ChatHistoryConsent);
+
+        if (chatHistoryBlocked)
+            return new ConversationMessagesDto { TotalCount = 0, Page = page, PageSize = pageSize, Messages = [] };
+
         var query = _context.Messages
             .AsNoTracking()
             .Where(m => (m.SenderId == userId1 && m.ReceiverId == userId2) ||
@@ -26,11 +40,6 @@ public partial class MessageService
                 IsRead = m.IsRead ?? false,
             })
             .ToListAsync();
-        var userIds = new[] { userId1, userId2 };
-        var users = await _usersContext.Users
-            .AsNoTracking()
-            .Where(u => userIds.Contains(u.UserId))
-            .ToDictionaryAsync(u => u.UserId);
         foreach (var msg in messages)
         {
             if (users.TryGetValue(msg.SenderId, out var sender))
@@ -69,9 +78,14 @@ public partial class MessageService
 
         var result = new List<ConversationDto>();
         var otherUserIds = conversations.Select(c => c.OtherUserId).ToList();
+
+        // Load other users + the current user (for consent check)
+        var allRelevantIds = otherUserIds.Concat([userId]).Distinct().ToList();
         var users = await _usersContext.Users.AsNoTracking()
-            .Where(u => otherUserIds.Contains(u.UserId))
+            .Where(u => allRelevantIds.Contains(u.UserId))
             .ToDictionaryAsync(u => u.UserId);
+
+        var currentUserHasConsentDisabled = users.TryGetValue(userId, out var currentUser) && !currentUser.ChatHistoryConsent;
 
         // Load conversation settings for all conversations
         var settings = await _context.ConversationSettings
@@ -101,7 +115,8 @@ public partial class MessageService
                     conversationDto.IsBlocked = setting.IsBlocked;
                 }
 
-                if (conv.LastMessage != null)
+                var otherUserHasConsentDisabled = users.TryGetValue(conv.OtherUserId ?? 0, out var ou) && !ou.ChatHistoryConsent;
+                if (conv.LastMessage != null && !currentUserHasConsentDisabled && !otherUserHasConsentDisabled)
                 {
                     conversationDto.LastMessage = new MessageDto
                     {
@@ -163,8 +178,22 @@ public partial class MessageService
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.MessageId == messageId);
         if (message == null) return null;
-        var sender = message.SenderId.HasValue ? await _usersContext.Users.FindAsync(message.SenderId.Value) : null;
-        var receiver = message.ReceiverId.HasValue ? await _usersContext.Users.FindAsync(message.ReceiverId.Value) : null;
+
+        // Batch-load both participants in one query instead of two FindAsync calls
+        var participantIds = new[] { message.SenderId, message.ReceiverId }
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var userMap = await _usersContext.Users
+            .AsNoTracking()
+            .Where(u => participantIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId);
+
+        userMap.TryGetValue(message.SenderId ?? -1, out var sender);
+        userMap.TryGetValue(message.ReceiverId ?? -1, out var receiver);
+
         return new MessageDto
         {
             MessageId = message.MessageId,

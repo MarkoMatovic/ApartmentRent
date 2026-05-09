@@ -41,10 +41,12 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
         {
             UserId = favorite.UserId ?? 0,
             ApartmentId = favorite.ApartmentId ?? 0,
-            CreatedByGuid = favorite.CreatedByGuid.ToString(),
-            CreatedDate = Timestamp.FromDateTime((DateTime)favorite.CreatedDate),
-            ModifiedByGuid = favorite.ModifiedByGuid.ToString(),
-            ModifiedDate = Timestamp.FromDateTime((DateTime)favorite.ModifiedDate)
+            CreatedByGuid = favorite.CreatedByGuid.HasValue ? favorite.CreatedByGuid.Value.ToString() : string.Empty,
+            CreatedDate = favorite.CreatedDate.HasValue
+                ? Timestamp.FromDateTime(favorite.CreatedDate.Value.ToUniversalTime()) : null,
+            ModifiedByGuid = favorite.ModifiedByGuid.HasValue ? favorite.ModifiedByGuid.Value.ToString() : string.Empty,
+            ModifiedDate = favorite.ModifiedDate.HasValue
+                ? Timestamp.FromDateTime(favorite.ModifiedDate.Value.ToUniversalTime()) : null
         };
     }
     public override async Task<ReviewResponse> CreateReview(CreateReviewRequest request, ServerCallContext context)
@@ -86,16 +88,18 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
         return new ReviewResponse
         {
             ReviewId = review.ReviewId,
-            UserId = (int)review.TenantId,
-            ApartmentId = (int)review.ApartmentId,
-            Rating = (int)review.Rating,
-            Comment = review.ReviewText,
+            UserId = review.TenantId ?? 0,
+            ApartmentId = review.ApartmentId ?? 0,
+            Rating = review.Rating ?? 0,
+            Comment = review.ReviewText ?? string.Empty,
             IsAnonymous = review.IsAnonymous,
             IsPublic = review.IsPublic,
-            CreatedByGuid = review.CreatedByGuid.ToString(),
-            CreatedDate = Timestamp.FromDateTime((DateTime)review.CreatedDate),
-            ModifiedByGuid = review.ModifiedByGuid.ToString(),
-            ModifiedDate = Timestamp.FromDateTime((DateTime)review.ModifiedDate),
+            CreatedByGuid = review.CreatedByGuid.HasValue ? review.CreatedByGuid.Value.ToString() : string.Empty,
+            CreatedDate = review.CreatedDate.HasValue
+                ? Timestamp.FromDateTime(review.CreatedDate.Value.ToUniversalTime()) : null,
+            ModifiedByGuid = review.ModifiedByGuid.HasValue ? review.ModifiedByGuid.Value.ToString() : string.Empty,
+            ModifiedDate = review.ModifiedDate.HasValue
+                ? Timestamp.FromDateTime(review.ModifiedDate.Value.ToUniversalTime()) : null,
             User = user != null ? new UserInfo
             {
                 FirstName = user.FirstName,
@@ -107,6 +111,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     public override async Task<ReviewResponse> GetReviewById(GetReviewByIdRequest request, ServerCallContext context)
     {
         var review = await _context.Reviews
+            .AsNoTracking()
             .Include(r => r.Tenant)
             .FirstOrDefaultAsync(r => r.ReviewId == request.ReviewId);
         if (review == null)
@@ -141,6 +146,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     public override async Task<GetReviewsResponse> GetReviewsByApartmentId(GetReviewsByApartmentIdRequest request, ServerCallContext context)
     {
         var reviews = await _context.Reviews
+            .AsNoTracking()
             .Include(r => r.Tenant)
             .Where(r => r.ApartmentId == request.ApartmentId && r.IsPublic)
             .OrderByDescending(r => r.CreatedDate)
@@ -177,7 +183,8 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     {
         int limit = Math.Min(request.Limit > 0 ? request.Limit : 10, 10);
         var favorites = await _context.Favorites
-            .OrderBy(f => f.FavoriteId) 
+            .AsNoTracking()
+            .OrderBy(f => f.FavoriteId)
             .Take(limit)
             .Select(f => new FavoriteResponse
             {
@@ -277,6 +284,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     public override async Task<GetFavoritesResponse> GetUserFavorites(GetUserFavoritesRequest request, ServerCallContext context)
     {
         var favorites = await _context.Favorites
+            .AsNoTracking()
             .Where(f => f.UserId == request.UserId)
             .OrderByDescending(f => f.CreatedDate)
             .Select(f => new FavoriteResponse

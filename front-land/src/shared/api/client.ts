@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAccessToken, setAccessToken } from './tokenStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 if (!API_BASE_URL) {
@@ -9,11 +10,6 @@ if (!API_BASE_URL) {
 }
 const _baseUrl = API_BASE_URL ?? 'https://localhost:7092';
 
-/**
- * The resolved API base URL.  Always use this instead of re-reading
- * `import.meta.env.VITE_API_URL` so the dev-fallback and production guard
- * only live in one place.
- */
 export const apiBaseUrl = _baseUrl;
 
 export const apiClient = axios.create({
@@ -40,14 +36,14 @@ function isTokenExpiringSoon(token: string, thresholdSeconds = 30): boolean {
 // Request interceptor — attaches token and proactively refreshes if expiring soon
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = sessionStorage.getItem('authToken');
+    const token = getAccessToken();
     if (!token) return config;
 
     // Proactively refresh if token expires within 30s (skip for refresh endpoint itself)
     if (isTokenExpiringSoon(token) && !config.url?.includes('token/refresh')) {
       try {
         const { data } = await apiClient.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
-        sessionStorage.setItem('authToken', data.accessToken);
+        setAccessToken(data.accessToken);
         config.headers.Authorization = `Bearer ${data.accessToken}`;
         return config;
       } catch {
@@ -94,8 +90,7 @@ apiClient.interceptors.response.use(
 
       // Spriječi beskonačnu petlju na samom refresh endpointu
       if (originalRequest._retry || originalRequest.url?.includes('token/refresh')) {
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('refreshToken');
+        setAccessToken(null);
         sessionStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(error);
@@ -119,9 +114,7 @@ apiClient.interceptors.response.use(
           '/api/v1/auth/token/refresh'
         );
 
-        sessionStorage.setItem('authToken', data.accessToken);
-        // Note: new refresh token is set by server as httpOnly cookie automatically
-
+        setAccessToken(data.accessToken);
         apiClient.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
         processQueue(null, data.accessToken);
 
@@ -129,7 +122,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        sessionStorage.removeItem('authToken');
+        setAccessToken(null);
         sessionStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);

@@ -30,9 +30,13 @@ public class ApartmentFilterDto
     [FromQuery(Name = "availableFrom")]
     public DateOnly? AvailableFrom { get; set; }
     [FromQuery(Name = "page")]
-    public int Page { get; set; } = 1;
+    public int Page { get => _page; set => _page = value < 1 ? 1 : value; }
+    private int _page = 1;
+
+    /// <summary>Maximum of 100 items per page. Clamped server-side to prevent DoS.</summary>
     [FromQuery(Name = "pageSize")]
-    public int PageSize { get; set; } = 20;
+    public int PageSize { get => _pageSize; set => _pageSize = value < 1 ? 20 : value > 100 ? 100 : value; }
+    private int _pageSize = 20;
     [FromQuery(Name = "sortBy")]
     public string? SortBy { get; set; }
     [FromQuery(Name = "sortOrder")]

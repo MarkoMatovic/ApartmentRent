@@ -40,7 +40,12 @@ public class AnalyticsServiceTests : IDisposable
         _roommatesContext = new RoommatesContext(roommatesOptions);
         _usersContext     = new UsersContext(usersOptions);
 
-        _analyticsService = new AnalyticsService(_analyticsContext, _listingsContext, _roommatesContext, _usersContext);
+        _analyticsService = new AnalyticsService(
+            _analyticsContext,
+            _listingsContext,
+            _roommatesContext,
+            _usersContext,
+            new Mock<Microsoft.Extensions.Logging.ILogger<AnalyticsService>>().Object);
     }
 
     public void Dispose()
