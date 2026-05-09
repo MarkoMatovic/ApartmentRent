@@ -90,6 +90,20 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
         services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IRoommateMatchingService, Lander.src.Modules.MachineLearning.Implementation.RoommateMatchingService>();
 
+        // --- Neighbourhood Insights (Walk Score + OpenStreetMap Overpass) ---
+        services.AddScoped<INeighbourhoodService, Lander.src.Modules.Listings.Services.NeighbourhoodService>();
+        services.AddHttpClient("WalkScore", c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(5);
+            c.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
+        services.AddHttpClient("Overpass", c =>
+        {
+            c.BaseAddress = new Uri("https://overpass-api.de/");
+            c.Timeout     = TimeSpan.FromSeconds(15);
+            c.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
+
         // .NET 10 Feature: Server-Sent Events for real-time notifications
         services.AddSingleton<NotificationStreamService>();
 

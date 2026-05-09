@@ -6,6 +6,7 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
 using Lander.src.Modules.Listings.Models;
+using Lander.src.Modules.Listings.Services;
 using Lander.src.Modules.MachineLearning.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -138,7 +139,12 @@ public partial class ApartmentService
         _auditLog.Log("CreateApartment", "Apartment", apartment.ApartmentId, currentUserGuid);
 
         if (apartment.IsActive)
+        {
             await _notificationService.NotifyNewListingAsync(apartment.Title, apartment.City ?? string.Empty);
+
+            // Alert users whose saved searches match this new listing.
+            await _notificationService.NotifyNewListingMatchesAsync(BuildAlertContext(apartment));
+        }
 
         return new ApartmentDto
         {
@@ -243,6 +249,21 @@ public partial class ApartmentService
 
         await RequireOwnerAsync(apartment);
 
+        // Restore NotMapped feature properties from the JSON column before applying partial updates.
+        // Without this, any feature not present in updateDto would be silently reset to false.
+        var existingFeatures = ApartmentFeaturesHelper.Deserialize(apartment.Features);
+        apartment.IsFurnished       = existingFeatures.IsFurnished;
+        apartment.HasBalcony        = existingFeatures.HasBalcony;
+        apartment.HasElevator       = existingFeatures.HasElevator;
+        apartment.HasParking        = existingFeatures.HasParking;
+        apartment.HasInternet       = existingFeatures.HasInternet;
+        apartment.HasAirCondition   = existingFeatures.HasAirCondition;
+        apartment.IsPetFriendly     = existingFeatures.IsPetFriendly;
+        apartment.IsSmokingAllowed  = existingFeatures.IsSmokingAllowed;
+
+        // Capture old rent BEFORE applying the update — needed for price-drop detection.
+        var oldRent = apartment.Rent;
+
         if (updateDto.Title != null) apartment.Title = HtmlSanitizationHelper.SanitizePlainText(updateDto.Title)!;
         if (updateDto.Description != null) apartment.Description = HtmlSanitizationHelper.SanitizeRichText(updateDto.Description);
         if (updateDto.Rent.HasValue) apartment.Rent = updateDto.Rent.Value;
@@ -319,6 +340,11 @@ public partial class ApartmentService
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
         _auditLog.Log("UpdateApartment", "Apartment", apartmentId, currentUserGuid);
+
+        // Alert saved-search users when the rent was lowered.
+        if (apartment.IsActive && apartment.Rent < oldRent)
+            await _notificationService.NotifyPriceDropMatchesAsync(BuildAlertContext(apartment), oldRent);
+
         return new ApartmentDto
         {
             ApartmentId = apartment.ApartmentId,
@@ -367,6 +393,24 @@ public partial class ApartmentService
         return uri.AbsolutePath.StartsWith("/uploads/apartments/", StringComparison.OrdinalIgnoreCase)
             && !uri.AbsolutePath.Contains("..");
     }
+
+    /// <summary>Builds a <see cref="ListingAlertContext"/> from the in-memory apartment entity.</summary>
+    private static ListingAlertContext BuildAlertContext(Apartment apt) => new(
+        ApartmentId           : apt.ApartmentId,
+        Title                 : apt.Title,
+        City                  : apt.City,
+        Rent                  : apt.Rent,
+        NumberOfRooms         : apt.NumberOfRooms,
+        ApartmentType         : apt.ApartmentType,
+        ListingType           : apt.ListingType,
+        IsFurnished           : apt.IsFurnished,
+        IsPetFriendly         : apt.IsPetFriendly,
+        IsSmokingAllowed      : apt.IsSmokingAllowed,
+        HasParking            : apt.HasParking,
+        HasBalcony            : apt.HasBalcony,
+        IsImmediatelyAvailable: apt.IsImmediatelyAvailable,
+        LandlordId            : apt.LandlordId
+    );
 
     private async Task RequireOwnerAsync(Apartment apartment)
     {

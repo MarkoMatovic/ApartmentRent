@@ -133,6 +133,7 @@ public class ApartmentServiceTests : IDisposable
             _mockEmailService.Object,
             _savedSearchesContext,
             _usersContext,
+            new Mock<Lander.src.Notifications.Interfaces.INotificationService>().Object,
             new Mock<ILogger<Lander.src.Modules.Listings.Services.ApartmentNotificationService>>().Object);
 
         _apartmentService = new ApartmentService(
