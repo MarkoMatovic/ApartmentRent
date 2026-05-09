@@ -29,6 +29,7 @@ public static class ApiActionsV1
     public const string DeleteApartment = "delete-apartment/{id}";
     public const string ActivateApartment = "activate-apartment/{id}";
     public const string UploadImages = "upload-images";
+    public const string GetNeighbourhood = "neighbourhood/{apartmentId:int}";
     #endregion
 
     #region NotificationActions
