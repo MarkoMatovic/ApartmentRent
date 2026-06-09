@@ -16,18 +16,24 @@ export interface User {
   dateOfBirth?: string;
   isActive: boolean;
   isLookingForRoommate?: boolean;
+  // Premium features (from JWT claims + API)
   hasPersonalAnalytics?: boolean;
   hasLandlordAnalytics?: boolean;
+  tokenBalance?: number;
+  listingCredits?: number;
+  // Timed features (from /api/payments/my-status)
+  boostedUntil?: string;
+  priorityInboxUntil?: string;
+  // Legacy
   subscriptionExpiresAt?: string;
+  // Privacy settings
   analyticsConsent?: boolean;
   chatHistoryConsent?: boolean;
   profileVisibility?: boolean;
   isIncognito?: boolean;
-  tokenBalance?: number;
+  // Rating
   averageRating?: number;
   reviewCount?: number;
-  isIncognito?: boolean;
-  tokenBalance?: number;
 }
 
 export interface PrivacySettings {
@@ -71,4 +77,3 @@ export interface AuthResponse {
   token: string;
   user?: User;
 }
-

@@ -40,6 +40,24 @@
   "editProfile": "Mitbewohner-Profil bearbeiten",
   "deleteMyCard": "Meine Karte löschen",
   "deleteCardConfirm": "Sind Sie sicher, dass Sie Ihre Mitbewohner-Karte löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
-  "noPicture": "Ein Profilbild ist erforderlich, um eine Mitbewohner-Karte zu erstellen. Bitte fügen Sie eines auf Ihrer Profilseite hinzu."
+  "noPicture": "Ein Profilbild ist erforderlich, um eine Mitbewohner-Karte zu erstellen. Bitte fügen Sie eines auf Ihrer Profilseite hinzu.",
+  "gender": "Geschlecht",
+  "languages": "Sprachen",
+  "workSchedule": "Tagesrhythmus",
+  "musicFriendly": "Musik OK",
+  "genderMale": "Männlich",
+  "genderFemale": "Weiblich",
+  "genderNonBinary": "Nicht-binär",
+  "genderOther": "Andere",
+  "genderNotSay": "Keine Angabe",
+  "scheduleMorning": "Morgenmensch",
+  "scheduleEvening": "Abendmensch",
+  "scheduleNight": "Nachtmensch",
+  "scheduleFlexible": "Flexibel",
+  "lifestyleQuiet": "Ruhig",
+  "lifestyleSocial": "Gesellig",
+  "lifestyleMixed": "Gemischt",
+  "availableNow": "Sofort verfügbar",
+  "boostProfile": "Profil boosten",
+  "profileCompleteness": "Profilvollständigkeit"
 }
-

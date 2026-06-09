@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander;
 using Lander.src.Common.Exceptions;
 using Lander.src.Modules.SavedSearches.Dtos.Dto;
@@ -70,18 +71,11 @@ public class SavedSearchService : ISavedSearchService
             ModifiedByGuid = Guid.TryParse(currentUserGuid, out var ssMg) ? ssMg : null,
             ModifiedDate = DateTime.UtcNow
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.SavedSearches.Add(savedSearch);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new InvalidOperationException("Failed to create saved search");
     }
     public async Task<SavedSearchDto> UpdateSavedSearchAsync(int id, int userId, SavedSearchInputDto input)
@@ -101,17 +95,10 @@ public class SavedSearchService : ISavedSearchService
         savedSearch.EmailNotificationsEnabled = input.EmailNotificationsEnabled;
         savedSearch.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var ssMg2) ? ssMg2 : null;
         savedSearch.ModifiedDate = DateTime.UtcNow;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return await GetSavedSearchByIdAsync(savedSearch.SavedSearchId) ?? throw new InvalidOperationException("Failed to update saved search");
     }
     public async Task<bool> DeleteSavedSearchAsync(int id, int userId)
@@ -119,18 +106,11 @@ public class SavedSearchService : ISavedSearchService
         var savedSearch = await _context.SavedSearches
             .FirstOrDefaultAsync(ss => ss.SavedSearchId == id && ss.UserId == userId);
         if (savedSearch == null) return false;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             savedSearch.IsActive = false;
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
 }

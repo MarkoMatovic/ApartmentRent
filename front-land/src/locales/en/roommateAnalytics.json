@@ -14,5 +14,6 @@
   "averagePrices": "Average prices",
   "currency": "din",
   "noRoommateViews": "You haven't viewed any roommate listings yet",
-  "noSearches": "You haven't performed any searches yet"
+  "noSearches": "You haven't performed any searches yet",
+  "apiNotAvailable": "Analytics feature is not available"
 }

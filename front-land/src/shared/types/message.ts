@@ -16,6 +16,8 @@ export interface Message {
     fileType?: string;
     // Phase 2: Super-Like
     isSuperLike?: boolean;
+    // Priority Inbox — server-computed: recipient has active subscription + sender email-verified
+    isPriority?: boolean;
 }
 
 export interface Conversation {

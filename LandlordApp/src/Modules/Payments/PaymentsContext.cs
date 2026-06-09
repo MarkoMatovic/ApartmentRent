@@ -9,32 +9,12 @@ namespace Lander.src.Modules.Payments
         {
         }
 
-        public DbSet<Subscription> Subscriptions { get; set; } = null!;
-        public DbSet<Transaction> Transactions { get; set; } = null!;
+        // Monri payment provider — idempotency table for processed callbacks
         public DbSet<ProcessedMonriOrder> ProcessedMonriOrders { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            modelBuilder.Entity<Subscription>(entity =>
-            {
-                entity.ToTable("Subscriptions", "payments");
-                entity.HasKey(e => e.SubscriptionId);
-                entity.Property(e => e.SubscriptionGuid).HasDefaultValueSql("NEWID()");
-                entity.HasIndex(e => e.SubscriptionGuid).IsUnique();
-                entity.HasIndex(e => e.UserId);
-            });
-
-            modelBuilder.Entity<Transaction>(entity =>
-            {
-                entity.ToTable("Transactions", "payments");
-                entity.HasKey(e => e.TransactionId);
-                entity.Property(e => e.TransactionGuid).HasDefaultValueSql("NEWID()");
-                entity.HasIndex(e => e.TransactionGuid).IsUnique();
-                entity.HasIndex(e => e.UserId);
-                entity.HasIndex(e => e.PaytenTransactionId);
-            });
 
             modelBuilder.Entity<ProcessedMonriOrder>(entity =>
             {

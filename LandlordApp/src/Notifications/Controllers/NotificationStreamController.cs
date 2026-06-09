@@ -28,11 +28,15 @@ public class NotificationStreamController : ControllerBase
         Response.Headers.Append("Connection", "keep-alive");
         Response.Headers.Append("X-Accel-Buffering", "no");
 
+        // Each SSE request gets a unique connectionId so two browser tabs of the
+        // same user each have their own channel — TryRemove on one doesn't disrupt the other.
+        var connectionId = Guid.NewGuid().ToString("N");
+
         try
         {
-            await SendSseMessage("connected", new { userId, timestamp = DateTime.UtcNow });
+            await SendSseMessage("connected", new { userId, connectionId, timestamp = DateTime.UtcNow });
 
-            await foreach (var notification in _streamService.StreamNotificationsAsync(userId, cancellationToken))
+            await foreach (var notification in _streamService.StreamNotificationsAsync(userId, connectionId, cancellationToken))
             {
                 await SendSseMessage("notification", notification);
             }

@@ -153,6 +153,25 @@ public sealed class ListingExpirationService : BackgroundService
 
         if (softDeleted > 0)
             _logger.LogInformation("Soft-deleted {Count} listing(s) past grace period.", softDeleted);
+
+        // ── 4. Deactivate expired featured promotions ───────────────────────────
+        //    When FeaturedUntil has passed, clear IsFeatured so the listing no longer
+        //    appears at the top of search results.
+        int featuredExpired = await db.Apartments
+            .IgnoreQueryFilters()
+            .Where(a =>
+                !a.IsDeleted &&
+                a.IsFeatured &&
+                a.FeaturedUntil.HasValue &&
+                a.FeaturedUntil.Value <= now)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.IsFeatured, false)
+                .SetProperty(a => a.FeaturedUntil, (DateTime?)null)
+                .SetProperty(a => a.ModifiedDate, now),
+                ct);
+
+        if (featuredExpired > 0)
+            _logger.LogInformation("Cleared {Count} expired featured listing promotion(s).", featuredExpired);
     }
 
     // ─── Scheduling ─────────────────────────────────────────────────────────────

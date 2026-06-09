@@ -51,7 +51,7 @@ class ErrorBoundary extends Component<Props, State> {
               {process.env.NODE_ENV === 'development' && this.state.error?.message}
             </Typography>
             <Button variant="contained" color="secondary" onClick={this.handleReload}>
-              Osvježi stranicu
+              Osveži stranicu
             </Button>
           </Paper>
         </Container>

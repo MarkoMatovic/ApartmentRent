@@ -20,6 +20,12 @@ public class UserProfileDto
     public string? RoleName { get; set; }
     public DateTime? CreatedDate { get; set; }
     
+    // Premium features state
+    public bool HasPersonalAnalytics { get; set; }
+    public int ListingCredits { get; set; }
+    public DateTime? BoostedUntil { get; set; }
+    public DateTime? PriorityInboxUntil { get; set; }
+
     // Rating information
     public decimal? AverageRating { get; set; }
     public int ReviewCount { get; set; }

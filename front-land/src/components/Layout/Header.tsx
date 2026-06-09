@@ -19,6 +19,7 @@ import {
   ListItemText,
   Divider,
 } from '@mui/material';
+import Chip from '@mui/material/Chip';
 import {
   Notifications as NotificationsIcon,
   DarkMode as DarkModeIcon,
@@ -30,6 +31,7 @@ import {
   Star as StarIcon,
   Report as ReportIcon,
   Psychology as PsychologyIcon,
+  Token as TokenIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -77,7 +79,9 @@ const Header: React.FC = () => {
   const navItems = [
     { label: t('apartments'), path: '/apartments' },
     ...(isAuthenticated ? [
-      { label: t('messages'), path: '/messages' },
+      // /chat = real-time SignalR chat (typing indicators, read receipts)
+      // /messages = REST-based message history (archive, mute, block, file upload)
+      { label: t('chat:chat', 'Chat'), path: '/chat' },
       { label: t('roommates'), path: '/roommates' },
     ] : []),
   ];
@@ -118,7 +122,7 @@ const Header: React.FC = () => {
         {!isMobile && (
           <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
             {navItems.map((item) => {
-              const showBadge = item.path === '/messages' && unreadMessagesCount > 0;
+              const showBadge = (item.path === '/messages' || item.path === '/chat') && unreadMessagesCount > 0;
               return (
                 <Box
                   key={item.path}
@@ -206,6 +210,17 @@ const Header: React.FC = () => {
             <>
               {!isMobile && (
                 <>
+                  {/* Token balance chip */}
+                  {user?.tokenBalance !== undefined && (
+                    <Chip
+                      icon={<TokenIcon sx={{ fontSize: '1rem !important' }} />}
+                      label={user.tokenBalance}
+                      size="small"
+                      onClick={() => navigate('/pricing')}
+                      sx={{ cursor: 'pointer', mr: 0.5, bgcolor: 'rgba(255,255,255,0.15)', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)', border: 1 }}
+                      title="Tokeni — klikni za kupovinu"
+                    />
+                  )}
                   <IconButton color="inherit" onClick={() => navigate('/profile')} size="medium">
                     <AccountCircle />
                   </IconButton>
@@ -253,6 +268,12 @@ const Header: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/roommates/matches'); handleMenuClose(); }}>
                   <PsychologyIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                   {t('roommates:matches', { defaultValue: 'Roommate Matches' })}
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/moje-pretplate'); handleMenuClose(); }}>
+                  Moje pretplate
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/istorija-placanja'); handleMenuClose(); }}>
+                  Istorija plaćanja
                 </MenuItem>
                 {!user?.roleName?.includes('Premium') && (
                   <MenuItem
@@ -343,7 +364,7 @@ const Header: React.FC = () => {
           {/* Navigation Items */}
           <List>
             {navItems.map((item) => {
-              const showBadge = item.path === '/messages' && unreadMessagesCount > 0;
+              const showBadge = (item.path === '/messages' || item.path === '/chat') && unreadMessagesCount > 0;
               return (
                 <ListItem key={item.path} disablePadding>
                   <ListItemButton onClick={() => { navigate(item.path); setMobileOpen(false); }}>

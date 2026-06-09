@@ -174,7 +174,7 @@ i18n
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications'],
+    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications', 'appointments'],
     interpolation: {
       escapeValue: false,
     },

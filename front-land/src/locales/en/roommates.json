@@ -40,6 +40,24 @@
   "editProfile": "Edit Roommate Profile",
   "deleteMyCard": "Delete My Card",
   "deleteCardConfirm": "Are you sure you want to delete your roommate card? This action cannot be undone.",
-  "noPicture": "A profile picture is required to create a roommate card. Please add one on your profile page."
+  "noPicture": "A profile picture is required to create a roommate card. Please add one on your profile page.",
+  "gender": "Gender",
+  "languages": "Languages",
+  "workSchedule": "Daily rhythm",
+  "musicFriendly": "Music OK",
+  "genderMale": "Male",
+  "genderFemale": "Female",
+  "genderNonBinary": "Non-binary",
+  "genderOther": "Other",
+  "genderNotSay": "Prefer not to say",
+  "scheduleMorning": "Morning person",
+  "scheduleEvening": "Evening person",
+  "scheduleNight": "Night owl",
+  "scheduleFlexible": "Flexible",
+  "lifestyleQuiet": "Quiet",
+  "lifestyleSocial": "Social",
+  "lifestyleMixed": "Mixed",
+  "availableNow": "Available now",
+  "boostProfile": "Boost profile",
+  "profileCompleteness": "Profile completeness"
 }
-

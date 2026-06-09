@@ -13,7 +13,9 @@ import {
     PictureAsPdf as PdfIcon,
     Description as DocIcon,
     Star as StarIcon,
+    MarkEmailRead as PriorityIcon,
 } from '@mui/icons-material';
+import { Tooltip, Chip } from '@mui/material';
 import { format, parseISO } from 'date-fns';
 import { Message } from '../../shared/types/message';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -116,6 +118,11 @@ export const MessageThread: React.FC<MessageThreadProps> = ({ messages }) => {
                                 </Typography>
                                 {message.isSuperLike && (
                                     <StarIcon sx={{ fontSize: 14, color: 'warning.main' }} />
+                                )}
+                                {message.isPriority && !isOwnMessage && (
+                                    <Tooltip title="Priority poruka — verificiran pošiljaoc">
+                                        <PriorityIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                                    </Tooltip>
                                 )}
                             </Box>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +10,12 @@ import {
   ListItemIcon,
   ListItemText,
   Tab,
-  Tabs
+  Tabs,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  CircularProgress,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
@@ -21,8 +26,11 @@ import HomeIcon from '@mui/icons-material/Home';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useNavigate } from 'react-router-dom';
-import { paymentsApi } from '../shared/api/paymentsApi';
+import { paymentsApi, submitMonriForm } from '../shared/api/paymentsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
+import { useAuth } from '../shared/context/AuthContext';
+import { apiClient } from '../shared/api/client';
+import WithdrawalWaiverModal from '../components/Payment/WithdrawalWaiverModal';
 
 const analyticsFeatures = [
   { icon: <AutoGraphIcon fontSize="small" />, text: "Advanced search behavior insights", highlighted: true },
@@ -63,75 +71,129 @@ const featuredFeatures = [
 const PricingPage: React.FC = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotifications();
+  const { isAuthenticated } = useAuth();
   const [tabIndex, setTabIndex] = useState(0);
-  
-  // State for Analytics
-  const [analyticsCycle, setAnalyticsCycle] = useState<'Monthly' | 'Yearly'>('Yearly');
-  
-  // State for Featured Apartment
-  const [featuredDuration, setFeaturedDuration] = useState<'7 Days' | '30 Days'>('7 Days');
 
+  // Analytics
+  const [analyticsCycle, setAnalyticsCycle] = useState<'Monthly' | 'Yearly'>('Yearly');
+
+  // Featured listing
+  const [featuredDuration, setFeaturedDuration] = useState<'7 Days' | '30 Days'>('7 Days');
+  const [myApartments, setMyApartments] = useState<{ apartmentId: number; title: string }[]>([]);
+  const [selectedApartmentId, setSelectedApartmentId] = useState<number | ''>('');
+  const [apartmentsLoading, setApartmentsLoading] = useState(false);
+
+  // Listing
   const [listingCount, setListingCount] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // Withdrawal waiver modal state
+  const [waiverOpen, setWaiverOpen] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
+  const [pendingApartmentId, setPendingApartmentId] = useState<number | null>(null);
+  const [waiverPlanName, setWaiverPlanName] = useState('');
+  const [waiverAmount, setWaiverAmount] = useState('');
+
+  // Load user's apartments when on the Featured tab
+  useEffect(() => {
+    if (tabIndex !== 1 || !isAuthenticated || myApartments.length > 0) return;
+    setApartmentsLoading(true);
+    apiClient.get('/api/v1/apartments/my-apartments')
+      .then(res => {
+        const items = (res.data?.items ?? res.data ?? []) as { apartmentId: number; title: string }[];
+        setMyApartments(items);
+        if (items.length > 0) setSelectedApartmentId(items[0].apartmentId);
+      })
+      .catch(() => {/* silently ignore */})
+      .finally(() => setApartmentsLoading(false));
+  }, [tabIndex, isAuthenticated]);
+
   const comingSoon = () => {
-    addNotification({ title: 'Coming Soon', message: 'Online payment will be available soon. Contact us at info@turentaj.com to arrange payment.', type: 'info' });
+    addNotification({
+      title: 'Uskoro dostupno',
+      message: 'Online plaćanje za ovu uslugu će biti dostupno uskoro. Kontaktirajte nas na info@turentaj.com.',
+      type: 'info',
+    });
   };
 
-  const handleSubscribeAnalytics = comingSoon;
-  const handleBoostProfile = comingSoon;
-  const handlePriorityInbox = comingSoon;
-  const handlePublishListing = comingSoon;
-  const handlePromoteFeature = comingSoon;
+  // All flows now wired to Monri via handleSubscribe
+  const handleBoostProfile   = () => handleSubscribe('boost-7');
+  const handlePriorityInbox  = () => handleSubscribe('priority-30');
+  const handlePublishListing = () => handleSubscribe(`listing-${listingCount}`);
+  const handlePromoteFeature = () => {
+    if (!selectedApartmentId) {
+      addNotification({ title: 'Odaberi oglas', message: 'Molimo odaberi oglas koji želiš istaknuti.', type: 'warning' });
+      return;
+    }
+    handleSubscribeWithApartment(
+      featuredDuration === '7 Days' ? 'featured-7' : 'featured-30',
+      selectedApartmentId as number,
+    );
+  };
 
-  const handleSubscribe = async (planId: string) => {
+  // Plan name/amount lookup for the waiver modal
+  const PLAN_LABELS: Record<string, { name: string; amount: string }> = {
+    'analytics-monthly':  { name: 'Analytics (Mesečno)',           amount: '€4.99' },
+    'analytics-yearly':   { name: 'Analytics (Godišnje)',           amount: '€49.99' },
+    'tokens-10':          { name: 'Starter Pack (10 Tokena)',        amount: '€2.99' },
+    'tokens-50':          { name: 'Power User (50 Tokena)',          amount: '€9.99' },
+    'tokens-150':         { name: 'Elite Bundle (150 Tokena)',       amount: '€24.99' },
+    'featured-7':         { name: 'Istaknut Oglas (7 Dana)',         amount: '€9.99' },
+    'featured-30':        { name: 'Istaknut Oglas (30 Dana)',        amount: '€29.99' },
+    'listing-1':          { name: 'Objavi Oglas (1)',                amount: '€5.00' },
+    'listing-3':          { name: 'Objavi Oglas (3)',                amount: '€15.00' },
+    'listing-5':          { name: 'Objavi Oglas (5)',                amount: '€25.00' },
+    'boost-7':            { name: 'Boost Profila Cimera (7 Dana)',   amount: '€2.00' },
+    'priority-30':        { name: 'Priority Inbox (30 Dana)',        amount: '€2.00' },
+  };
+
+  /** Opens the mandatory withdrawal waiver modal, then proceeds to payment on confirm. */
+  const handleSubscribe = (planId: string) => {
+    const info = PLAN_LABELS[planId] ?? { name: planId, amount: '' };
+    setPendingPlanId(planId);
+    setPendingApartmentId(null);
+    setWaiverPlanName(info.name);
+    setWaiverAmount(info.amount);
+    setWaiverOpen(true);
+  };
+
+  /** Same as handleSubscribe but passes an apartmentId (for featured-* plans). */
+  const handleSubscribeWithApartment = (planId: string, apartmentId: number) => {
+    const info = PLAN_LABELS[planId] ?? { name: planId, amount: '' };
+    setPendingPlanId(planId);
+    setPendingApartmentId(apartmentId);
+    setWaiverPlanName(info.name);
+    setWaiverAmount(info.amount);
+    setWaiverOpen(true);
+  };
+
+  /** Called when user confirms the waiver — proceeds to actual Monri payment. */
+  const handleWaiverConfirm = async () => {
+    if (!pendingPlanId) return;
+    setWaiverOpen(false);
     setLoading(true);
     try {
       const formFields = await paymentsApi.createPayment(
-        planId,
+        pendingPlanId,
         `${window.location.origin}/payment-success`,
-        `${window.location.origin}/payment-failure`
+        `${window.location.origin}/payment-failure`,
+        pendingApartmentId ?? undefined,
       );
-
-      // Dynamically build and submit a form to Monri's hosted payment page
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = formFields.formAction;
-
-      const fields: Record<string, string> = {
-        authenticity_token: formFields.authenticityToken,
-        order_number: formFields.orderNumber,
-        amount: String(formFields.amount),
-        currency: formFields.currency,
-        order_info: formFields.orderInfo,
-        digest: formFields.digest,
-        success_url_override: formFields.successUrl,
-        failure_url_override: formFields.failureUrl,
-        callback_url: formFields.callbackUrl,
-        buyer_name: formFields.buyerName,
-        buyer_email: formFields.buyerEmail,
-        language: 'sr',
-      };
-
-      Object.entries(fields).forEach(([name, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-      form.submit();
+      submitMonriForm(formFields);
+      // Page navigates away — setLoading not needed
     } catch (error: any) {
       addNotification({
         title: 'Greška',
-        message: error.response?.data?.error || 'Nije moguće pokrenuti plaćanje',
-        type: 'error'
+        message: error.response?.data?.message || 'Nije moguće pokrenuti plaćanje. Pokušajte ponovo.',
+        type: 'error',
       });
       setLoading(false);
     }
   };
+
+  // Analytics: delegate to handleSubscribe with the correct planId
+  const handleSubscribeAnalytics = () =>
+    handleSubscribe(analyticsCycle === 'Monthly' ? 'analytics-monthly' : 'analytics-yearly');
 
   return (
     <Box sx={{
@@ -299,6 +361,33 @@ const PricingPage: React.FC = () => {
               30 Dana
             </Button>
           </Box>
+
+          {/* Apartment selector */}
+          {isAuthenticated && (
+            <Box sx={{ mb: 3 }}>
+              {apartmentsLoading ? (
+                <Box sx={{ textAlign: 'center' }}><CircularProgress size={24} sx={{ color: '#89D9F8' }} /></Box>
+              ) : myApartments.length === 0 ? (
+                <Typography variant="body2" sx={{ opacity: 0.7, textAlign: 'center' }}>
+                  Nemate objavljenih oglasa. Prvo objavite oglas (Oglas tab), a potom ga istaknite.
+                </Typography>
+              ) : (
+                <FormControl fullWidth size="small">
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Odaberi oglas za isticanje</InputLabel>
+                  <Select
+                    value={selectedApartmentId}
+                    onChange={e => setSelectedApartmentId(e.target.value as number)}
+                    label="Odaberi oglas za isticanje"
+                    sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' }, '.MuiSvgIcon-root': { color: '#fff' } }}
+                  >
+                    {myApartments.map(apt => (
+                      <MenuItem key={apt.apartmentId} value={apt.apartmentId}>{apt.title}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+          )}
 
           {/* Card */}
           <Box sx={{
@@ -558,28 +647,21 @@ const PricingPage: React.FC = () => {
                 </Box>
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="h5" fontWeight="bold">€{pack.price}</Typography>
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     variant="contained"
-                    onClick={() => {
-                      setLoading(true);
-                      paymentsApi.initiatePaytenCheckout(`${pack.tokens} Tokena`, pack.price)
-                        .then(res => { if (res.checkoutUrl) window.location.href = res.checkoutUrl; })
-                        .catch(() => {
-                           addNotification({ title: 'Error', message: 'Failed to initiate checkout', type: 'error' });
-                           setLoading(false);
-                        });
-                    }}
-                    sx={{ 
-                      mt: 1, 
-                      borderRadius: '12px', 
+                    onClick={() => handleSubscribe(`tokens-${pack.tokens}`)}
+                    disabled={loading}
+                    sx={{
+                      mt: 1,
+                      borderRadius: '12px',
                       backgroundColor: pack.popular ? '#89D9F8' : '#fff',
                       color: '#0A2540',
                       textTransform: 'none',
-                      fontWeight: 'bold'
+                      fontWeight: 'bold',
                     }}
                   >
-                    Kupi
+                    {loading ? '...' : 'Kupi'}
                   </Button>
                 </Box>
               </Box>
@@ -590,6 +672,14 @@ const PricingPage: React.FC = () => {
           </Typography>
         </>
       )}
+    {/* Mandatory withdrawal waiver modal — ZZP čl. 30 */}
+    <WithdrawalWaiverModal
+      open={waiverOpen}
+      planName={waiverPlanName}
+      amount={waiverAmount}
+      onConfirm={handleWaiverConfirm}
+      onCancel={() => setWaiverOpen(false)}
+    />
     </Box>
   );
 };

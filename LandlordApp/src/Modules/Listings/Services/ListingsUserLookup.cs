@@ -35,4 +35,28 @@ public class ListingsUserLookup : IListingsUserLookup
 
         return user is null ? null : new LandlordBrief(user.FirstName, user.LastName, user.Email);
     }
+
+    public async Task<(string? RoleName, int ListingCredits)> GetUserListingContextAsync(int userId)
+    {
+        var data = await _usersContext.Users
+            .AsNoTracking()
+            .Where(u => u.UserId == userId)
+            .Select(u => new
+            {
+                u.ListingCredits,
+                RoleName = u.UserRole != null ? u.UserRole.RoleName : null
+            })
+            .FirstOrDefaultAsync();
+
+        return data is null ? (null, 0) : (data.RoleName, data.ListingCredits);
+    }
+
+    public async Task<bool> TryDeductListingCreditAsync(int userId)
+    {
+        // Atomic conditional decrement — only executes when balance > 0 to prevent going negative.
+        var affected = await _usersContext.Database.ExecuteSqlRawAsync(
+            "UPDATE [UsersRoles].[Users] SET ListingCredits = ListingCredits - 1 WHERE UserId = {0} AND ListingCredits > 0",
+            userId);
+        return affected > 0;
+    }
 }

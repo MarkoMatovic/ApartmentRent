@@ -60,13 +60,17 @@ public class GlobalExceptionHandlerMiddleware
                 statusCode = HttpStatusCode.NotFound;
                 message = "Resource not found.";
                 break;
-            case ArgumentException argEx:
+            case ArgumentException:
+                // Return 400 but DO NOT expose the exception message — it may contain
+                // internal details (table names, query shapes, parameter values, etc.).
                 statusCode = HttpStatusCode.BadRequest;
-                message = argEx.Message;
+                message = "The request contains invalid data.";
                 break;
-            case InvalidOperationException invEx:
-                statusCode = HttpStatusCode.BadRequest;
-                message = invEx.Message;
+            case InvalidOperationException:
+                // Could come from EF, ASP.NET pipeline, or business logic.
+                // Treat as a server-side error rather than leaking implementation details.
+                statusCode = HttpStatusCode.InternalServerError;
+                message = "An error occurred while processing your request.";
                 break;
             default:
                 message = "An unexpected error occurred.";

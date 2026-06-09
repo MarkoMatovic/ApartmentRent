@@ -40,7 +40,11 @@ public static class ApartmentQueryBuilder
     public static IOrderedQueryable<Apartment> ApplySort(
         this IQueryable<Apartment> query, string? sortBy, string? sortOrder)
     {
-        var baseOrdered = query.OrderByDescending(a => a.IsFeatured);
+        // Featured listings bubble to the top only while their FeaturedUntil window is active.
+        // EF Core translates DateTime.UtcNow → SQL Server GETUTCDATE() at query time.
+        var now = DateTime.UtcNow;
+        var baseOrdered = query.OrderByDescending(a =>
+            a.IsFeatured && (a.FeaturedUntil == null || a.FeaturedUntil > now));
         var by = sortBy?.ToLower() ?? "date";
         var order = sortOrder?.ToLower() ?? "desc";
 

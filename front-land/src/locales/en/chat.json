@@ -89,5 +89,7 @@
   "adminNotes": "Admin Notes",
   "markAsReviewed": "Mark as Reviewed",
   "resolve": "Resolve",
-  "confirmDeleteReport": "Are you sure you want to delete this report?"
+  "confirmDeleteReport": "Are you sure you want to delete this report?",
+  "unblockUser": "Unblock user",
+  "userUnblocked": "User has been unblocked"
 }

@@ -126,12 +126,17 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Analytics.AnalyticsUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.ApartmentApplications.ApplicationUserDeletedHandler>();
 
-        // gRPC client for Reviews/Favorites microservice
-        services.AddScoped<IGrpcServiceClient>(sp =>
+        // gRPC client for Reviews/Favorites microservice.
+        // Registered as SINGLETON so that GrpcChannel (which owns the HTTP/2 connection
+        // pool) is created once and reused — creating a new channel per-request leaks
+        // sockets.  IHttpContextAccessor is injected so each call can forward the
+        // caller's Authorization header at invoke time.
+        services.AddSingleton<IGrpcServiceClient>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
+            var accessor = sp.GetRequiredService<IHttpContextAccessor>();
             var grpcUrl = config["GrpcServerUrl"] ?? "http://localhost:5001";
-            return new GrpcServiceClient(grpcUrl);
+            return new GrpcServiceClient(grpcUrl, accessor);
         });
 
         // .NET 10 Feature: Vector Search for semantic apartment search
@@ -139,9 +144,6 @@ public static class ApplicationServiceExtensions
 
         // Appointment Booking System
         services.AddScoped<Lander.src.Modules.Appointments.Interfaces.IAppointmentService, Lander.src.Modules.Appointments.Implementation.AppointmentService>();
-
-        // Payments
-        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentService, Lander.src.Modules.Payments.Implementation.PaytenPaymentService>();
 
         services.AddScoped<TokenProvider>();
         services.AddScoped<RefreshTokenService>();

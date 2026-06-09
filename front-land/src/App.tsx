@@ -41,6 +41,16 @@ import { PricePredictorPage } from './pages/PricePredictor';
 import RoommateMatchesPage from './pages/RoommateMatchesPage';
 import { AdminRoute } from './shared/components/AdminRoute';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
+// Legal pages
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/legal/TermsOfServicePage';
+import CookiePolicyPage from './pages/legal/CookiePolicyPage';
+import RefundPolicyPage from './pages/legal/RefundPolicyPage';
+// Payment management pages
+import MySubscriptionsPage from './pages/MySubscriptionsPage';
+import PaymentHistoryPage from './pages/PaymentHistoryPage';
+// Cookie consent
+import CookieConsentBanner from './components/CookieConsent/CookieConsentBanner';
 
 /**
  * Wraps the route tree in an ErrorBoundary that automatically resets whenever
@@ -97,6 +107,14 @@ function App() {
                 <Route path="/saved-searches" element={<ProtectedRoute><SavedSearchesPage /></ProtectedRoute>} />
                 <Route path="/search-requests" element={<ProtectedRoute><SearchRequestsPage /></ProtectedRoute>} />
                 <Route path="/price-predictor" element={<PricePredictorPage />} />
+                {/* Legal pages — required by ZET and ZZPL */}
+                <Route path="/politika-privatnosti" element={<PrivacyPolicyPage />} />
+                <Route path="/uslovi-koriscenja" element={<TermsOfServicePage />} />
+                <Route path="/politika-kolacica" element={<CookiePolicyPage />} />
+                <Route path="/politika-povracaja" element={<RefundPolicyPage />} />
+                {/* Payment management */}
+                <Route path="/moje-pretplate" element={<ProtectedRoute><MySubscriptionsPage /></ProtectedRoute>} />
+                <Route path="/istorija-placanja" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} />
                 <Route path="/unauthorized" element={
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
                     <h2>Access Denied</h2>
@@ -108,6 +126,7 @@ function App() {
               </Routes>
               </PageErrorBoundary>
               </Layout>
+              <CookieConsentBanner />
             </Router>
           </NotificationProvider>
         </AuthProvider>

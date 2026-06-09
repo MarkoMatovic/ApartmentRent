@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { messagesApi } from '../../api/messagesApi';
 import RejectionDialog from '../../components/Dialogs/RejectionDialog';
 import { apiBaseUrl } from '../api/client';
+import { getAccessToken } from '../api/tokenStore';
 
 interface Notification {
   id: string;
@@ -36,7 +37,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Učitaj broj nepročitanih poruka — memoised so consumers get a stable reference
   const refreshUnreadMessagesCount = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('authToken');
+      // Use in-memory token only — never sessionStorage (XSS risk).
+      const token = getAccessToken();
       if (!token) return;
 
       // Parsiraj userId iz JWT tokena
@@ -91,7 +93,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Poveži se na ChatHub za real-time ažuriranje broja nepročitanih poruka
   useEffect(() => {
-    const token = sessionStorage.getItem('authToken');
+    const token = getAccessToken();
     if (!token) return;
 
     try {
@@ -103,7 +105,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       const chatHubUrl = apiBaseUrl + '/chatHub';
       const newChatConnection = new signalR.HubConnectionBuilder()
         .withUrl(chatHubUrl, {
-          accessTokenFactory: () => token
+          // Always read from in-memory store at connection time — token may have rotated.
+          accessTokenFactory: () => getAccessToken() ?? ''
         })
         .withAutomaticReconnect()
         .build();
@@ -139,7 +142,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   // Učitaj broj nepročitanih poruka kada postoji token (korisnik je ulogovan)
   useEffect(() => {
     const checkAndLoad = async () => {
-      const token = sessionStorage.getItem('authToken');
+      // Use in-memory token — never sessionStorage (XSS risk).
+      const token = getAccessToken();
       if (!token) {
         setUnreadMessagesCount(0);
         return;
@@ -162,19 +166,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     };
 
     window.addEventListener('authTokenChanged', handleAuthChange);
-    // Takođe osluškuj storage event za promene iz drugih prozora
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken' && e.storageArea === sessionStorage) {
-        checkAndLoad();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
       clearInterval(interval);
       window.removeEventListener('authTokenChanged', handleAuthChange);
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, []); // Prazan dependency array - učitava se samo jednom pri mount-u
 
@@ -185,7 +179,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       timestamp: new Date(),
       read: false,
     };
-    setNotifications((prev) => [newNotification, ...prev]);
+    // Cap at 50 so the in-memory array never grows unboundedly during a long session.
+    setNotifications((prev) => [newNotification, ...prev].slice(0, 50));
   };
 
   const markAsRead = (id: string) => {

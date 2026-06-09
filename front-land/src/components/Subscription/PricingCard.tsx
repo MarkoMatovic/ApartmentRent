@@ -101,10 +101,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
                     variant={isCurrentPlan ? "outlined" : "contained"}
                     fullWidth
                     size="large"
-                    onClick={() => onSubscribe(plan)}
+                    onClick={() => !isCurrentPlan && onSubscribe(plan)}
                     disabled={isCurrentPlan || loading}
                 >
-                    {isCurrentPlan ? 'Active' : 'Get Premium'}
+                    {isCurrentPlan ? 'Active' : loading ? 'Obrađuje se...' : 'Kupi'}
                 </Button>
             </CardActions>
         </Card>

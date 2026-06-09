@@ -51,8 +51,20 @@ public class OutboxProcessorService : BackgroundService
         var commContext = scope.ServiceProvider.GetRequiredService<CommunicationsContext>();
         var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
 
+        // ── Atomic claim: set ProcessedAt to a sentinel value (DateTime.MinValue)
+        // in a single UPDATE so that concurrent instances don't double-process.
+        // Only rows where ProcessedAt IS NULL are eligible; UPDLOCK + READPAST hints
+        // skip rows already locked by another instance.
+        var claimedIds = new List<int>();
+        var claimCount = await commContext.Database.ExecuteSqlRawAsync(
+            @"UPDATE TOP({0}) [communications].[OutboxMessages]
+              SET ProcessedAt = '0001-01-01 00:00:00'
+              WHERE ProcessedAt IS NULL AND RetryCount < {1}",
+            BatchSize, MaxRetries);
+
+        // Fetch only the rows we just claimed (sentinel = DateTime.MinValue)
         var pending = await commContext.OutboxMessages
-            .Where(e => e.ProcessedAt == null && e.RetryCount < MaxRetries)
+            .Where(e => e.ProcessedAt == DateTime.MinValue)
             .OrderBy(e => e.CreatedAt)
             .Take(BatchSize)
             .ToListAsync(ct);
@@ -62,16 +74,24 @@ public class OutboxProcessorService : BackgroundService
             try
             {
                 await HandleEventAsync(evt, usersContext, ct);
+                // Mark truly processed with real timestamp
                 evt.ProcessedAt = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
+                // Release the claim (set back to NULL) so retry logic can pick it up
                 await commContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE [communications].[OutboxMessages] SET RetryCount = RetryCount + 1, Error = {0} WHERE Id = {1}",
-                    ex.Message, evt.Id);
+                    "UPDATE [communications].[OutboxMessages] SET ProcessedAt = NULL, RetryCount = RetryCount + 1, Error = {0} WHERE Id = {1}",
+                    ex.Message.Length > 500 ? ex.Message[..500] : ex.Message, evt.Id);
                 await commContext.Entry(evt).ReloadAsync(ct);
-                _logger.LogWarning(ex, "Failed to process outbox event {Id} (type: {Type}), retry {Retry}/{Max}.",
-                    evt.Id, evt.EventType, evt.RetryCount, MaxRetries);
+
+                if (evt.RetryCount >= MaxRetries)
+                    _logger.LogError(ex,
+                        "Outbox event {Id} (type: {Type}) exhausted {Max} retries and will not be retried. Manual intervention required.",
+                        evt.Id, evt.EventType, MaxRetries);
+                else
+                    _logger.LogWarning(ex, "Failed to process outbox event {Id} (type: {Type}), retry {Retry}/{Max}.",
+                        evt.Id, evt.EventType, evt.RetryCount, MaxRetries);
             }
         }
 

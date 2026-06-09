@@ -60,6 +60,9 @@ public class UserRoleUpgradeService : IUserRoleUpgradeService
         finally
         {
             semaphore.Release();
+            // Remove the entry so the dictionary doesn't grow unboundedly with one
+            // SemaphoreSlim per user that has ever created a listing.
+            _upgradeLocks.TryRemove(new KeyValuePair<int, SemaphoreSlim>(userId, semaphore));
         }
     }
 }

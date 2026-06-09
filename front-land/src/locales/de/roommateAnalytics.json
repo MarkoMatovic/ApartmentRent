@@ -14,5 +14,6 @@
   "averagePrices": "Durchschnittspreise",
   "currency": "Din",
   "noRoommateViews": "Sie haben noch keine Mitbewohner-Anzeigen angesehen",
-  "noSearches": "Sie haben noch keine Suchen durchgeführt"
+  "noSearches": "Sie haben noch keine Suchen durchgeführt",
+  "apiNotAvailable": "Analysefunktion ist nicht verfügbar"
 }

@@ -4,7 +4,7 @@ namespace Lander.src.Infrastructure.Services;
 
 /// <summary>
 /// IHostedService koji automatski pokреće sve EF Core migracije pri startu aplikacije.
-/// Sve greške se loguju ali ne zaustavljaju pokretanje app-a — operator mora ručno da ispravi.
+/// Migration errors cause the host to stop (fail-fast) so the app never runs against a mismatched schema.
 /// </summary>
 public class DatabaseMigrationService(
     IServiceScopeFactory scopeFactory,
@@ -59,8 +59,14 @@ public class DatabaseMigrationService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Greška pri migraciji {Context}. Aplikacija nastavlja s radom, ali DB možda nije ažuran.",
+            // Migration failure is unrecoverable — serving traffic against a mismatched
+            // schema causes silent data corruption that is much harder to diagnose.
+            // Log the error and rethrow so the host stops cleanly (BackgroundService
+            // exceptions bubble through IHostApplicationLifetime.StopApplication).
+            logger.LogCritical(ex,
+                "FATAL: migration failed for {Context}. Application cannot start safely. Fix the migration and redeploy.",
                 typeof(TContext).Name);
+            throw;
         }
     }
 }

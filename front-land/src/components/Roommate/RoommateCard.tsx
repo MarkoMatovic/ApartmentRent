@@ -1,138 +1,204 @@
 import React from 'react';
-import { Card, CardContent, CardActions, Typography, Chip, Box, Button, Avatar } from '@mui/material';
+import {
+  Card, CardActionArea, Box, Typography, Avatar, Chip,
+  LinearProgress, Tooltip,
+} from '@mui/material';
 import {
   LocationOn as LocationIcon,
   Euro as EuroIcon,
-  Favorite as FavoriteIcon,
+  CalendarToday as CalIcon,
   SmokingRooms as SmokingIcon,
+  SmokeFree as NoSmokingIcon,
   Pets as PetsIcon,
+  MusicNote as MusicIcon,
+  Star as StarIcon,
+  Favorite as HeartIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { Roommate } from '../../shared/types/roommate';
+import {
+  Roommate,
+  getAge, formatAvailableFrom,
+  LIFESTYLE_ICONS, LIFESTYLE_LABELS,
+  SCHEDULE_ICONS, SCHEDULE_LABELS,
+  GENDER_LABELS,
+} from '../../shared/types/roommate';
 
-interface RoommateCardProps {
+interface Props {
   roommate: Roommate;
   matchScore?: number;
+  isOwn?: boolean;
 }
 
-const RoommateCard: React.FC<RoommateCardProps> = ({ roommate, matchScore }) => {
+const TagChips: React.FC<{ value?: string; max?: number }> = ({ value, max = 4 }) => {
+  if (!value) return null;
+  const items = value.split(',').map(s => s.trim()).filter(Boolean).slice(0, max);
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+      {items.map(item => (
+        <Chip key={item} label={item} size="small"
+          sx={{ fontSize: '0.68rem', height: 20, bgcolor: 'action.hover' }} />
+      ))}
+    </Box>
+  );
+};
+
+const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
   const navigate = useNavigate();
+  const age = getAge(roommate.dateOfBirth);
+  const availableFrom = formatAvailableFrom(roommate.availableFrom);
 
-  const getMatchColor = (score: number) => {
-    if (score >= 80) return 'success';
-    if (score >= 60) return 'info';
-    if (score >= 40) return 'warning';
-    return 'default';
-  };
+  // Profile completeness score
+  const fields = [
+    roommate.bio, roommate.profession, roommate.hobbies,
+    roommate.preferredLocation, roommate.languages,
+    roommate.lifestyle, roommate.cleanliness,
+    roommate.budgetMin, roommate.availableFrom,
+    roommate.gender !== undefined && roommate.gender !== 0,
+    roommate.workSchedule !== undefined,
+    roommate.profilePicture,
+  ];
+  const completeness = Math.round((fields.filter(Boolean).length / fields.length) * 100);
 
-  const getMatchQuality = (score: number) => {
-    if (score >= 80) return 'Excellent Match';
-    if (score >= 60) return 'Good Match';
-    if (score >= 40) return 'Fair Match';
-    return 'Low Match';
-  };
+  const matchColor = matchScore !== undefined
+    ? matchScore >= 80 ? '#4caf50' : matchScore >= 60 ? '#2196f3' : matchScore >= 40 ? '#ff9800' : '#9e9e9e'
+    : undefined;
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <Card sx={{
+      borderRadius: 3, overflow: 'hidden', height: '100%',
+      display: 'flex', flexDirection: 'column', position: 'relative',
+      border: matchScore && matchScore >= 80 ? '2px solid #4caf50' : undefined,
+      transition: 'transform 0.15s, box-shadow 0.15s',
+      '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
+    }}>
+      {/* Badges */}
+      <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2, display: 'flex', gap: 0.5, flexDirection: 'column' }}>
+        {isOwn && (
+          <Chip label="Moj profil" size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+        )}
+      </Box>
       {matchScore !== undefined && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            zIndex: 1,
-          }}
-        >
+        <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
           <Chip
-            label={`${matchScore.toFixed(0)}% Match`}
-            color={getMatchColor(matchScore)}
-            size="small"
-            icon={<FavoriteIcon />}
-            sx={{ fontWeight: 'bold' }}
+            icon={<HeartIcon sx={{ fontSize: '0.9rem !important', color: matchColor + ' !important' }} />}
+            label={`${matchScore.toFixed(0)}%`} size="small"
+            sx={{ bgcolor: 'background.paper', fontWeight: 800, fontSize: '0.78rem', border: `2px solid ${matchColor}`, color: matchColor }}
           />
         </Box>
       )}
 
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar 
-            src={roommate.profilePicture || undefined}
-            sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}
-          >
-            {roommate.firstName?.[0] || roommate.user?.firstName?.[0] || 'R'}
+      <CardActionArea onClick={() => navigate(`/roommates/${roommate.roommateId}`)}
+        sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+
+        {/* Header */}
+        <Box sx={{
+          background: 'linear-gradient(135deg, #1C3C58 0%, #305B7A 100%)',
+          px: 2, pt: 3.5, pb: 2, display: 'flex', gap: 2, alignItems: 'center',
+        }}>
+          <Avatar src={roommate.profilePicture || undefined}
+            sx={{ width: 72, height: 72, border: '3px solid rgba(255,255,255,0.3)', flexShrink: 0 }}>
+            {(roommate.firstName?.[0] || '?').toUpperCase()}
           </Avatar>
-          <Box>
-            <Typography variant="h6">
-              {roommate.firstName || roommate.user?.firstName || 'Roommate'} {roommate.lastName || roommate.user?.lastName || ''}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" fontWeight="bold" noWrap sx={{ color: '#fff' }}>
+              {roommate.firstName}{age ? `, ${age}` : ''}
+              {roommate.gender !== undefined && roommate.gender !== 0 && (
+                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', ml: 0.5 }}>
+                  · {GENDER_LABELS[roommate.gender as number]}
+                </Typography>
+              )}
             </Typography>
             {roommate.profession && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }} noWrap>
                 {roommate.profession}
               </Typography>
+            )}
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }}>
+              {roommate.lifestyle && `${LIFESTYLE_ICONS[roommate.lifestyle]} ${LIFESTYLE_LABELS[roommate.lifestyle]}`}
+              {roommate.lifestyle && roommate.workSchedule !== undefined && ' · '}
+              {roommate.workSchedule !== undefined && `${SCHEDULE_ICONS[roommate.workSchedule as number]} ${SCHEDULE_LABELS[roommate.workSchedule as number]}`}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Key info strip */}
+        <Box sx={{ px: 2, py: 1.2, bgcolor: 'primary.main', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#fff' }}>
+            <CalIcon sx={{ fontSize: 14 }} />
+            <Typography variant="caption" fontWeight="bold">
+              {availableFrom === 'Odmah'
+                ? <span style={{ color: '#a5d6a7' }}>✓ Odmah slobodan/na</span>
+                : availableFrom}
+            </Typography>
+          </Box>
+          {(roommate.budgetMin || roommate.budgetMax) && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#fff' }}>
+              <EuroIcon sx={{ fontSize: 14 }} />
+              <Typography variant="caption" fontWeight="bold">
+                {roommate.budgetMin && roommate.budgetMax
+                  ? `${roommate.budgetMin}–${roommate.budgetMax}`
+                  : roommate.budgetMin ? `od ${roommate.budgetMin}` : `do ${roommate.budgetMax}`}/mj
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* Body */}
+        <Box sx={{ px: 2, py: 1.5, flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {roommate.preferredLocation && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <LocationIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+              <Typography variant="body2" color="text.secondary" noWrap>{roommate.preferredLocation}</Typography>
+            </Box>
+          )}
+          {roommate.bio && (
+            <Typography variant="body2" color="text.secondary"
+              sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+              {roommate.bio}
+            </Typography>
+          )}
+          {roommate.hobbies && <TagChips value={roommate.hobbies} max={4} />}
+          {roommate.languages && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="caption">🌐</Typography>
+              <TagChips value={roommate.languages} max={3} />
+            </Box>
+          )}
+          {/* Preference icons */}
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', pt: 0.5 }}>
+            {roommate.smokingAllowed === true && (
+              <Tooltip title="Pušenje OK"><Chip icon={<SmokingIcon />} label="Pušač" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+            )}
+            {roommate.smokingAllowed === false && (
+              <Tooltip title="Nepušač"><Chip icon={<NoSmokingIcon />} label="Nepušač" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+            )}
+            {roommate.petFriendly && (
+              <Tooltip title="Ljubimci OK"><Chip icon={<PetsIcon />} label="Ljubimci" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+            )}
+            {roommate.musicFriendly && (
+              <Tooltip title="Muzika OK"><Chip icon={<MusicIcon />} label="Muzika" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+            )}
+            {roommate.guestsAllowed && (
+              <Tooltip title="Gosti OK"><Chip label="👥 Gosti" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
           </Box>
         </Box>
 
-        {matchScore !== undefined && (
-          <Chip
-            label={getMatchQuality(matchScore)}
-            size="small"
-            variant="outlined"
-            sx={{ mb: 2 }}
-          />
+        {/* Completeness bar (own profile) */}
+        {isOwn && (
+          <Box sx={{ px: 2, pb: 1.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+              <Typography variant="caption" color="text.secondary">Kompletnost profila</Typography>
+              <Typography variant="caption" fontWeight="bold" color={completeness >= 80 ? 'success.main' : 'warning.main'}>
+                {completeness}%
+              </Typography>
+            </Box>
+            <LinearProgress variant="determinate" value={completeness}
+              color={completeness >= 80 ? 'success' : completeness >= 50 ? 'warning' : 'error'}
+              sx={{ borderRadius: 4, height: 5 }} />
+          </Box>
         )}
-
-        {roommate.bio && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }} noWrap>
-            {roommate.bio.substring(0, 100)}...
-          </Typography>
-        )}
-
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-          {roommate.preferredLocation && (
-            <Chip
-              icon={<LocationIcon />}
-              label={roommate.preferredLocation}
-              size="small"
-              variant="outlined"
-            />
-          )}
-          {(roommate.budgetMin || roommate.budgetMax) && (
-            <Chip
-              icon={<EuroIcon />}
-              label={`€${roommate.budgetMin || 0} - €${roommate.budgetMax || 0}`}
-              size="small"
-              variant="outlined"
-            />
-          )}
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-          {roommate.smokingAllowed && (
-            <Chip icon={<SmokingIcon />} label="Smoking OK" size="small" color="default" />
-          )}
-          {roommate.petFriendly && (
-            <Chip icon={<PetsIcon />} label="Pet Friendly" size="small" color="default" />
-          )}
-        </Box>
-
-        {roommate.lifestyle && (
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-            Lifestyle: {roommate.lifestyle}
-          </Typography>
-        )}
-      </CardContent>
-
-      <CardActions>
-        <Button
-          size="small"
-          fullWidth
-          variant="outlined"
-          onClick={() => navigate(`/roommates/${roommate.roommateId}`)}
-        >
-          View Profile
-        </Button>
-      </CardActions>
+      </CardActionArea>
     </Card>
   );
 };

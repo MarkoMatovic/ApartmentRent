@@ -50,18 +50,11 @@ public class SmsService : ISmsService
             CreatedByGuid = Guid.NewGuid(), 
             CreatedDate = DateTime.UtcNow
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Messages.Add(message);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         TwilioClient.Init(_twilioSettings.AccountSid, _twilioSettings.AuthToken);
         var twilioMessage = await _smsPipeline.ExecuteAsync(async ct =>
             await MessageResource.CreateAsync(

@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import { Message, Conversation, SendMessageRequest } from '../types/message';
 import { jwtDecode } from 'jwt-decode';
+import { getAccessToken } from './tokenStore';
 
 interface JwtPayload {
     userId: string;
@@ -8,7 +9,8 @@ interface JwtPayload {
 }
 
 const getUserId = (): number => {
-    const token = sessionStorage.getItem('authToken');
+    // Use in-memory token only — never read from sessionStorage (XSS risk).
+    const token = getAccessToken();
     if (!token) throw new Error('No auth token');
     const decoded = jwtDecode<JwtPayload>(token);
     return parseInt(decoded.userId);

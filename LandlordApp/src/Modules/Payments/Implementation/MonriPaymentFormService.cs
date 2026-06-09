@@ -28,14 +28,26 @@ public class MonriPaymentFormService : IMonriPaymentFormService
 
     public MonriPaymentFormDto CreatePaymentForm(
         string planId, string successUrl, string failureUrl,
-        int userId, string buyerEmail, string buyerName)
+        int userId, string buyerEmail, string buyerName,
+        int? apartmentId = null)
     {
         ValidateRedirectUrl(successUrl, nameof(successUrl));
         ValidateRedirectUrl(failureUrl, nameof(failureUrl));
 
+        // For featured-* plans, apartmentId must be provided.
+        if (planId.StartsWith("featured", StringComparison.OrdinalIgnoreCase) && (apartmentId is null or <= 0))
+            throw new ArgumentException("ApartmentId is required for featured listing plans.");
+
         var plan = GetPlan(planId);
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var orderNumber = $"{userId}_{planId}_{timestamp}";
+
+        // Order number format:
+        //   featured plans: "{userId}_{planId}_{apartmentId}_{timestamp}"
+        //   all others:     "{userId}_{planId}_{timestamp}"
+        var orderNumber = planId.StartsWith("featured", StringComparison.OrdinalIgnoreCase)
+            ? $"{userId}_{planId}_{apartmentId}_{timestamp}"
+            : $"{userId}_{planId}_{timestamp}";
+
         var digest = CalculateDigest(_merchantKey, orderNumber, plan.Amount, plan.Currency);
 
         return new MonriPaymentFormDto

@@ -1,3 +1,5 @@
+using Lander.src.Modules.Roommates.Models;
+
 namespace Lander.src.Modules.Roommates.Dtos.InputDto;
 public class RoommateInputDto
 {
@@ -20,4 +22,9 @@ public class RoommateInputDto
     public string? LookingForApartmentType { get; set; }
     public string? PreferredLocation { get; set; }
     public int? LookingForApartmentId { get; set; }
+    // New fields
+    public RoommateGender Gender { get; set; } = RoommateGender.PreferNotToSay;
+    public string? Languages { get; set; }
+    public WorkSchedule WorkSchedule { get; set; } = WorkSchedule.Flexible;
+    public bool? MusicFriendly { get; set; }
 }

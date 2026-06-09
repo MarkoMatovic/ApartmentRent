@@ -62,4 +62,19 @@ public class RefreshTokenService
         token.IsRevoked = true;
         await _context.SaveEntitiesAsync();
     }
+
+    /// <summary>
+    /// Revokes ALL active refresh tokens for a user.
+    /// Must be called on password reset/change so a compromised session
+    /// cannot survive after credentials are updated.
+    /// </summary>
+    public async Task RevokeAllByUserIdAsync(int userId)
+    {
+        var active = await _context.RefreshTokens
+            .Where(t => t.UserId == userId && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync();
+        foreach (var t in active) t.IsRevoked = true;
+        if (active.Count > 0)
+            await _context.SaveEntitiesAsync();
+    }
 }

@@ -1,9 +1,19 @@
 using Google.Protobuf.WellKnownTypes;
+using Lander.Helpers;
 using Grpc.Core;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+
 namespace Lander.src.Modules.Reviews.Implementation;
+
+// [Authorize] ensures that only callers who present a valid JWT (forwarded from the
+// REST layer via GrpcServiceClient) can invoke these methods.  This prevents an
+// external attacker from calling the gRPC endpoint directly and forging UserId /
+// CreatedByGuid values — the REST controller (ReviewsFavoritesController) already
+// overwrites those fields with the authenticated user's identity.
+[Authorize]
 public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrpcServiceBase
 {
     private readonly ReviewsContext _context;
@@ -25,18 +35,11 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ModifiedByGuid = favGuid,
             ModifiedDate = DateTime.UtcNow
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Favorites.Add(favorite);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return new FavoriteResponse
         {
             UserId = favorite.UserId ?? 0,
@@ -72,18 +75,11 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             ModifiedByGuid = reviewGuid,
             ModifiedDate = DateTime.UtcNow
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Reviews.Add(review);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         var user = await _context.Users.FindAsync(request.UserId);
         return new ReviewResponse
         {
@@ -108,6 +104,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             } : null
         };
     }
+    [AllowAnonymous]
     public override async Task<ReviewResponse> GetReviewById(GetReviewByIdRequest request, ServerCallContext context)
     {
         var review = await _context.Reviews
@@ -143,6 +140,7 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             } : null
         };
     }
+    [AllowAnonymous]
     public override async Task<GetReviewsResponse> GetReviewsByApartmentId(GetReviewsByApartmentIdRequest request, ServerCallContext context)
     {
         var reviews = await _context.Reviews
@@ -225,18 +223,11 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 Message = "Unauthorized: You do not own this review"
             };
         }
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Reviews.Remove(review);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return new DeleteResponse
         {
             Success = true,
@@ -263,18 +254,11 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
                 Message = "Unauthorized: You do not own this favorite"
             };
         }
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Favorites.Remove(favorite);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return new DeleteResponse
         {
             Success = true,

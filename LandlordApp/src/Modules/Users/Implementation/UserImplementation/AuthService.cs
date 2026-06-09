@@ -98,17 +98,18 @@ public class AuthService : IAuthService
         // Gradual migration: re-hash with BCrypt if stored as legacy SHA-256
         if (_passwordHashingService.NeedsRehash(user.Password))
         {
-            var transaction = await _context.BeginTransactionAsync();
             try
             {
-                user.Password = _passwordHashingService.Hash(dto.Password);
-                await _context.SaveEntitiesAsync();
-                await _context.CommitTransactionAsync(transaction);
+                await _context.RunInTransactionAsync(async () =>
+                {
+                    user.Password = _passwordHashingService.Hash(dto.Password);
+                    await _context.SaveEntitiesAsync();
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error rehashing password in LoginUserAsync");
-                _context.RollBackTransaction();
+                // Non-fatal — user can still log in with old hash
             }
         }
 
@@ -132,67 +133,71 @@ public class AuthService : IAuthService
         Guid? callerGuid = Guid.TryParse(currentUserGuid, out var authCg) ? authCg : null;
 
         var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
-        var transaction = await _context.BeginTransactionAsync();
+
+        UserRegistrationDto result;
+        User registeredUser;
         try
         {
-            if (tenantRole == null)
+            registeredUser = await _context.RunInTransactionAsync(async () =>
             {
-                tenantRole = new Role
+                if (tenantRole == null)
                 {
-                    RoleName = "Tenant",
-                    Description = "Tenant role for users looking for apartments",
-                    CreatedDate = _timeProvider.GetUtcNow().UtcDateTime,
-                    CreatedByGuid = callerGuid
+                    tenantRole = new Role
+                    {
+                        RoleName = "Tenant",
+                        Description = "Tenant role for users looking for apartments",
+                        CreatedDate = _timeProvider.GetUtcNow().UtcDateTime,
+                        CreatedByGuid = callerGuid
+                    };
+                    _context.Roles.Add(tenantRole);
+                    await _context.SaveEntitiesAsync();
+                }
+
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
+                var user = new User
+                {
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    Email = dto.Email,
+                    Password = _passwordHashingService.Hash(dto.Password),
+                    DateOfBirth = dto.DateOfBirth,
+                    PhoneNumber = dto.PhoneNumber,
+                    ProfilePicture = dto.ProfilePicture,
+                    CreatedDate = now,
+                    CreatedByGuid = callerGuid,
+                    ModifiedByGuid = callerGuid,
+                    IsActive = false,
+                    UserRoleId = tenantRole.RoleId
                 };
-                _context.Roles.Add(tenantRole);
+                _context.Users.Add(user);
                 await _context.SaveEntitiesAsync();
-            }
-
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-            var user = new User
-            {
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Email = dto.Email,
-                Password = _passwordHashingService.Hash(dto.Password),
-                DateOfBirth = dto.DateOfBirth,
-                PhoneNumber = dto.PhoneNumber,
-                ProfilePicture = dto.ProfilePicture,
-                CreatedDate = now,
-                CreatedByGuid = callerGuid,
-                ModifiedByGuid = callerGuid,
-                IsActive = false,
-                UserRoleId = tenantRole.RoleId
-            };
-            _context.Users.Add(user);
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-
-            var userName = $"{user.FirstName} {user.LastName}";
-            FireAndForget(_emailService.SendWelcomeEmailAsync(user.Email, userName), "SendWelcomeEmail");
-            FireAndForget(_passwordService.SendVerificationEmailAsync(user.UserId), "SendVerificationEmail");
-
-            return new UserRegistrationDto
-            {
-                UserId = user.UserId,
-                UserGuid = user.UserGuid.ToString(),
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                ProfilePicture = user.ProfilePicture,
-                UserRoleId = user.UserRoleId,
-                DateOfBirth = user.DateOfBirth,
-                IsActive = user.IsActive,
-                IsLookingForRoommate = user.IsLookingForRoommate
-            };
+                return user;
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in RegisterUserAsync");
-            _context.RollBackTransaction();
             throw;
         }
+
+        var userName = $"{registeredUser.FirstName} {registeredUser.LastName}";
+        FireAndForget(_emailService.SendWelcomeEmailAsync(registeredUser.Email, userName), "SendWelcomeEmail");
+        FireAndForget(_passwordService.SendVerificationEmailAsync(registeredUser.UserId), "SendVerificationEmail");
+
+        return new UserRegistrationDto
+        {
+            UserId = registeredUser.UserId,
+            UserGuid = registeredUser.UserGuid.ToString(),
+            FirstName = registeredUser.FirstName,
+            LastName = registeredUser.LastName,
+            Email = registeredUser.Email,
+            PhoneNumber = registeredUser.PhoneNumber,
+            ProfilePicture = registeredUser.ProfilePicture,
+            UserRoleId = registeredUser.UserRoleId,
+            DateOfBirth = registeredUser.DateOfBirth,
+            IsActive = registeredUser.IsActive,
+            IsLookingForRoommate = registeredUser.IsLookingForRoommate
+        };
     }
 
     public async Task LogoutUserAsync(string? rawRefreshToken = null)
