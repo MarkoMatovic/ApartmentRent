@@ -53,7 +53,6 @@
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
     <PackageReference Include="sib_api_v3_sdk" Version="4.0.2" />
-    <PackageReference Include="Stripe.net" Version="50.3.0" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageReference Include="Twilio" Version="7.9.0" />
@@ -66,6 +65,9 @@
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
     <PackageReference Include="HtmlSanitizer" Version="8.1.0" />
+    <!-- ImageSharp 3.1.7: GHSA-rxmq-m78w-7wmc (moderate DoS) — risk low since
+         we only accept JPEG/PNG/WebP (no SVG) and validate magic bytes first.
+         Version 4.0.0+ requires a commercial license; upgrade when licensing is resolved. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.24" />

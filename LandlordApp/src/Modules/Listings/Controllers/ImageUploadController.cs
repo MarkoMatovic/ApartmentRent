@@ -2,6 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.Processing;
 
 namespace Lander.src.Modules.Listings.Controllers;
 
@@ -80,12 +86,57 @@ public class ImageUploadController : ControllerBase
                 return BadRequest($"File '{Path.GetFileName(file.FileName)}' content does not match its extension.");
             }
 
-            // ── Save ──────────────────────────────────────────────────────────
-            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            // ── Process via ImageSharp: strip EXIF + normalise format ─────────
+            // Re-encoding through ImageSharp:
+            //   • Removes all EXIF metadata (GPS location, device info, etc.)
+            //   • Acts as a second-layer polyglot defence (re-decodes pixel data)
+            //   • Converts to WebP for smaller file sizes; falls back to JPEG/PNG
+            //     for formats where WebP is unsuitable.
+            // Always save as .webp for uniformity except for original PNG/GIF/BMP
+            // which may need lossless handling.
+            byte[] processedBytes;
+            string saveExtension;
+            try
+            {
+                using var img = await Image.LoadAsync(file.OpenReadStream());
+                // Strip all EXIF, XMP, IPTC metadata
+                img.Metadata.ExifProfile = null;
+                img.Metadata.XmpProfile = null;
+                img.Metadata.IptcProfile = null;
 
-            await using (var stream = new FileStream(filePath, FileMode.Create))
-                await file.CopyToAsync(stream);
+                // Downscale if wider/taller than 2000px while keeping aspect ratio
+                const int MaxDimension = 2000;
+                if (img.Width > MaxDimension || img.Height > MaxDimension)
+                    img.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new SixLabors.ImageSharp.Size(MaxDimension, MaxDimension)
+                    }));
+
+                using var ms = new MemoryStream();
+                if (extension == ".png")
+                {
+                    await img.SaveAsync(ms, new PngEncoder());
+                    saveExtension = ".png";
+                }
+                else
+                {
+                    // Convert everything else to WebP (smaller & widely supported)
+                    await img.SaveAsync(ms, new WebpEncoder { Quality = 85 });
+                    saveExtension = ".webp";
+                }
+                processedBytes = ms.ToArray();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ImageSharp processing failed for {File}; rejecting upload.", file.FileName);
+                return BadRequest($"File '{Path.GetFileName(file.FileName)}' could not be processed as a valid image.");
+            }
+
+            // ── Save ──────────────────────────────────────────────────────────
+            var uniqueFileName = $"{Guid.NewGuid()}{saveExtension}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            await System.IO.File.WriteAllBytesAsync(filePath, processedBytes);
 
             var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/apartments/{uniqueFileName}";
             uploadedUrls.Add(fileUrl);

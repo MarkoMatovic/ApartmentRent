@@ -67,6 +67,7 @@ const decodeToken = (token: string): User | null => {
       hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
       subscriptionExpiresAt: payload.subscriptionExpiresAt || undefined,
       tokenBalance: payload.tokenBalance !== undefined ? parseInt(payload.tokenBalance) : 3,
+      listingCredits: payload.listingCredits !== undefined ? parseInt(payload.listingCredits) : 0,
       isIncognito: payload.isIncognito === 'true' || payload.isIncognito === true,
     };
   } catch (error) {

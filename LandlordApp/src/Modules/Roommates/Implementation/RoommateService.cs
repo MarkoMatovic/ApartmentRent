@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
@@ -92,8 +93,11 @@ public class RoommateService : IRoommateService
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
         var totalCount = await query.CountAsync();
+        var now = DateTime.UtcNow;
         var roommates = await query
-            .OrderByDescending(r => r.CreatedDate)
+            // Boosted profiles bubble to the top while BoostedUntil is in the future
+            .OrderByDescending(r => r.BoostedUntil != null && r.BoostedUntil > now)
+            .ThenByDescending(r => r.CreatedDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -245,9 +249,8 @@ public class RoommateService : IRoommateService
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
         if (user == null) throw new NotFoundException("User", userId);
-        Roommate roommate;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        Roommate roommate = null!;
+        await _context.RunInTransactionAsync(async () =>
         {
             if (existingRoommate != null)
             {
@@ -309,13 +312,7 @@ public class RoommateService : IRoommateService
                 _context.Roommates.Add(roommate);
             }
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return new RoommateDto
         {
             RoommateId = roommate.RoommateId,
@@ -376,17 +373,10 @@ public class RoommateService : IRoommateService
         roommate.PreferredLocation = input.PreferredLocation;
         roommate.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var rmGuid) ? rmGuid : null;
         roommate.ModifiedDate = DateTime.UtcNow;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
 
         // Roommate is already up-to-date in memory — only load the user to build the DTO,
         // avoiding an unnecessary re-fetch of the same roommate entity.
@@ -430,18 +420,11 @@ public class RoommateService : IRoommateService
         var roommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.RoommateId == id && r.UserId == userId);
         if (roommate == null) return false;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             roommate.IsActive = false;
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
     public async Task<bool> DeleteRoommateByUserIdAsync(int userId)
@@ -449,18 +432,11 @@ public class RoommateService : IRoommateService
         var roommate = await _context.Roommates
             .FirstOrDefaultAsync(r => r.UserId == userId && r.IsActive);
         if (roommate == null) return false;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             roommate.IsActive = false;
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
 }

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Models;
@@ -148,17 +149,10 @@ public partial class MessageService
             CreatedDate = DateTime.UtcNow
         };
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.ReportedMessages.Add(report);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
     }
 }

@@ -40,6 +40,7 @@ public partial class MessageService
                 IsRead = m.IsRead ?? false,
             })
             .ToListAsync();
+        var now = DateTime.UtcNow;
         foreach (var msg in messages)
         {
             if (users.TryGetValue(msg.SenderId, out var sender))
@@ -51,6 +52,12 @@ public partial class MessageService
             {
                 msg.ReceiverName = $"{receiver.FirstName} {receiver.LastName}";
                 msg.ReceiverProfilePicture = receiver.ProfilePicture;
+
+                // Priority Inbox: flag when the recipient has an active subscription AND
+                // the sender is email-verified (verified = trustworthy user).
+                var senderVerified = users.TryGetValue(msg.SenderId, out var snd) && snd?.EmailVerifiedAt != null;
+                var recipientHasPriority = receiver.PriorityInboxUntil.HasValue && receiver.PriorityInboxUntil > now;
+                msg.IsPriority = senderVerified && recipientHasPriority;
             }
         }
         return new ConversationMessagesDto

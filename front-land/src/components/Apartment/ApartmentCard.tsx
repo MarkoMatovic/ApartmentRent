@@ -20,6 +20,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   PlayArrow as ActivateIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -119,7 +120,19 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = fals
         )}
 
 
-        {/* Public badge - shown when looking for roommate and not owner */}
+        {/* Featured badge */}
+        {apartment.isFeatured && (
+          <Box sx={{ position: 'absolute', top: 12, left: 12, zIndex: 2 }}>
+            <Chip
+              icon={<StarIcon sx={{ fontSize: '1rem !important' }} />}
+              label="Istaknuto"
+              size="small"
+              sx={{ bgcolor: '#FFD700', color: '#0A2540', fontWeight: 700, boxShadow: 2 }}
+            />
+          </Box>
+        )}
+
+        {/* Roommate badge - shown when looking for roommate and not owner */}
         {!isOwner && apartment.isLookingForRoommate && (
           <Box
             sx={{
@@ -239,17 +252,19 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = fals
                   checked={apartment.isLookingForRoommate || false}
                   onChange={(e) => {
                     e.stopPropagation();
-                    if (onToggleRoommate) {
-                      onToggleRoommate(e.target.checked);
-                    }
+                    if (onToggleRoommate) onToggleRoommate(e.target.checked);
                   }}
                   disabled={isUpdating}
+                  color="success"
                 />
               }
               label={
-                <Typography variant="body2">
-                  {t('apartments:lookingForRoommate', { defaultValue: 'Looking for Roommate' })}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="body2" fontWeight={apartment.isLookingForRoommate ? 'bold' : 'normal'}
+                    color={apartment.isLookingForRoommate ? 'success.main' : 'text.secondary'}>
+                    🙋 {apartment.isLookingForRoommate ? 'Traži cimera — AKTIVAN' : 'Traži cimera'}
+                  </Typography>
+                </Box>
               }
             />
           </Box>

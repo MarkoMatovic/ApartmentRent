@@ -19,6 +19,11 @@ public class MessageDto
     public long? FileSize { get; set; }
     public string? FileType { get; set; }
 
+    /// <summary>
+    /// True when the recipient has an active Priority Inbox subscription AND
+    /// the sender is a verified (email-confirmed) user.  Computed at query time — not persisted.
+    /// </summary>
+    public bool IsPriority { get; set; }
 }
 public class ConversationDto
 {

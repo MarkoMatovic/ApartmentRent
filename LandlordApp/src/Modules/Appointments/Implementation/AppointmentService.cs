@@ -1,4 +1,5 @@
 using Lander.src.Modules.Appointments.Dtos;
+using Lander.Helpers;
 using Lander.src.Modules.Appointments.Interfaces;
 using Lander.src.Modules.Appointments.Models;
 using Lander.src.Modules.Communication.Interfaces;
@@ -97,10 +98,11 @@ namespace Lander.src.Modules.Appointments.Implementation
                 throw new ArgumentException("Appointment date must be in the future");
             }
 
-            // Check for conflicts and insert atomically to prevent double-booking race condition
-            var transaction = await _context.BeginTransactionAsync(IsolationLevel.Serializable);
-            Appointment appointment;
-            try
+            // Check for conflicts and insert atomically to prevent double-booking race condition.
+            // SERIALIZABLE isolation prevents phantom reads so two concurrent bookings for the
+            // same slot can't both pass the conflict check.
+            Appointment appointment = null!;
+            await _context.RunInTransactionAsync(async () =>
             {
                 var hasConflict = await _context.Appointments
                     .AnyAsync(a => a.ApartmentId == dto.ApartmentId &&
@@ -127,13 +129,7 @@ namespace Lander.src.Modules.Appointments.Implementation
 
                 _context.Appointments.Add(appointment);
                 await _context.SaveEntitiesAsync();
-                await _context.CommitTransactionAsync(transaction);
-            }
-            catch
-            {
-                _context.RollBackTransaction();
-                throw;
-            }
+            }, System.Data.IsolationLevel.Serializable);
 
             // Load tenant and landlord for email + DTO (2 queries, no N+1)
             var userIds = new[] { tenantId, apartment.LandlordId!.Value }.Distinct().ToList();
@@ -487,9 +483,8 @@ namespace Lander.src.Modules.Appointments.Implementation
 
             // Delete-then-insert must be atomic — wrap in a transaction so a crash
             // between the two operations doesn't leave the landlord with no slots.
-            var transaction = await _context.BeginTransactionAsync();
-            List<LandlordAvailability> newSlots;
-            try
+            List<LandlordAvailability> newSlots = null!;
+            await _context.RunInTransactionAsync(async () =>
             {
                 var existing = await _context.LandlordAvailabilities
                     .Where(la => la.LandlordId == landlordId)
@@ -509,13 +504,7 @@ namespace Lander.src.Modules.Appointments.Implementation
 
                 _context.LandlordAvailabilities.AddRange(newSlots);
                 await _context.SaveEntitiesAsync();
-                await _context.CommitTransactionAsync(transaction);
-            }
-            catch
-            {
-                _context.RollBackTransaction();
-                throw;
-            }
+            });
 
             _logger.LogInformation("Landlord {LandlordId} set {Count} availability slots", landlordId, newSlots.Count);
 

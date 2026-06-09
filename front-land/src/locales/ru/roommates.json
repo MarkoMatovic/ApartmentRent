@@ -40,6 +40,24 @@
   "editProfile": "Редактировать профиль соседа",
   "deleteMyCard": "Удалить мою карточку",
   "deleteCardConfirm": "Вы уверены, что хотите удалить вашу карточку соседа? Это действие нельзя отменить.",
-  "noPicture": "Для создания карточки соседа необходима фотография профиля. Пожалуйста, добавьте её на странице профиля."
+  "noPicture": "Для создания карточки соседа необходима фотография профиля. Пожалуйста, добавьте её на странице профиля.",
+  "gender": "Пол",
+  "languages": "Языки",
+  "workSchedule": "Ритм дня",
+  "musicFriendly": "Музыка ОК",
+  "genderMale": "Мужской",
+  "genderFemale": "Женский",
+  "genderNonBinary": "Небинарный",
+  "genderOther": "Другое",
+  "genderNotSay": "Не хочу указывать",
+  "scheduleMorning": "Жаворонок",
+  "scheduleEvening": "Вечерний тип",
+  "scheduleNight": "Ночная птица",
+  "scheduleFlexible": "Гибкий",
+  "lifestyleQuiet": "Тихий",
+  "lifestyleSocial": "Общительный",
+  "lifestyleMixed": "Смешанный",
+  "availableNow": "Доступен сейчас",
+  "boostProfile": "Буст профиля",
+  "profileCompleteness": "Полнота профиля"
 }
-

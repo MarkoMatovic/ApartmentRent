@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
@@ -228,18 +229,11 @@ public class SearchRequestService : ISearchRequestService
             ModifiedByGuid = Guid.TryParse(currentUserGuid, out var srMg) ? srMg : null,
             ModifiedDate = DateTime.UtcNow
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.SearchRequests.Add(searchRequest);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new InvalidOperationException("Failed to create search request");
     }
     public async Task<SearchRequestDto> UpdateSearchRequestAsync(int id, int userId, SearchRequestInputDto input)
@@ -271,17 +265,10 @@ public class SearchRequestService : ISearchRequestService
         searchRequest.PreferredLifestyle = input.PreferredLifestyle;
         searchRequest.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var srMg2) ? srMg2 : null;
         searchRequest.ModifiedDate = DateTime.UtcNow;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return await GetSearchRequestByIdAsync(searchRequest.SearchRequestId) ?? throw new InvalidOperationException("Failed to update search request");
     }
     public async Task<bool> DeleteSearchRequestAsync(int id, int userId)
@@ -289,18 +276,11 @@ public class SearchRequestService : ISearchRequestService
         var searchRequest = await _context.SearchRequests
             .FirstOrDefaultAsync(sr => sr.SearchRequestId == id && sr.UserId == userId);
         if (searchRequest == null) return false;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             searchRequest.IsActive = false;
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
 }

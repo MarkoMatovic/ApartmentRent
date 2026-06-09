@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentUpdateInputDto } from '../shared/types/apartment';
+import PriceSuggestion from '../components/PriceSuggestion';
 import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 const EditApartmentPage: React.FC = () => {
@@ -192,16 +193,35 @@ const EditApartmentPage: React.FC = () => {
                                 />
                             </Grid>
                         ) : (
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label={`${t('apartments:monthlyRent', { defaultValue: 'Monthly Rent' })} (€)`}
-                                    type="number"
-                                    value={formData.rent || ''}
-                                    onChange={(e) => handleChange('rent', parseFloat(e.target.value) || 0)}
-                                    margin="normal"
-                                />
-                            </Grid>
+                            <>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label={`${t('apartments:monthlyRent', { defaultValue: 'Monthly Rent' })} (€)`}
+                                        type="number"
+                                        value={formData.rent || ''}
+                                        onChange={(e) => handleChange('rent', parseFloat(e.target.value) || 0)}
+                                        margin="normal"
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <PriceSuggestion
+                                        apartmentData={{
+                                            sizeSquareMeters: formData.sizeSquareMeters,
+                                            numberOfRooms: formData.numberOfRooms,
+                                            isFurnished: formData.isFurnished,
+                                            hasBalcony: formData.hasBalcony,
+                                            hasParking: formData.hasParking,
+                                            hasElevator: formData.hasElevator,
+                                            hasAirCondition: formData.hasAirCondition,
+                                            hasInternet: formData.hasInternet,
+                                            isPetFriendly: formData.isPetFriendly,
+                                            isSmokingAllowed: formData.isSmokingAllowed,
+                                        }}
+                                        onPriceSelected={(price) => handleChange('rent', price)}
+                                    />
+                                </Grid>
+                            </>
                         )}
 
                         <Grid item xs={12} sm={6}>

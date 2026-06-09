@@ -97,8 +97,7 @@ public partial class MessageService : IMessageService
         // Outbox pattern: message + token deduction event are written atomically in one transaction.
         // OutboxProcessorService picks up the event and deducts tokens from UsersContext separately,
         // guaranteeing at-least-once delivery without a distributed transaction.
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Messages.Add(message);
 
@@ -113,13 +112,7 @@ public partial class MessageService : IMessageService
             }
 
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         var users = await _usersContext.Users.AsNoTracking()
             .Where(u => u.UserId == senderId || u.UserId == receiverId)
             .ToDictionaryAsync(u => u.UserId);

@@ -40,6 +40,9 @@ namespace Lander.Migrations.Roommates
                     b.Property<string>("Bio")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("BoostedUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("BudgetIncludes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -62,6 +65,9 @@ namespace Lander.Migrations.Roommates
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int>("Gender")
+                        .HasColumnType("int");
+
                     b.Property<bool?>("GuestsAllowed")
                         .HasColumnType("bit");
 
@@ -73,6 +79,9 @@ namespace Lander.Migrations.Roommates
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("Languages")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Lifestyle")
                         .HasMaxLength(50)
@@ -101,6 +110,9 @@ namespace Lander.Migrations.Roommates
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime");
 
+                    b.Property<bool?>("MusicFriendly")
+                        .HasColumnType("bit");
+
                     b.Property<bool?>("PetFriendly")
                         .HasColumnType("bit");
 
@@ -116,6 +128,9 @@ namespace Lander.Migrations.Roommates
                         .HasColumnType("bit");
 
                     b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WorkSchedule")
                         .HasColumnType("int");
 
                     b.HasKey("RoommateId")

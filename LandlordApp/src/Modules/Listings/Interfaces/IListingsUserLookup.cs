@@ -17,6 +17,18 @@ public interface IListingsUserLookup
     /// Returns null when the user does not exist.
     /// </summary>
     Task<LandlordBrief?> GetLandlordBriefAsync(int userId);
+
+    /// <summary>
+    /// Returns (roleName, listingCredits) for the given user in a single DB round-trip.
+    /// Used by CreateApartmentAsync to decide whether to deduct a listing credit.
+    /// </summary>
+    Task<(string? RoleName, int ListingCredits)> GetUserListingContextAsync(int userId);
+
+    /// <summary>
+    /// Atomically decrements ListingCredits by 1 (only when balance > 0).
+    /// Returns true if a credit was consumed; false if balance was already 0.
+    /// </summary>
+    Task<bool> TryDeductListingCreditAsync(int userId);
 }
 
 /// <param name="FirstName">Landlord first name.</param>

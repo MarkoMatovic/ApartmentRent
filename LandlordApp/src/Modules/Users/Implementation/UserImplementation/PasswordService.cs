@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Common.Exceptions;
 using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Communication.Interfaces;
@@ -17,6 +18,7 @@ public class PasswordService : IPasswordService
     private readonly IConfiguration _configuration;
     private readonly ILogger<PasswordService> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly RefreshTokenService _refreshTokenService;
 
     public PasswordService(
         UsersContext context,
@@ -25,7 +27,8 @@ public class PasswordService : IPasswordService
         IEmailService emailService,
         IConfiguration configuration,
         ILogger<PasswordService> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        RefreshTokenService refreshTokenService)
     {
         _context = context;
         _passwordHashingService = passwordHashingService;
@@ -34,6 +37,7 @@ public class PasswordService : IPasswordService
         _configuration = configuration;
         _logger = logger;
         _timeProvider = timeProvider;
+        _refreshTokenService = refreshTokenService;
     }
 
     public async Task ChangePasswordAsync(ChangePasswordInputDto dto)
@@ -45,20 +49,24 @@ public class PasswordService : IPasswordService
         if (user == null || !_passwordHashingService.Verify(dto.OldPassword, user.Password))
             throw new InvalidOperationException("Incorrect old password.");
 
-        var transaction = await _context.BeginTransactionAsync();
         try
         {
-            user.Password = _passwordHashingService.Hash(dto.NewPassword);
-            user.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
+            await _context.RunInTransactionAsync(async () =>
+            {
+                user.Password = _passwordHashingService.Hash(dto.NewPassword);
+                user.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
+                await _context.SaveEntitiesAsync();
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in ChangePasswordAsync");
-            _context.RollBackTransaction();
             throw;
         }
+
+        // Revoke all existing refresh tokens so old sessions cannot persist
+        // after the password has been changed.
+        await _refreshTokenService.RevokeAllByUserIdAsync(user.UserId);
     }
 
     public async Task SendVerificationEmailAsync(int userId)
@@ -124,6 +132,11 @@ public class PasswordService : IPasswordService
         user.PasswordResetTokenExpiry = null;
         user.ModifiedDate = now;
         await _context.SaveEntitiesAsync();
+
+        // Revoke all existing refresh tokens — a password reset must terminate
+        // all active sessions, including any that the attacker may hold.
+        await _refreshTokenService.RevokeAllByUserIdAsync(user.UserId);
+
         return true;
     }
 

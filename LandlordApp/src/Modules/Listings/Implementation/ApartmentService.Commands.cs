@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
 using Lander.src.Infrastructure.Authorization;
@@ -29,17 +30,10 @@ public partial class ApartmentService
         apartment.IsActive = true;
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid parsedGuidMod) ? parsedGuidMod : null;
         apartment.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
         return true;
@@ -55,7 +49,28 @@ public partial class ApartmentService
         {
             landlordId = await _userLookup.GetUserIdByGuidAsync(parsedGuid);
             if (landlordId.HasValue)
+            {
                 await _roleUpgradeService.AutoUpgradeOnFirstListingAsync(landlordId.Value);
+
+                // Listing credits: Landlord/Premium roles publish freely.
+                // Tenant/Guest roles consume one credit per listing (purchased via /pricing → Oglas tab).
+                var (roleName, credits) = await _userLookup.GetUserListingContextAsync(landlordId.Value);
+                var isLandlordRole = roleName is
+                    RoleConstants.Landlord or RoleConstants.TenantLandlord or
+                    RoleConstants.PremiumLandlord or RoleConstants.PremiumTenant;
+
+                if (!isLandlordRole)
+                {
+                    var deducted = await _userLookup.TryDeductListingCreditAsync(landlordId.Value);
+                    if (!deducted)
+                        // Log a warning but allow creation — enforcement can be tightened
+                        // once all existing free listings have been grandfathered.
+                        _logger.LogWarning(
+                            "User {UserId} (role={Role}) created a listing with 0 credits. " +
+                            "Consider enforcing credit gate once billing is live.",
+                            landlordId.Value, roleName ?? "unknown");
+                }
+            }
         }
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var apartment = new Apartment
@@ -103,8 +118,7 @@ public partial class ApartmentService
             apartment.IsFurnished, apartment.HasBalcony, apartment.HasElevator,
             apartment.HasParking, apartment.HasInternet, apartment.HasAirCondition,
             apartment.IsPetFriendly, apartment.IsSmokingAllowed);
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Apartments.Add(apartment);
             await _context.SaveEntitiesAsync(); // Save apartment first to get ApartmentId
@@ -127,13 +141,7 @@ public partial class ApartmentService
                 _context.ApartmentImages.AddRange(apartmentImages);
                 await _context.SaveEntitiesAsync(); // Save images
             }
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch (Exception ex)
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
         _auditLog.Log("CreateApartment", "Apartment", apartment.ApartmentId, currentUserGuid);
@@ -185,17 +193,10 @@ public partial class ApartmentService
         apartment.IsActive = false;
         apartment.ModifiedByGuid = Guid.TryParse(currentUserGuid, out Guid tempGuid) ? tempGuid : null;
         apartment.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
         _auditLog.Log("DeleteApartment", "Apartment", apartmentId, currentUserGuid);
@@ -221,17 +222,10 @@ public partial class ApartmentService
             apartment.ModifiedDate = now;
         }
 
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
     }
 
     public async Task<ApartmentDto> UpdateApartmentAsync(int apartmentId, ApartmentUpdateInputDto updateDto)
@@ -326,17 +320,10 @@ public partial class ApartmentService
                 }).ToList();
             _context.ApartmentImages.AddRange(newImages);
         }
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         _cacheVersion.Invalidate();
         await _outputCacheStore.EvictByTagAsync("apartments", default);
         _auditLog.Log("UpdateApartment", "Apartment", apartmentId, currentUserGuid);

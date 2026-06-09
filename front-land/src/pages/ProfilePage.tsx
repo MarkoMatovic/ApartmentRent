@@ -28,6 +28,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../shared/context/AuthContext';
 import { authApi } from '../shared/api/auth';
+import { setAccessToken } from '../shared/api/tokenStore';
 import { apiClient } from '../shared/api/client';
 
 const ProfilePage: React.FC = () => {
@@ -57,8 +58,7 @@ const ProfilePage: React.FC = () => {
       await authApi.deleteUser({ userGuid: user.userGuid });
       setSuccess('Account deleted. You will be logged out.');
       setTimeout(() => {
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('refreshToken');
+        setAccessToken(null);
         sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);
@@ -183,8 +183,7 @@ const ProfilePage: React.FC = () => {
       await authApi.deactivateUser(user.userGuid);
       setSuccess('Account deactivated. You will be logged out.');
       setTimeout(() => {
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('refreshToken');
+        setAccessToken(null);
         sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
 using Lander.src.Infrastructure.Services;
@@ -89,7 +90,11 @@ public class UserProfileService : IUserProfileService
             RoleName = user.UserRole?.RoleName,
             CreatedDate = user.CreatedDate,
             AverageRating = averageRating,
-            ReviewCount = allReviews.Count
+            ReviewCount = allReviews.Count,
+            HasPersonalAnalytics = user.HasPersonalAnalytics,
+            ListingCredits = user.ListingCredits,
+            BoostedUntil = null, // stored on Roommate profile — use GET /api/payments/my-status
+            PriorityInboxUntil = user.PriorityInboxUntil,
         };
     }
 
@@ -197,17 +202,17 @@ public class UserProfileService : IUserProfileService
             await handler.HandleAsync(user.UserId);
 
         var callerGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
-        var transaction = await _context.BeginTransactionAsync();
         try
         {
-            _context.Users.Remove(user);
-            await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
+            await _context.RunInTransactionAsync(async () =>
+            {
+                _context.Users.Remove(user);
+                await _context.SaveEntitiesAsync();
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in DeleteUserAsync");
-            _context.RollBackTransaction();
             throw;
         }
         _auditLog.Log("DeleteUser", "User", dto.UserGuid, callerGuid);

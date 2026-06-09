@@ -1,3 +1,6 @@
+using System.Net;
+using System.Reflection;
+
 namespace Lander.src.Modules.Communication.Services;
 
 public class EmailTemplateRenderer : IEmailTemplateRenderer
@@ -23,11 +26,16 @@ public class EmailTemplateRenderer : IEmailTemplateRenderer
         }
 
         var template = File.ReadAllText(templatePath);
-        foreach (var prop in templateData.GetType().GetProperties())
+
+        // HTML-encode every placeholder value before injecting into the template.
+        // Without encoding, a user-controlled field (name, message preview, etc.)
+        // could inject arbitrary HTML/JS into the outgoing email.
+        foreach (var prop in templateData.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             var placeholder = $"{{{{{prop.Name}}}}}";
-            var value = prop.GetValue(templateData)?.ToString() ?? "";
-            template = template.Replace(placeholder, value);
+            var raw = prop.GetValue(templateData)?.ToString() ?? "";
+            var encoded = WebUtility.HtmlEncode(raw);
+            template = template.Replace(placeholder, encoded);
         }
         return template;
     }

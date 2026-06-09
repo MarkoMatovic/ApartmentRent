@@ -7,6 +7,7 @@ using Lander.src.Infrastructure.Extensions;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Reviews.Implementation;
+using Microsoft.AspNetCore.HttpOverrides;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -28,13 +29,18 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
 });
 
-// TEMP: k6 performance testing — higher connection limits to avoid TCP backlog on Windows loopback
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxConcurrentConnections = 1000;
-    options.Limits.MaxConcurrentUpgradedConnections = 1000;
-    options.Limits.MinRequestBodyDataRate = null;
+    // MaxConcurrentConnections: null = OS default (unlimited at the Kestrel level).
+    // Set an explicit cap via environment variable or appsettings in production if needed.
+    options.Limits.MaxConcurrentConnections = null;
+    options.Limits.MaxConcurrentUpgradedConnections = null;
+    // Keep the default MinRequestBodyDataRate so slow-loris-style attacks are mitigated.
 });
+
+// Background services ne smiju rušiti cijeli host pri TaskCanceledException (shutdown)
+builder.Services.Configure<HostOptions>(o =>
+    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
 StartupValidation.ValidateSecrets(builder.Configuration, builder.Environment);
 
@@ -96,7 +102,9 @@ builder.Services.AddOpenTelemetry()
                     !ctx.Request.Path.StartsWithSegments("/favicon");
             })
             .AddHttpClientInstrumentation()
-            .AddSqlClientInstrumentation(o => o.SetDbStatementForText = true);
+            // SetDbStatementForText includes the full SQL text in traces.
+            // Disable in production to avoid leaking query parameters (potential PII).
+            .AddSqlClientInstrumentation(o => o.SetDbStatementForText = builder.Environment.IsDevelopment());
 
         var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
@@ -227,6 +235,15 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
 }
 
 var app = builder.Build();
+
+// ─── Forwarded-headers (reverse proxy / load balancer) ───────────────────────
+// Must run before UseAuthentication / rate-limiting so that RemoteIpAddress
+// and the HTTPS scheme reflect the real client — not the proxy's internal IP.
+// Restrict KnownNetworks / KnownProxies in production to prevent IP spoofing.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Global exception handler - must be first in the pipeline
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();

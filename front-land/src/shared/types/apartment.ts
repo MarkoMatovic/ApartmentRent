@@ -72,6 +72,8 @@ export interface ApartmentDto {
   isLookingForRoommate?: boolean;
   averageRating?: number;
   reviewCount?: number;
+  isFeatured?: boolean;
+  featuredUntil?: string;
 }
 
 export interface GetApartmentDto {
@@ -112,6 +114,8 @@ export interface GetApartmentDto {
   landlordEmail?: string;
   averageRating?: number;
   reviewCount?: number;
+  isFeatured?: boolean;
+  featuredUntil?: string;
 }
 
 export interface ApartmentFilters {

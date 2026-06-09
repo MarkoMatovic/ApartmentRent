@@ -194,29 +194,30 @@ const ApartmentDetailPage: React.FC = () => {
             </Paper>
           )}
 
-          {/* Roommates Looking for Room in This Apartment */}
+          {/* Cimeri koji traže sobu u ovom stanu */}
           {roommatesLookingForThisApartment && roommatesLookingForThisApartment.length > 0 && (
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {t('roommates:lookingForRoomInThisApartment', { defaultValue: 'Roommates Looking for Room in This Apartment' })}
-              </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                {roommatesLookingForThisApartment.slice(0, 3).map((roommate) => (
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 3, border: 1, borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold">
+                    🙋 Zainteresovani cimeri
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {roommatesLookingForThisApartment.length} {roommatesLookingForThisApartment.length === 1 ? 'osoba traži' : 'osoba traže'} sobu u ovom stanu
+                  </Typography>
+                </Box>
+                <Button variant="outlined" size="small"
+                  onClick={() => navigate(`/roommates?apartmentId=${id}`)}>
+                  Prikaži sve
+                </Button>
+              </Box>
+              <Grid container spacing={2}>
+                {roommatesLookingForThisApartment.slice(0, 3).map(roommate => (
                   <Grid item xs={12} sm={6} md={4} key={roommate.userId}>
                     <RoommateCard roommate={roommate} />
                   </Grid>
                 ))}
               </Grid>
-              {roommatesLookingForThisApartment.length > 3 && (
-                <Box sx={{ mt: 2, textAlign: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate(`/roommates?apartmentId=${id}`)}
-                  >
-                    {t('roommates:viewAll', { defaultValue: 'View All' })} ({roommatesLookingForThisApartment.length})
-                  </Button>
-                </Box>
-              )}
             </Paper>
           )}
 
@@ -362,7 +363,7 @@ const ApartmentDetailPage: React.FC = () => {
                       Number(id),
                       'Apartment'
                     );
-                    navigate(`/messages?userId=${apartment.landlordId}`);
+                    navigate(`/chat?userId=${apartment.landlordId}`);
                   }
                 }}
                 disabled={!apartment.landlordId}
@@ -439,12 +440,23 @@ const ApartmentDetailPage: React.FC = () => {
                 apartmentTitle={apartment.title}
               />
 
-              {/* Looking for roommate notice */}
+              {/* Looking for roommate — istaknuti notice */}
               {apartment.isLookingForRoommate && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'success.contrastText', fontWeight: 600 }}>
-                    {t('apartments:lookingForRoommateNotice', { defaultValue: '🏠 This apartment is looking for a roommate! Contact the landlord to learn more.' })}
+                <Box sx={{
+                  mt: 2, p: 2, borderRadius: 2,
+                  background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
+                  border: '1px solid #a5d6a7',
+                }}>
+                  <Typography variant="body2" fontWeight="bold" color="success.dark" gutterBottom>
+                    🏠 Stan traži cimera!
                   </Typography>
+                  <Typography variant="body2" color="success.dark" sx={{ mb: 1.5 }}>
+                    Stanodavac je otvoren za deljenje stana. Obratite se direktno ili pogledajte dostupne sobne aranžmane.
+                  </Typography>
+                  <Button size="small" variant="contained" color="success"
+                    onClick={() => navigate(`/roommates?apartmentId=${id}`)}>
+                    Pogledaj zainteresovane cimere
+                  </Button>
                 </Box>
               )}
             </CardContent>

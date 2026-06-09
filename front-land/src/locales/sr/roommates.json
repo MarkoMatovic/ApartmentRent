@@ -40,6 +40,24 @@
   "editProfile": "Izmeni profil cimera",
   "deleteMyCard": "Obriši moju karticu",
   "deleteCardConfirm": "Da li ste sigurni da želite da obrišete vašu karticu cimera? Ova akcija se ne može poništiti.",
-  "noPicture": "Profilna slika je obavezna za kreiranje kartice cimera. Dodajte sliku na stranici profila."
+  "noPicture": "Profilna slika je obavezna za kreiranje kartice cimera. Dodajte sliku na stranici profila.",
+  "gender": "Pol",
+  "languages": "Jezici",
+  "workSchedule": "Ritam dana",
+  "musicFriendly": "Muzika OK",
+  "genderMale": "Muško",
+  "genderFemale": "Žensko",
+  "genderNonBinary": "Nebinarno",
+  "genderOther": "Ostalo",
+  "genderNotSay": "Radije ne navodim",
+  "scheduleMorning": "Jutarnji tip",
+  "scheduleEvening": "Večernji tip",
+  "scheduleNight": "Noćni tip",
+  "scheduleFlexible": "Fleksibilno",
+  "lifestyleQuiet": "Miran",
+  "lifestyleSocial": "Društven",
+  "lifestyleMixed": "Mešovit",
+  "availableNow": "Odmah slobodan/na",
+  "boostProfile": "Boost profila",
+  "profileCompleteness": "Kompletnost profila"
 }
-

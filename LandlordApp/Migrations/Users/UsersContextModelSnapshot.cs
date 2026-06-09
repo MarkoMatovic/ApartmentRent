@@ -231,6 +231,9 @@ namespace Lander.Migrations.Users
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("ListingCredits")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("LockoutUntil")
                         .HasColumnType("datetime2");
 
@@ -254,6 +257,9 @@ namespace Lander.Migrations.Users
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("PriorityInboxUntil")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ProfilePicture")
                         .HasMaxLength(255)

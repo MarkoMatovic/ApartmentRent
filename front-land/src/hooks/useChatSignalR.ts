@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { MessageDto } from '../api/messagesApi';
 import { apiBaseUrl } from '../shared/api/client';
+import { getAccessToken } from '../shared/api/tokenStore';
 
 export const useChatSignalR = (userId: number | null) => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
@@ -18,9 +19,8 @@ export const useChatSignalR = (userId: number | null) => {
     const chatHubUrl = apiBaseUrl + '/chatHub';
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(chatHubUrl, {
-        accessTokenFactory: () => {
-          return sessionStorage.getItem('authToken') || '';
-        }
+        // Use in-memory token — never sessionStorage (XSS risk).
+        accessTokenFactory: () => getAccessToken() ?? ''
       })
       .withAutomaticReconnect()
       .build();

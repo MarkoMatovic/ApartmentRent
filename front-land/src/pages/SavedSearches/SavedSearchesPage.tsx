@@ -28,11 +28,29 @@ import {
     Euro as EuroIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { savedSearchesApi, SavedSearch, SavedSearchInput } from '../../shared/api/savedSearches';
 import { useAuth } from '../../shared/context/AuthContext';
 
+/** Converts a SavedSearch into URLSearchParams for /apartments route. */
+const buildSearchParams = (search: SavedSearch): string => {
+    const params = new URLSearchParams();
+    if (search.city)           params.set('city',           search.city);
+    if (search.minRent)        params.set('minRent',        String(search.minRent));
+    if (search.maxRent)        params.set('maxRent',        String(search.maxRent));
+    if (search.numberOfRooms)  params.set('numberOfRooms',  String(search.numberOfRooms));
+    if (search.apartmentType != null) params.set('apartmentType', String(search.apartmentType));
+    if (search.listingType  != null)  params.set('listingType',   String(search.listingType));
+    if (search.isFurnished)    params.set('isFurnished',    'true');
+    if (search.isPetFriendly)  params.set('isPetFriendly',  'true');
+    if (search.hasParking)     params.set('hasParking',     'true');
+    if (search.hasBalcony)     params.set('hasBalcony',     'true');
+    return params.toString();
+};
+
 export const SavedSearchesPage: React.FC = () => {
     const { t } = useTranslation(['savedSearches']);
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [searches, setSearches] = useState<SavedSearch[]>([]);
     const [loading, setLoading] = useState(true);
@@ -215,8 +233,13 @@ export const SavedSearchesPage: React.FC = () => {
                                 </CardContent>
 
                                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                                    <Button size="small" color="primary">
-                                        Apply Search
+                                    <Button
+                                        size="small"
+                                        color="primary"
+                                        startIcon={<SearchIcon />}
+                                        onClick={() => navigate(`/apartments?${buildSearchParams(search)}`)}
+                                    >
+                                        {t('applySearch', 'Primeni pretragu')}
                                     </Button>
                                     <IconButton
                                         size="small"

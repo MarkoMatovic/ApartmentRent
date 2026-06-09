@@ -1,4 +1,5 @@
 using Lander.src.Infrastructure.Services;
+using Lander.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Lander;
@@ -60,7 +61,14 @@ public static class DatabaseServiceExtensions
         return services;
     }
 
-    // TEMP: retry disabled for k6 performance testing (SqlServerRetryingExecutionStrategy
-    // conflicts with manual BeginTransactionAsync used throughout the app)
-    private static Action<SqlServerDbContextOptionsBuilder> DbResilience() => _ => { };
+    // SqlServerRetryingExecutionStrategy retries on transient SQL Server errors (network
+    // blips, throttling, connection resets).  All manual transactions in service code
+    // are now wrapped with UnitOfWorkExtensions.RunInTransactionAsync which calls
+    // Database.CreateExecutionStrategy().ExecuteAsync() — the required outer scope for
+    // user-initiated transactions when a retry strategy is active.
+    private static Action<SqlServerDbContextOptionsBuilder> DbResilience() =>
+        sql => sql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
 }

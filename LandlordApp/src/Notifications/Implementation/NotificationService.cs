@@ -1,4 +1,5 @@
 using System;
+using Lander.Helpers;
 using Lander.src.Notifications.Dtos.Dto;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
@@ -56,19 +57,12 @@ public class NotificationService : INotificationService
                 SenderUserId = notification.SenderUserId,
                 RecipientUserId = notification.RecipientUserId
             };
-            var transaction = await _context.BeginTransactionAsync();
-            try
+            await _context.RunInTransactionAsync(async () =>
             {
                 await _context.ReadNotifications.AddAsync(readNotification);
                 _context.Notifications.Remove(notification);
                 await _context.SaveEntitiesAsync();
-                await _context.CommitTransactionAsync(transaction);
-            }
-            catch
-            {
-                _context.RollBackTransaction();
-                throw;
-            }
+                            });
         }
     }
     public async Task<NotificationDto> SendNotificationAsync(CreateNotificationInputDto createNotificationInputDto)
@@ -86,18 +80,11 @@ public class NotificationService : INotificationService
             RecipientUserId = createNotificationInputDto.RecipientUserId,
             CreatedDate = DateTime.UtcNow,
         };
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Notifications.Add(notification);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         var notificationDto = new NotificationDto
         {
             Id = notification.Id,
@@ -115,18 +102,11 @@ public class NotificationService : INotificationService
         var notification = await _context.Notifications
             .FirstOrDefaultAsync(n => n.Id == notificationId);
         if (notification == null) return false;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             _context.Notifications.Remove(notification);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
     public async Task<bool> MarkAllAsReadAsync(int userId)
@@ -135,8 +115,7 @@ public class NotificationService : INotificationService
             .Where(n => n.RecipientUserId == userId && !n.IsRead)
             .ToListAsync();
         if (!notifications.Any()) return true;
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        await _context.RunInTransactionAsync(async () =>
         {
             foreach (var notification in notifications)
             {
@@ -157,13 +136,7 @@ public class NotificationService : INotificationService
             }
             _context.Notifications.RemoveRange(notifications);
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+                    });
         return true;
     }
     public async Task<NotificationDto?> GetNotificationByIdAsync(int notificationId)

@@ -25,6 +25,10 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentInputDto, ApartmentType } from '../shared/types/apartment';
+import { useAuth } from '../shared/context/AuthContext';
+import { Chip } from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
+import PriceSuggestion from '../components/PriceSuggestion';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -44,6 +48,33 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+/** Shows listing credit balance and a link to buy more if credits are low. */
+const ListingCreditsInfo: React.FC = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const credits = user?.listingCredits ?? null;
+    const isLandlord = user?.roleName?.toLowerCase().includes('landlord') || user?.roleName?.toLowerCase().includes('tenant') === false;
+
+    // Landlords with premium role don't consume credits — no need to show banner
+    if (credits === null || (credits > 0)) return null;
+    if (user?.roleName && ['Landlord', 'TenantLandlord', 'PremiumLandlord', 'PremiumTenant'].includes(user.roleName)) return null;
+
+    return (
+        <Alert
+            severity="warning"
+            sx={{ mb: 3 }}
+            icon={<HomeIcon />}
+            action={
+                <Button size="small" color="inherit" onClick={() => navigate('/pricing')}>
+                    Kupi kredite
+                </Button>
+            }
+        >
+            Nemate listing kredita. Kupite listing kredite da biste objavili oglas.
+        </Alert>
+    );
+};
 
 interface SortableImageItemProps {
     url: string;
@@ -419,6 +450,8 @@ const CreateApartmentPage: React.FC = () => {
                         {t('apartments:createApartment', { defaultValue: 'Create Apartment Listing' })}
                     </Typography>
 
+                    <ListingCreditsInfo />
+
                     {error && (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             {error}
@@ -683,6 +716,25 @@ const CreateApartmentPage: React.FC = () => {
                                             value={formData.rent || ''}
                                             onChange={(e) => handleChange('rent', parseFloat(e.target.value))}
                                             margin="normal"
+                                        />
+                                    </Grid>
+
+                                    {/* AI Price Suggestion — appears after rent field, pre-fills it */}
+                                    <Grid item xs={12}>
+                                        <PriceSuggestion
+                                            apartmentData={{
+                                                sizeSquareMeters: formData.sizeSquareMeters,
+                                                numberOfRooms: formData.numberOfRooms,
+                                                isFurnished: formData.isFurnished,
+                                                hasBalcony: formData.hasBalcony,
+                                                hasParking: formData.hasParking,
+                                                hasElevator: formData.hasElevator,
+                                                hasAirCondition: formData.hasAirCondition,
+                                                hasInternet: formData.hasInternet,
+                                                isPetFriendly: formData.isPetFriendly,
+                                                isSmokingAllowed: formData.isSmokingAllowed,
+                                            }}
+                                            onPriceSelected={(price) => handleChange('rent', price)}
                                         />
                                     </Grid>
 

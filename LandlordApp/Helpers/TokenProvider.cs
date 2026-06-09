@@ -43,6 +43,7 @@ public sealed class TokenProvider
             new Claim("hasPersonalAnalytics", user.HasPersonalAnalytics.ToString()),
             new Claim("hasLandlordAnalytics", user.HasLandlordAnalytics.ToString()),
             new Claim("tokenBalance", user.TokenBalance.ToString()),
+            new Claim("listingCredits", user.ListingCredits.ToString()),
             new Claim("isIncognito", user.IsIncognito.ToString())
         };
 

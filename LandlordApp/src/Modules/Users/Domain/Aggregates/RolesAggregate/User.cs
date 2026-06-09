@@ -30,6 +30,10 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public bool HasLandlordAnalytics { get; set; } = false;
         public int TokenBalance { get; set; } = 3;
         public bool IsIncognito { get; set; } = false;
+        /// <summary>Number of listing-publish credits remaining (each credit = 1 apartment creation).</summary>
+        public int ListingCredits { get; set; } = 0;
+        /// <summary>Until when the user's Priority Inbox feature is active (messages from verified users are flagged).</summary>
+        public DateTime? PriorityInboxUntil { get; set; }
 
         // Login lockout
         public int FailedLoginAttempts { get; set; } = 0;
