@@ -231,8 +231,9 @@ public class SavedSearchServiceTests : IDisposable
         // Act — UserId2 tries to update UserId1's search
         var act = async () => await _service.UpdateSavedSearchAsync(ss.SavedSearchId, UserId2, input);
 
-        // Assert
-        await act.Should().ThrowAsync<Exception>().WithMessage("*not found*");
+        // Assert — ownership violation is a Forbidden, not NotFound
+        await act.Should().ThrowAsync<Lander.src.Common.Exceptions.ForbiddenException>()
+            .WithMessage("*permission*");
     }
 
     [Fact]

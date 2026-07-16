@@ -1,8 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { Container, Typography, Button, Paper, Box } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { withTranslation, WithTranslation } from 'react-i18next';
 
-interface Props {
+interface Props extends WithTranslation {
   children: ReactNode;
   fallback?: ReactNode;
 }
@@ -24,7 +25,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // In production this would go to a logging service (Sentry, etc.)
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught:', error, info.componentStack);
     }
   }
@@ -35,6 +36,8 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    const { t } = this.props;
+
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
 
@@ -45,13 +48,13 @@ class ErrorBoundary extends Component<Props, State> {
               <ErrorOutlineIcon sx={{ fontSize: 64, color: 'error.main' }} />
             </Box>
             <Typography variant="h5" gutterBottom>
-              Nešto je pošlo naopako
+              {t('errorTitle')}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {process.env.NODE_ENV === 'development' && this.state.error?.message}
+              {import.meta.env.DEV && this.state.error?.message}
             </Typography>
             <Button variant="contained" color="secondary" onClick={this.handleReload}>
-              Osveži stranicu
+              {t('refreshPage')}
             </Button>
           </Paper>
         </Container>
@@ -62,4 +65,4 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default ErrorBoundary;
+export default withTranslation('common')(ErrorBoundary);

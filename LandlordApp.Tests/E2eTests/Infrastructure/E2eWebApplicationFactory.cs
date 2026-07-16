@@ -53,15 +53,13 @@ public class E2eWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"]                           = TestJwtGenerator.TestAudience,
                 // Stub values for external services (never actually called)
                 ["Brevo:ApiKey"]                           = "e2e-brevo-key",
-                ["Monri:AuthenticityToken"]                = "e2e-auth-token",
-                ["Monri:MerchantKey"]                      = "e2e-merchant-key",
-                // Minimal plan so CreatePayment tests can resolve "basic" without 400
-                ["Monri:Plans:basic:Name"]                 = "Basic Plan",
-                ["Monri:Plans:basic:Amount"]               = "999",
-                ["Monri:Plans:basic:Currency"]             = "EUR",
-                ["Monri:Plans:premium:Name"]               = "Premium Plan",
-                ["Monri:Plans:premium:Amount"]             = "1999",
-                ["Monri:Plans:premium:Currency"]           = "EUR",
+                // Minimal plans so plan-listing tests can resolve them
+                ["Payments:Plans:basic:Name"]              = "Basic Plan",
+                ["Payments:Plans:basic:Amount"]            = "999",
+                ["Payments:Plans:basic:Currency"]          = "EUR",
+                ["Payments:Plans:premium:Name"]            = "Premium Plan",
+                ["Payments:Plans:premium:Amount"]          = "1999",
+                ["Payments:Plans:premium:Currency"]        = "EUR",
                 ["GrpcServerUrl"]                          = "http://localhost:9999",
                 ["Redis:Configuration"]                    = "",   // skip Redis
                 ["Security:MaxFailedLoginAttempts"]        = "5",

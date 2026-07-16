@@ -51,6 +51,8 @@ public abstract class E2eTestBase : IAsyncLifetime
         {
             AllowAutoRedirect = false,
             HandleCookies     = true,
+            // Auth cookies are Secure — the CookieContainer only sends them over https
+            BaseAddress       = new Uri("https://localhost"),
         });
 
         Data = new TestDataFactory(Scope.ServiceProvider);
@@ -72,6 +74,8 @@ public abstract class E2eTestBase : IAsyncLifetime
         {
             AllowAutoRedirect = false,
             HandleCookies     = true,
+            // Auth cookies are Secure — the CookieContainer only sends them over https
+            BaseAddress       = new Uri("https://localhost"),
         });
         var token = TestJwtGenerator.Generate(userId, userGuid, role);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -85,6 +89,8 @@ public abstract class E2eTestBase : IAsyncLifetime
         {
             AllowAutoRedirect = false,
             HandleCookies     = true,
+            // Auth cookies are Secure — the CookieContainer only sends them over https
+            BaseAddress       = new Uri("https://localhost"),
         });
         var response = await loginClient.PostAsJsonAsync("/api/v1/auth/login", new { Email = email, Password = password });
         response.EnsureSuccessStatusCode();

@@ -1,10 +1,14 @@
 using FluentAssertions;
+using Lander.src.Infrastructure.FileStorage;
 using Lander.src.Modules.Listings.Controllers;
-using Microsoft.AspNetCore.Hosting;
+using Lander.src.Modules.Listings.Dtos.Dto;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System.Security.Claims;
 using System.Text;
 
@@ -12,22 +16,24 @@ namespace LandlordApp.Tests.Controllers;
 
 public class ImageUploadControllerTests
 {
-    private readonly Mock<IWebHostEnvironment> _mockEnv;
+    private readonly Mock<IFileStorageService> _mockStorage;
     private readonly Mock<ILogger<ImageUploadController>> _mockLogger;
     private readonly ImageUploadController _controller;
-    private readonly string _tempRoot;
 
     public ImageUploadControllerTests()
     {
-        _tempRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-        Directory.CreateDirectory(_tempRoot);
-
-        _mockEnv = new Mock<IWebHostEnvironment>();
-        _mockEnv.Setup(e => e.WebRootPath).Returns(_tempRoot);
+        _mockStorage = new Mock<IFileStorageService>();
+        // Echo back a site-relative URL so the controller promotes it to absolute.
+        _mockStorage
+            .Setup(s => s.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string container, string path, Stream _, string __, CancellationToken ___) => $"/uploads/{container}/{path}");
 
         _mockLogger = new Mock<ILogger<ImageUploadController>>();
 
-        _controller = new ImageUploadController(_mockEnv.Object, _mockLogger.Object);
+        _controller = new ImageUploadController(
+            _mockStorage.Object,
+            new Mock<IServiceScopeFactory>().Object,
+            _mockLogger.Object);
         _controller.ControllerContext = MakeControllerContext();
     }
 
@@ -117,9 +123,9 @@ public class ImageUploadControllerTests
         var result = await _controller.UploadImages(new List<IFormFile> { file });
 
         result.Result.Should().BeOfType<OkObjectResult>();
-        var urls = result.Result.As<OkObjectResult>().Value.As<List<string>>();
-        urls.Should().HaveCount(1);
-        urls[0].Should().Contain("apartments");
+        var images = result.Result.As<OkObjectResult>().Value.As<List<UploadedImageDto>>();
+        images.Should().HaveCount(1);
+        images[0].Url.Should().Contain("apartments");
     }
 
     [Fact]
@@ -144,7 +150,7 @@ public class ImageUploadControllerTests
         var result = await _controller.UploadImages(files);
 
         result.Result.Should().BeOfType<OkObjectResult>();
-        result.Result.As<OkObjectResult>().Value.As<List<string>>().Should().HaveCount(2);
+        result.Result.As<OkObjectResult>().Value.As<List<UploadedImageDto>>().Should().HaveCount(2);
     }
 
     [Fact]
@@ -157,15 +163,7 @@ public class ImageUploadControllerTests
 
         // Empty file is skipped; only the valid one is returned
         result.Result.Should().BeOfType<OkObjectResult>();
-        result.Result.As<OkObjectResult>().Value.As<List<string>>().Should().HaveCount(1);
-    }
-
-    // ─── Cleanup ──────────────────────────────────────────────────────────────
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        result.Result.As<OkObjectResult>().Value.As<List<UploadedImageDto>>().Should().HaveCount(1);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -193,7 +191,20 @@ public class ImageUploadControllerTests
         return mock.Object;
     }
 
-    // Minimal valid magic byte sequences
-    private static byte[] JpegBytes() => new byte[] { 0xFF, 0xD8, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    private static byte[] PngBytes()  => new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x00 };
+    // Real, decodable images so the ImageSharp pipeline (and thumbnail generation) succeeds.
+    private static byte[] JpegBytes()
+    {
+        using var img = new Image<Rgba32>(16, 16);
+        using var ms = new MemoryStream();
+        img.SaveAsJpeg(ms);
+        return ms.ToArray();
+    }
+
+    private static byte[] PngBytes()
+    {
+        using var img = new Image<Rgba32>(16, 16);
+        using var ms = new MemoryStream();
+        img.SaveAsPng(ms);
+        return ms.ToArray();
+    }
 }

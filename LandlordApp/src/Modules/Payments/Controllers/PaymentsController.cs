@@ -1,5 +1,4 @@
 using Lander.src.Common;
-using Lander.src.Modules.Payments.Dtos;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authorization;
@@ -11,38 +10,45 @@ namespace Lander.src.Modules.Payments.Controllers;
 [ApiController]
 public class PaymentsController : ApiControllerBase
 {
-    private readonly IMonriService _monriService;
+    private readonly IPaymentService _paymentService;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
-        IMonriService monriService,
+        IPaymentService paymentService,
         IUserInterface userService,
         ILogger<PaymentsController> logger) : base(userService)
     {
-        _monriService = monriService;
+        _paymentService = paymentService;
         _logger = logger;
     }
 
     [HttpGet("plans")]
     public IActionResult GetSubscriptionPlans()
-        => Ok(_monriService.GetPlans());
+        => Ok(_paymentService.GetPlans());
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Charge initiation + provider callback.
+    //
+    // The Monri provider was removed (cost). The frontend payment pages stay; a new
+    // provider will be plugged in here. When that happens, the provider implementation
+    // confirms the charge and calls IPaymentFulfillmentService.FulfillAsync(...) to grant
+    // the purchase. Until then these endpoints return 503 so the UI can show a clear
+    // "payments temporarily unavailable" state instead of failing opaquely.
+    // ─────────────────────────────────────────────────────────────────────────
 
     [HttpPost("create-payment")]
     [Authorize]
-    public async Task<IActionResult> CreatePayment([FromBody] CreateMonriPaymentRequest request)
+    public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentRequest request)
     {
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
 
-        var idempotencyKey = Request.Headers["Idempotency-Key"].FirstOrDefault();
-        var formDto = await _monriService.CreatePaymentAsync(
-            user.UserId, request.PlanId, request.SuccessUrl, request.FailureUrl,
-            idempotencyKey, request.ApartmentId);
+        _logger.LogInformation(
+            "create-payment requested by user {UserId} for plan {PlanId} but no payment provider is configured.",
+            user.UserId, request.PlanId);
 
-        if (formDto is null)
-            return Conflict(new { message = "Duplicate request — this payment was already initiated." });
-
-        return Ok(formDto);
+        return StatusCode(StatusCodes.Status503ServiceUnavailable,
+            new { message = "Plaćanje trenutno nije dostupno. Pokušajte kasnije." });
     }
 
     /// <summary>Returns the current active premium feature state for the authenticated user.</summary>
@@ -52,7 +58,7 @@ public class PaymentsController : ApiControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
-        return Ok(await _monriService.GetUserStatusAsync(user.UserId));
+        return Ok(await _paymentService.GetUserStatusAsync(user.UserId));
     }
 
     /// <summary>Returns the authenticated user's processed payment order history, newest first.</summary>
@@ -62,7 +68,7 @@ public class PaymentsController : ApiControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
-        return Ok(await _monriService.GetUserOrdersAsync(user.UserId));
+        return Ok(await _paymentService.GetUserOrdersAsync(user.UserId));
     }
 
     /// <summary>
@@ -75,35 +81,21 @@ public class PaymentsController : ApiControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user is null) return Unauthorized();
-        await _monriService.CancelAnalyticsAsync(user.UserId);
+        await _paymentService.CancelAnalyticsAsync(user.UserId);
         return Ok(new { message = "Analitika je deaktivirana. Vaš nalog je vraćen na osnovni plan." });
     }
 
     [HttpPost("callback")]
     [AllowAnonymous]
-    public async Task<IActionResult> Callback()
+    public IActionResult Callback()
     {
-        using var reader = new StreamReader(HttpContext.Request.Body);
-        var json = await reader.ReadToEndAsync();
-        try
-        {
-            await _monriService.HandleCallbackAsync(json);
-            return Ok();
-        }
-        catch (ArgumentException)
-        {
-            return BadRequest();
-        }
-        catch (Exception ex)
-        {
-            // Always return 200 to Monri to prevent retries on internal errors
-            _logger.LogError(ex, "Unhandled error processing Monri payment callback.");
-            return Ok();
-        }
+        // No payment provider is currently configured; reject callbacks explicitly.
+        _logger.LogWarning("Payment callback received but no payment provider is configured.");
+        return StatusCode(StatusCodes.Status503ServiceUnavailable);
     }
 }
 
-public class CreateMonriPaymentRequest
+public class CreatePaymentRequest
 {
     public string PlanId { get; set; } = string.Empty;
     public string SuccessUrl { get; set; } = string.Empty;

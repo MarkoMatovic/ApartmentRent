@@ -1,4 +1,12 @@
 {
   "support": "Podrška",
-  "pricing": "Cenovnik"
+  "pricing": "Cenovnik",
+  "mySubscriptions": "Moje pretplate",
+  "paymentHistory": "Istorija plaćanja",
+  "privacy": "Politika privatnosti",
+  "terms": "Uslovi korišćenja",
+  "cookies": "Politika kolačića",
+  "refund": "Politika povraćaja",
+  "copyright": "Sva prava zadržana.",
+  "disclaimer": "TuRentaj je oglasna platforma i ne vrši posredovanje u prometu i zakupu nepokretnosti (Zakon o posredovanju, Sl. gl. RS 95/2013). Kontakt:"
 }

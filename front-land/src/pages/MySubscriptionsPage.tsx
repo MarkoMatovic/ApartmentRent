@@ -12,6 +12,7 @@ import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { apiClient } from '../shared/api/client';
 import { useNotifications } from '../shared/context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface SubscriptionStatus {
   hasAnalytics: boolean;
@@ -27,10 +28,8 @@ interface SubscriptionStatus {
 const formatDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('sr-RS', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
 
-const ActiveChip = () => <Chip label="Aktivno" color="success" size="small" />;
-const InactiveChip = () => <Chip label="Neaktivno" color="default" size="small" />;
-
 const MySubscriptionsPage: React.FC = () => {
+  const { t } = useTranslation('subscriptions');
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -38,12 +37,15 @@ const MySubscriptionsPage: React.FC = () => {
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
+  const ActiveChip = () => <Chip label={t('statusActive')} color="success" size="small" />;
+  const InactiveChip = () => <Chip label={t('statusInactive')} color="default" size="small" />;
+
   const fetchStatus = async () => {
     try {
       const res = await apiClient.get('/api/payments/my-status');
       setStatus(res.data);
     } catch {
-      addNotification({ title: 'Greška', message: 'Nije moguće učitati status pretplata.', type: 'error' });
+      addNotification({ title: t('common:error'), message: t('errorLoadStatus'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -55,11 +57,11 @@ const MySubscriptionsPage: React.FC = () => {
     setCancelling(true);
     try {
       await apiClient.post('/api/payments/cancel-analytics');
-      addNotification({ title: 'Deaktivacija uspešna', message: 'Analitika je deaktivirana. Nalog je vraćen na osnovni plan.', type: 'success' });
+      addNotification({ title: t('deactivateSuccessTitle'), message: t('deactivateSuccessMsg'), type: 'success' });
       setCancelOpen(false);
       await fetchStatus();
     } catch {
-      addNotification({ title: 'Greška', message: 'Deaktivacija nije uspela. Pokušajte ponovo.', type: 'error' });
+      addNotification({ title: t('deactivateErrorTitle'), message: t('deactivateErrorMsg'), type: 'error' });
     } finally {
       setCancelling(false);
     }
@@ -69,14 +71,13 @@ const MySubscriptionsPage: React.FC = () => {
 
   return (
     <Container maxWidth="md" sx={{ py: 5 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>Moje pretplate i usluge</Typography>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>{t('mySubsTitle')}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-        Pregled svih aktivnih premium usluga na vašem nalogu. Sve kupovine su jednokratne — nema
-        automatskog obnavljanja.
+        {t('mySubsSubtitle')}
       </Typography>
 
       {!status ? (
-        <Alert severity="error">Nije moguće učitati podatke. Pokušajte osvežiti stranicu.</Alert>
+        <Alert severity="error">{t('errorLoadData')}</Alert>
       ) : (
         <Grid container spacing={3}>
 
@@ -86,13 +87,13 @@ const MySubscriptionsPage: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <AnalyticsIcon color={status.hasAnalytics ? 'primary' : 'disabled'} />
-                  <Typography fontWeight="bold">Analitika</Typography>
+                  <Typography fontWeight="bold">{t('analyticsCardTitle')}</Typography>
                   {status.hasAnalytics ? <ActiveChip /> : <InactiveChip />}
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                   {status.hasAnalytics
-                    ? 'Pristup naprednoj analitici pretrage, praćenju pregleda i ML predviđanju cena.'
-                    : 'Kupite analitičku pretplatu na stranici Cenovnik za napredne uvide.'}
+                    ? t('analyticsActiveDesc')
+                    : t('analyticsInactiveDesc')}
                 </Typography>
                 {status.roleName && (
                   <Chip label={status.roleName} size="small" variant="outlined" sx={{ mt: 1.5 }} />
@@ -101,13 +102,13 @@ const MySubscriptionsPage: React.FC = () => {
               {status.hasAnalytics && (
                 <CardActions>
                   <Button size="small" color="error" onClick={() => setCancelOpen(true)}>
-                    Deaktiviraj
+                    {t('btnDeactivate')}
                   </Button>
                 </CardActions>
               )}
               {!status.hasAnalytics && (
                 <CardActions>
-                  <Button size="small" onClick={() => navigate('/pricing')}>Kupi</Button>
+                  <Button size="small" onClick={() => navigate('/pricing')}>{t('btnBuyService')}</Button>
                 </CardActions>
               )}
             </Card>
@@ -119,17 +120,16 @@ const MySubscriptionsPage: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <TokenIcon color={status.tokenBalance > 0 ? 'primary' : 'disabled'} />
-                  <Typography fontWeight="bold">Tokeni</Typography>
-                  <Chip label={`${status.tokenBalance} tokena`} size="small"
+                  <Typography fontWeight="bold">{t('tokensCardTitle')}</Typography>
+                  <Chip label={t('tokensChip', { count: status.tokenBalance })} size="small"
                     color={status.tokenBalance > 0 ? 'primary' : 'default'} />
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Tokeni se koriste za Super-Like i direktne poruke stanodavcima.
-                  Neiskorišćeni tokeni ne ističu.
+                  {t('tokensCardDesc')}
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" onClick={() => navigate('/pricing')}>Kupi još</Button>
+                <Button size="small" onClick={() => navigate('/pricing')}>{t('btnBuyMore')}</Button>
               </CardActions>
             </Card>
           </Grid>
@@ -140,17 +140,16 @@ const MySubscriptionsPage: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <HomeIcon color={status.listingCredits > 0 ? 'primary' : 'disabled'} />
-                  <Typography fontWeight="bold">Listing krediti</Typography>
-                  <Chip label={`${status.listingCredits} kredita`} size="small"
+                  <Typography fontWeight="bold">{t('listingCreditsTitle')}</Typography>
+                  <Chip label={t('listingCreditsChip', { count: status.listingCredits })} size="small"
                     color={status.listingCredits > 0 ? 'primary' : 'default'} />
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Svaki kredit vam omogućava objavljivanje jednog oglasa za nekretninu (30 dana).
-                  Krediti ne ističu.
+                  {t('listingCreditsDesc')}
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" onClick={() => navigate('/pricing')}>Kupi još</Button>
+                <Button size="small" onClick={() => navigate('/pricing')}>{t('btnBuyMore')}</Button>
               </CardActions>
             </Card>
           </Grid>
@@ -161,22 +160,22 @@ const MySubscriptionsPage: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <RocketLaunchIcon color={status.isBoosted ? 'primary' : 'disabled'} />
-                  <Typography fontWeight="bold">Boost profila</Typography>
+                  <Typography fontWeight="bold">{t('boostCardTitle')}</Typography>
                   {status.isBoosted ? <ActiveChip /> : <InactiveChip />}
                 </Box>
                 {status.boostedUntil && status.isBoosted ? (
                   <Typography variant="body2" color="text.secondary">
-                    Aktivan do: <strong>{formatDate(status.boostedUntil)}</strong>
+                    {t('boostActiveUntil')} <strong>{formatDate(status.boostedUntil)}</strong>
                   </Typography>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    Vaš profil se pojavljuje u vrhu pretrage cimera dok je boost aktivan.
+                    {t('boostInactiveDesc')}
                   </Typography>
                 )}
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={() => navigate('/pricing')}>
-                  {status.isBoosted ? 'Produži' : 'Aktiviraj'}
+                  {status.isBoosted ? t('btnExtend') : t('btnActivate')}
                 </Button>
               </CardActions>
             </Card>
@@ -188,22 +187,22 @@ const MySubscriptionsPage: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                   <MarkEmailReadIcon color={status.hasPriorityInbox ? 'primary' : 'disabled'} />
-                  <Typography fontWeight="bold">Priority Inbox</Typography>
+                  <Typography fontWeight="bold">{t('priorityCardTitle')}</Typography>
                   {status.hasPriorityInbox ? <ActiveChip /> : <InactiveChip />}
                 </Box>
                 {status.priorityInboxUntil && status.hasPriorityInbox ? (
                   <Typography variant="body2" color="text.secondary">
-                    Aktivan do: <strong>{formatDate(status.priorityInboxUntil)}</strong>
+                    {t('priorityActiveUntil')} <strong>{formatDate(status.priorityInboxUntil)}</strong>
                   </Typography>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    Poruke od verifikovanih korisnika označene prioritetom.
+                    {t('priorityInactiveDesc')}
                   </Typography>
                 )}
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={() => navigate('/pricing')}>
-                  {status.hasPriorityInbox ? 'Produži' : 'Aktiviraj'}
+                  {status.hasPriorityInbox ? t('btnExtend') : t('btnActivate')}
                 </Button>
               </CardActions>
             </Card>
@@ -215,30 +214,28 @@ const MySubscriptionsPage: React.FC = () => {
       <Divider sx={{ my: 4 }} />
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <Button variant="outlined" onClick={() => navigate('/istorija-placanja')}>
-          Istorija plaćanja
+          {t('btnPaymentHistory')}
         </Button>
         <Button variant="outlined" onClick={() => navigate('/pricing')}>
-          Kupovina usluga
+          {t('btnBuyServices')}
         </Button>
         <Button variant="text" href="/politika-povracaja" size="small" sx={{ ml: 'auto' }}>
-          Politika povraćaja
+          {t('btnRefundPolicy')}
         </Button>
       </Box>
 
       {/* Cancel analytics confirmation dialog */}
       <Dialog open={cancelOpen} onClose={() => setCancelOpen(false)} maxWidth="xs">
-        <DialogTitle>Deaktivacija analitike</DialogTitle>
+        <DialogTitle>{t('cancelAnalyticsTitle')}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
-            Da li ste sigurni da želite deaktivirati analitiku? Vaš nalog će biti vraćen na
-            osnovni plan. Podaci o analitici biće izbrisani. <strong>Ova akcija je nepovratna i
-            ne podrazumijeva povraćaj novca</strong> (usluga je već isporučena).
-          </Typography>
+          <Typography variant="body2"
+            dangerouslySetInnerHTML={{ __html: t('cancelAnalyticsBody') }}
+          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCancelOpen(false)}>Odustani</Button>
+          <Button onClick={() => setCancelOpen(false)}>{t('common:cancel')}</Button>
           <Button color="error" onClick={cancelAnalytics} disabled={cancelling}>
-            {cancelling ? <CircularProgress size={20} /> : 'Deaktiviraj'}
+            {cancelling ? <CircularProgress size={20} /> : t('btnCancelConfirm')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -9,15 +9,16 @@ namespace Lander.src.Modules.Payments
         {
         }
 
-        // Monri payment provider — idempotency table for processed callbacks
-        public DbSet<ProcessedMonriOrder> ProcessedMonriOrders { get; set; } = null!;
+        // Idempotency table for processed payment orders (provider-agnostic).
+        public DbSet<ProcessedOrder> ProcessedOrders { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<ProcessedMonriOrder>(entity =>
+            modelBuilder.Entity<ProcessedOrder>(entity =>
             {
+                // Table name kept as-is to avoid a migration.
                 entity.ToTable("ProcessedMonriOrders", "payments");
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.OrderNumber).IsUnique();

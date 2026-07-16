@@ -53,12 +53,15 @@ public partial class MessageService : IMessageService
             await _idempotencyService.IsDuplicateAsync($"msg:{senderId}:{idempotencyKey}"))
             return null;
 
-        // Validacija fileUrl — samo interni upload putevi su dozvoljeni (S-8 fix)
+        // Validacija fileUrl — samo interni, RELATIVNI upload putevi su dozvoljeni.
+        // Ranije se gledao samo AbsolutePath pa je "https://evil.com/uploads/x.jpg"
+        // prolazio (host spoofing). Chat upload vraća relativni "/uploads/chat-files/...",
+        // pa apsolutne URL-ove odbijamo u potpunosti.
         if (fileUrl != null)
         {
-            if (!Uri.TryCreate(fileUrl, UriKind.Absolute, out var parsedFileUrl) ||
-                !parsedFileUrl.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
-                parsedFileUrl.AbsolutePath.Contains(".."))
+            var isValidPath = fileUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+                || fileUrl.StartsWith("/api/v1/messages/files/", StringComparison.OrdinalIgnoreCase);
+            if (Uri.TryCreate(fileUrl, UriKind.Absolute, out _) || !isValidPath || fileUrl.Contains(".."))
                 throw new InvalidOperationException("Nevažeći URL fajla.");
         }
 

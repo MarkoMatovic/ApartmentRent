@@ -192,14 +192,16 @@ public class SavedSearchesControllerTests
     }
 
     [Fact]
-    public async Task UpdateSavedSearch_ServiceThrows_ReturnsBadRequest()
+    public async Task UpdateSavedSearch_ServiceThrows_PropagatesToMiddleware()
     {
+        // Controllers no longer swallow service exceptions — the global
+        // exception middleware maps them to the proper status code.
         _mockService.Setup(s => s.UpdateSavedSearchAsync(1, 1, SampleInput))
             .ThrowsAsync(new Exception("not found"));
 
-        var result = await _controller.UpdateSavedSearch(1, SampleInput);
+        var act = () => _controller.UpdateSavedSearch(1, SampleInput);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("not found");
     }
 
     // ─── DeleteSavedSearch ────────────────────────────────────────────────────

@@ -73,7 +73,7 @@ public class NotificationStreamControllerTests
         // Open a stream for userId=5
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var n in service.StreamNotificationsAsync(5, cts.Token))
+            await foreach (var n in service.StreamNotificationsAsync(5, "test-conn", cts.Token))
             {
                 received.Add(n);
                 cts.Cancel();
@@ -114,7 +114,7 @@ public class NotificationStreamControllerTests
 
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var _ in service.StreamNotificationsAsync(1, cts.Token)) { }
+            await foreach (var _ in service.StreamNotificationsAsync(1, "test-conn", cts.Token)) { }
         });
 
         await Task.Delay(50);

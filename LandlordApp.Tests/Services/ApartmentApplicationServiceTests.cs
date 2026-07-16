@@ -64,6 +64,22 @@ public class ApartmentApplicationServiceTests : IDisposable
         var listingsContext = new ListingsContext(listingsOptions);
         var usersContext    = new UsersContext(usersOptions);
 
+        // GetLandlordApplicationsAsync queries ListingsContext directly —
+        // seed the landlord's apartment so ownership resolution works.
+        listingsContext.Apartments.Add(new Apartment
+        {
+            ApartmentId = ApartmentId,
+            LandlordId  = LandlordUserId,
+            Title       = "Test Apartment",
+            Address     = "Test Address 1",
+            Rent        = 500,
+            Features    = "{}",
+            // Global query filter requires IsActive && !IsDeleted; the InMemory
+            // provider ignores HasDefaultValue so set it explicitly.
+            IsActive    = true,
+        });
+        listingsContext.SaveChanges();
+
         var mockHttp = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
         mockHttp.Setup(x => x.HttpContext).Returns(new Microsoft.AspNetCore.Http.DefaultHttpContext());
 

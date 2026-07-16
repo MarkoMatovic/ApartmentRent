@@ -95,8 +95,14 @@ const ApartmentCard: React.FC<ApartmentCardProps> = ({ apartment, isOwner = fals
         {hasImages ? (
           <Box
             component="img"
-            src={images[currentImageIndex].imageUrl}
+            src={images[currentImageIndex].thumbnailUrl || images[currentImageIndex].imageUrl}
             alt={apartment.title}
+            onError={(e) => {
+              // Thumbnail missing (e.g. legacy image without a generated thumb) → fall back to full image.
+              const target = e.currentTarget as HTMLImageElement;
+              const full = images[currentImageIndex].imageUrl;
+              if (full && target.src !== full) target.src = full;
+            }}
             sx={{
               width: '100%',
               height: '100%',

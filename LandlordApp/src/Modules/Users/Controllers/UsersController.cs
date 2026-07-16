@@ -19,26 +19,24 @@ namespace Lander.src.Modules.Users.Controllers
         #region Properties
         private readonly IUserInterface _userInterface;
         private readonly TokenProvider _tokenProvider;
-        private readonly UsersContext _usersContext;
         private readonly RefreshTokenService _refreshTokenService;
         #endregion
         #region Constructors
-        public UsersController(IUserInterface userInterface, TokenProvider tokenProvider, UsersContext usersContext, RefreshTokenService refreshTokenService)
+        public UsersController(IUserInterface userInterface, TokenProvider tokenProvider, RefreshTokenService refreshTokenService)
         {
             _userInterface = userInterface;
             _tokenProvider = tokenProvider;
-            _usersContext = usersContext;
             _refreshTokenService = refreshTokenService;
         }
         #endregion
-        [EnableRateLimiting("auth")]
+        [EnableRateLimiting("register")]
         [HttpPost(ApiActionsV1.Register, Name = nameof(ApiActionsV1.Register))]
         public async Task<ActionResult<UserRegistrationDto>> RegisterUser([FromBody] UserRegistrationInputDto userRegistrationInputDto)
         {
             return Ok(await _userInterface.RegisterUserAsync(userRegistrationInputDto));
         }
 
-        [EnableRateLimiting("auth")]
+        [EnableRateLimiting("login")]
         [HttpPost(ApiActionsV1.Login, Name = nameof(ApiActionsV1.Login))]
         public async Task<ActionResult<AuthTokenDto>> LoginUser([FromBody] LoginUserInputDto loginUserInputDto)
         {
@@ -75,7 +73,7 @@ namespace Lander.src.Modules.Users.Controllers
 
             return Ok(new { Message = "Logged out successfully" });
         }
-        [EnableRateLimiting("auth")]
+        [EnableRateLimiting("change-password")]
         [Authorize]
         [HttpPost(ApiActionsV1.ChangePassword, Name = nameof(ApiActionsV1.ChangePassword))]
         public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordInputDto changePasswordInputDto)
@@ -176,6 +174,7 @@ namespace Lander.src.Modules.Users.Controllers
 
         
         [HttpPost("token/refresh")]
+        [EnableRateLimiting("auth")]
         public async Task<ActionResult<AuthTokenDto>> RotateRefreshToken([FromBody] LogoutInputDto? dto = null)
         {
             
@@ -197,27 +196,6 @@ namespace Lander.src.Modules.Users.Controllers
             SetRefreshTokenCookie(newRefresh);
 
             return Ok(new AuthTokenDto { AccessToken = newAccess, RefreshToken = string.Empty });
-        }
-
-       
-        [HttpPost("refresh-token")]
-        [Authorize]
-        public async Task<ActionResult<string>> RefreshToken()
-        {
-            var userGuid = User.FindFirstValue("sub");
-            if (string.IsNullOrEmpty(userGuid)) return Unauthorized();
-
-            if (!Guid.TryParse(userGuid, out var parsedGuid))
-                return Unauthorized();
-
-            var user = await _usersContext.Users
-                .Include(u => u.UserRole)
-                .FirstOrDefaultAsync(u => u.UserGuid == parsedGuid);
-
-            if (user == null) return Unauthorized();
-
-            var token = await _tokenProvider.CreateAsync(user);
-            return Ok(token);
         }
 
         [HttpPost("send-verification-email/{userId}")]

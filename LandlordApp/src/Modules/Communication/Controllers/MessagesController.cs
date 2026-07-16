@@ -3,6 +3,7 @@ using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -65,6 +66,7 @@ public class MessagesController : ControllerBase
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [EnableRateLimiting("auth")]
+    [Microsoft.AspNetCore.Http.Timeouts.RequestTimeout(60_000)]
     public async Task<IActionResult> UploadFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
@@ -74,10 +76,9 @@ public class MessagesController : ControllerBase
         try
         {
             var relativeUrl = await _messageService.UploadFileAsync(file, userId);
-            var fileUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
             return Ok(new
             {
-                fileUrl,
+                fileUrl = relativeUrl,
                 fileName = file.FileName,
                 fileSize = file.Length,
                 fileType = file.ContentType
@@ -90,7 +91,7 @@ public class MessagesController : ControllerBase
     }
 
     [HttpPost(ApiActionsV1.SendMessage, Name = nameof(ApiActionsV1.SendMessage))]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("messages-send")]
     public async Task<ActionResult<MessageDto>> SendMessage([FromBody] SendMessageInputDto input)
     {
         var senderId = GetCurrentUserId();
@@ -132,6 +133,36 @@ public class MessagesController : ControllerBase
         var guard = ForbiddenIfNotOwner(userId);
         if (guard != null) return guard;
         return Ok(await _messageService.GetUnreadCountAsync(userId));
+    }
+
+    [HttpGet("files/{filename}")]
+    public async Task<IActionResult> DownloadFile([FromRoute] string filename)
+    {
+        var userId = GetCurrentUserId();
+
+        if (!await _messageService.IsFileAccessibleAsync(filename, userId))
+            return Forbid();
+
+        var filePath = Path.Combine(
+            HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().ContentRootPath,
+            "chat-files",
+            filename);
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound();
+
+        // Derive content type from extension; default to octet-stream
+        var ext = Path.GetExtension(filename).ToLowerInvariant();
+        var contentType = ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png"            => "image/png",
+            ".gif"            => "image/gif",
+            ".pdf"            => "application/pdf",
+            _                 => "application/octet-stream"
+        };
+
+        return PhysicalFile(filePath, contentType, enableRangeProcessing: false);
     }
 
     [HttpPost("archive")]

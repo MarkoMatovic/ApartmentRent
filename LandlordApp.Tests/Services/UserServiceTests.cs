@@ -21,6 +21,7 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Common;
+using Lander.src.Infrastructure.Services;
 
 namespace LandlordApp.Tests.Services;
 
@@ -34,7 +35,7 @@ public class UserServiceTests : IDisposable
     private readonly Mock<IApartmentService> _mockApartmentService;
     private readonly Mock<IRoommateService> _mockRoommateService;
     private readonly Mock<ILogger<UserService>> _mockLogger;
-    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly IConfiguration _configuration;
     private readonly UserService _userService;
 
     // Helper: creates a valid User with all required non-nullable fields
@@ -79,11 +80,17 @@ public class UserServiceTests : IDisposable
         _mockApartmentService = new Mock<IApartmentService>();
         _mockRoommateService = new Mock<IRoommateService>();
         _mockLogger = new Mock<ILogger<UserService>>();
-        _mockConfiguration = new Mock<IConfiguration>();
-        _mockConfiguration.Setup(x => x["Jwt:Secret"]).Returns("ThisIsAVerySecureSecretKeyForTestingPurposesOnly12345678");
-        _mockConfiguration.Setup(x => x["Jwt:Issuer"]).Returns("TestIssuer");
-        _mockConfiguration.Setup(x => x["Jwt:Audience"]).Returns("TestAudience");
-        _mockConfiguration.Setup(x => x["App:FrontendBaseUrl"]).Returns("http://localhost:5173");
+        // Real configuration — ConfigurationBinder.GetValue (lockout settings etc.)
+        // does not work against a loose IConfiguration mock.
+        _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Secret"] = "ThisIsAVerySecureSecretKeyForTestingPurposesOnly12345678",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience",
+                ["App:FrontendBaseUrl"] = "http://localhost:5173",
+            })
+            .Build();
         var refreshTokenService = new RefreshTokenService(_context);
 
         _userService = BuildUserService(
@@ -91,7 +98,7 @@ public class UserServiceTests : IDisposable
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             Array.Empty<IUserDeletedHandler>(),
-            refreshTokenService, _mockConfiguration.Object);
+            refreshTokenService, _configuration);
 
         SeedTestData();
     }
@@ -144,15 +151,19 @@ public class UserServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LoginUserAsync_InactiveUser_ShouldReturnNull()
+    public async Task LoginUserAsync_InactiveUser_ThrowsEmailNotVerified()
     {
+        // Inactive (unverified) accounts get an explicit 403 EMAIL_NOT_VERIFIED
+        // so the frontend can offer "resend verification email".
         var user = MakeUser(email: "inactive@test.com", isActive: false);
         user.Password = BCrypt.Net.BCrypt.HashPassword("pass");
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var result = await _userService.LoginUserAsync(new LoginUserInputDto { Email = "inactive@test.com", Password = "pass" });
-        result.Should().BeNull();
+        var act = () => _userService.LoginUserAsync(new LoginUserInputDto { Email = "inactive@test.com", Password = "pass" });
+
+        await act.Should().ThrowAsync<Lander.src.Common.Exceptions.ForbiddenException>()
+            .WithMessage("EMAIL_NOT_VERIFIED");
     }
 
     [Fact]
@@ -212,10 +223,10 @@ public class UserServiceTests : IDisposable
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var updateDto = new UserProfileUpdateInputDto { FirstName = "New", Email = "new@test.com" };
+        var updateDto = new UserProfileUpdateInputDto { FirstName = "New" };
         var result = await _userService.UpdateUserProfileAsync(user.UserId, updateDto);
         result.FirstName.Should().Be("New");
-        result.Email.Should().Be("new@test.com");
+        result.Email.Should().Be("old@test.com"); // email unchanged — changes require dedicated verify flow
     }
 
     [Fact]
@@ -324,7 +335,7 @@ public class UserServiceTests : IDisposable
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             new[] { mockHandler.Object },
-            refreshTokenService, _mockConfiguration.Object);
+            refreshTokenService, _configuration);
 
         await svc.DeleteUserAsync(new DeleteUserInputDto { UserGuid = guid });
 
@@ -516,7 +527,8 @@ public class UserServiceTests : IDisposable
             emailService,
             configuration,
             new Mock<ILogger<PasswordService>>().Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new RefreshTokenService(context));
 
         var authService = new AuthService(
             context,
@@ -528,7 +540,8 @@ public class UserServiceTests : IDisposable
             passwordService,
             configuration,
             new Mock<ILogger<AuthService>>().Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Mock<IJwtBlacklistService>().Object);
 
         var profileService = new UserProfileService(
             context,
@@ -539,7 +552,8 @@ public class UserServiceTests : IDisposable
             deletionHandlers,
             new UserRoleUpgradeService(context, new Mock<ILogger<UserRoleUpgradeService>>().Object, TimeProvider.System),
             new Mock<ILogger<UserProfileService>>().Object,
-            new Mock<IAuditLogService>().Object);
+            new Mock<IAuditLogService>().Object,
+            new RefreshTokenService(context));
 
         return new UserService(authService, passwordService, profileService);
     }

@@ -4,6 +4,7 @@ import {
   Typography, FormControlLabel, Checkbox, Button, Link, Box, Alert,
 } from '@mui/material';
 import GavelIcon from '@mui/icons-material/Gavel';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ interface Props {
  * digital services that begin immediately upon purchase.
  */
 const WithdrawalWaiverModal: React.FC<Props> = ({ open, planName, amount, onConfirm, onCancel }) => {
+  const { t } = useTranslation('subscriptions');
   const [checked, setChecked] = useState(false);
 
   const handleClose = () => {
@@ -36,27 +38,21 @@ const WithdrawalWaiverModal: React.FC<Props> = ({ open, planName, amount, onConf
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <GavelIcon color="primary" />
-        Potvrda kupovine digitalne usluge
+        {t('waiverTitle')}
       </DialogTitle>
 
       <DialogContent>
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1" gutterBottom>
-            Kupujete: <strong>{planName}</strong>
+            {t('waiverBuying')} <strong>{planName}</strong>
           </Typography>
           <Typography variant="body1" color="primary" fontWeight="bold" gutterBottom>
-            Iznos: {amount}
+            {t('waiverAmount')} {amount}
           </Typography>
         </Box>
 
         <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Obaveštenje u skladu sa Zakonom o zaštiti potrošača RS (čl. 30, st. 6):</strong>
-            <br />
-            Ova usluga je <strong>digitalne prirode</strong> i biće aktivirana <strong>odmah</strong> po
-            potvrdi plaćanja. Prema srpskom pravu, kupovinom digitalne usluge koja počinje odmah,
-            odričete se prava na odustajanje od ugovora u roku od 14 dana.
-          </Typography>
+          <Typography variant="body2" dangerouslySetInnerHTML={{ __html: t('waiverBody') }} />
         </Alert>
 
         <FormControlLabel
@@ -69,11 +65,9 @@ const WithdrawalWaiverModal: React.FC<Props> = ({ open, planName, amount, onConf
           }
           label={
             <Typography variant="body2">
-              <strong>Razumijem i izričito prihvatam</strong> da aktivacijom digitalne usluge odmah
-              po kupovini <strong>gubim pravo na odustajanje od ugovora u roku od 14 dana</strong>,
-              u skladu sa čl. 30, st. 6 Zakona o zaštiti potrošača Republike Srbije.{' '}
+              <span dangerouslySetInnerHTML={{ __html: t('waiverCheckbox') }} />{' '}
               <Link href="/politika-povracaja" target="_blank" rel="noopener">
-                Politika povraćaja
+                {t('waiverRefundPolicy')}
               </Link>
             </Typography>
           }
@@ -83,7 +77,7 @@ const WithdrawalWaiverModal: React.FC<Props> = ({ open, planName, amount, onConf
 
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
         <Button variant="outlined" onClick={handleClose}>
-          Odustani
+          {t('waiverCancel')}
         </Button>
         <Button
           variant="contained"
@@ -91,7 +85,7 @@ const WithdrawalWaiverModal: React.FC<Props> = ({ open, planName, amount, onConf
           disabled={!checked}
           color="primary"
         >
-          Nastavi na plaćanje
+          {t('waiverConfirm')}
         </Button>
       </DialogActions>
     </Dialog>

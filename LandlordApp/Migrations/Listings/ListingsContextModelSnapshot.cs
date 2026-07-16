@@ -213,6 +213,10 @@ namespace Lander.Migrations.Listings
                     b.Property<int?>("ApartmentId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BlobPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<Guid?>("CreatedByGuid")
                         .HasColumnType("uniqueidentifier");
 
@@ -239,6 +243,10 @@ namespace Lander.Migrations.Listings
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("ThumbnailPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
 
                     b.HasKey("ImageId")
                         .HasName("PK__Apartmen__7516F70CD829ACA5");

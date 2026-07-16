@@ -12,7 +12,7 @@ public class PricePredictionRequestDto
     public bool? IsPetFriendly { get; set; }
     public bool? IsSmokingAllowed { get; set; }
     public string? City { get; set; }
-    public int? ApartmentType { get; set; } // 0=Studio, 1=OneBedroom, etc.
+    public int? ApartmentType { get; set; } // Values mirror Listings ApartmentType: 0=Studio, 1=OneRoom, 2=TwoRoom, 3=ThreeRoom, 4=FourRoom, 5=House
 }
 public class PricePredictionResponseDto
 {

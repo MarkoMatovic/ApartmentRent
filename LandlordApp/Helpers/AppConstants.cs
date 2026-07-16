@@ -13,7 +13,7 @@ public static class RoleConstants
     public const string Admin            = "Admin";
 }
 
-/// <summary>Subscription plan ID constants — must match Monri:Plans config keys.</summary>
+/// <summary>Subscription plan ID constants — must match Payments:Plans config keys.</summary>
 public static class PlanConstants
 {
     public const string PersonalAnalytics  = "personal_analytics";

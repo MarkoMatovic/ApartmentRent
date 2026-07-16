@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../shared/context/AuthContext';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -22,7 +21,6 @@ import { Search as SearchIcon, Home as HomeIcon, People as PeopleIcon, Message a
 const HomePage: React.FC = () => {
   const { t } = useTranslation(['common', 'apartments']);
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
 
 
   const [location, setLocation] = useState('');

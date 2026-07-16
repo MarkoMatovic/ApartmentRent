@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, Typography, Alert, FormControlLabel, Checkbox, Box, Paper, Chip
+    Button, Typography, Alert, FormControlLabel, Checkbox, Box, Chip
 } from '@mui/material';
 import { Star as StarIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { applicationsApi } from '../../shared/api/applicationsApi';
 import { useNotifications } from '../../shared/context/NotificationContext';
 
@@ -15,6 +16,7 @@ interface ApplicationModalProps {
 }
 
 const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apartmentId, apartmentTitle }) => {
+    const { t } = useTranslation('applications');
     const [loading, setLoading] = useState(false);
     const [isPriority, setIsPriority] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -26,14 +28,14 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
         try {
             await applicationsApi.applyForApartment({ apartmentId, isPriority });
             addNotification({
-                title: isPriority ? 'Priority Application Sent' : 'Application Sent',
-                message: `Successfully applied for ${apartmentTitle}${isPriority ? ' (Priority)' : ''}`,
+                title: isPriority ? t('priorityApplicationSent') : t('applicationSent'),
+                message: t('applicationSuccess', { title: apartmentTitle, priority: isPriority ? t('prioritySuffix') : '' }),
                 type: 'success'
             });
             onClose();
             setIsPriority(false);
         } catch (err: any) {
-            setError(err.response?.data || 'Failed to apply. Please try again.');
+            setError(err.response?.data || t('applicationError'));
         } finally {
             setLoading(false);
         }
@@ -47,11 +49,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Apply for {apartmentTitle}</DialogTitle>
+            <DialogTitle>{t('applyTitle', { title: apartmentTitle })}</DialogTitle>
             <DialogContent>
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                 <Typography sx={{ mb: 3 }}>
-                    Are you sure you want to apply for this apartment? The landlord will be notified immediately.
+                    {t('applyConfirm')}
                 </Typography>
 
                 <Box
@@ -77,11 +79,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
                         label={
                             <Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography fontWeight="medium">Priority Application</Typography>
-                                    <Chip label="Premium" size="small" color="warning" variant="outlined" />
+                                    <Typography fontWeight="medium">{t('priorityApplication')}</Typography>
+                                    <Chip label={t('premium')} size="small" color="warning" variant="outlined" />
                                 </Box>
                                 <Typography variant="body2" color="text.secondary">
-                                    Your application appears at the top of the landlord's list.
+                                    {t('priorityDesc')}
                                 </Typography>
                             </Box>
                         }
@@ -89,7 +91,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+                <Button onClick={handleClose} disabled={loading}>{t('cancel')}</Button>
                 <Button
                     onClick={handleApply}
                     variant="contained"
@@ -97,7 +99,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
                     disabled={loading}
                     startIcon={isPriority ? <StarIcon /> : undefined}
                 >
-                    {loading ? 'Sending...' : isPriority ? 'Send Priority Application' : 'Confirm Application'}
+                    {loading ? t('sending') : isPriority ? t('sendPriority') : t('confirmApplication')}
                 </Button>
             </DialogActions>
         </Dialog>

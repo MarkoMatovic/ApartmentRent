@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Check as CheckIcon } from '@mui/icons-material';
 import { SubscriptionPlan } from '../../shared/types/subscription';
+import { useTranslation } from 'react-i18next';
 
 interface PricingCardProps {
     plan: SubscriptionPlan;
@@ -24,13 +25,15 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     isCurrentPlan = false,
     loading = false,
 }) => {
+    const { t } = useTranslation('subscriptions');
+
     const features = [
-        'Personal analytics dashboard',
-        'Apartment view tracking',
-        'Message analytics',
-        'Search behavior insights',
-        'ML-powered price predictions (landlords)',
-        'Advanced listing analytics (landlords)',
+        t('planAnalytics_feat5'),
+        t('planAnalytics_feat2'),
+        t('planAnalytics_feat3'),
+        t('planAnalytics_feat1'),
+        t('planAnalytics_feat4'),
+        t('planAnalytics_feat6'),
     ];
 
     return (
@@ -46,7 +49,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         >
             {isCurrentPlan && (
                 <Chip
-                    label="Current Plan"
+                    label={t('currentPlan')}
                     color="primary"
                     size="small"
                     sx={{
@@ -77,7 +80,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
 
                 <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle2" gutterBottom fontWeight="medium">
-                        What's included:
+                        {t('whatsIncluded')}
                     </Typography>
                     {features.map((feature, index) => (
                         <Box
@@ -104,7 +107,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
                     onClick={() => !isCurrentPlan && onSubscribe(plan)}
                     disabled={isCurrentPlan || loading}
                 >
-                    {isCurrentPlan ? 'Active' : loading ? 'Obrađuje se...' : 'Kupi'}
+                    {isCurrentPlan ? t('currentPlan') : loading ? t('processing') : t('btnBuy')}
                 </Button>
             </CardActions>
         </Card>

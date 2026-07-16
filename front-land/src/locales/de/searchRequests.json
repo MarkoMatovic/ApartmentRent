@@ -31,5 +31,28 @@
         "city": "Stadt",
         "minBudget": "Min. Budget",
         "maxBudget": "Max. Budget"
+    },
+    "dialog": {
+        "newRequestTitle": "Neue Suchanfrage",
+        "type": "Typ",
+        "title": "Titel",
+        "description": "Beschreibung",
+        "city": "Stadt",
+        "budget": "Budget (€)",
+        "moveInDate": "Gewünschtes Einzugsdatum",
+        "cancel": "Abbrechen",
+        "saving": "Speichern...",
+        "createRequest": "Anfrage erstellen",
+        "titleRequired": "Titel ist erforderlich.",
+        "descriptionRequired": "Beschreibung ist erforderlich."
+    },
+    "card": {
+        "upTo": "Bis zu €{{amount}}",
+        "postedBy": "Gepostet von: {{name}}",
+        "yourRequest": "Ihre Anfrage",
+        "contact": "Kontaktieren",
+        "loginToContact": "Anmelden um zu kontaktieren",
+        "failedToDelete": "Fehler beim Löschen der Anfrage",
+        "failedToLoad": "Fehler beim Laden der Suchanfragen"
     }
 }

@@ -26,50 +26,16 @@ import HomeIcon from '@mui/icons-material/Home';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { paymentsApi, submitMonriForm } from '../shared/api/paymentsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
 import { useAuth } from '../shared/context/AuthContext';
 import { apiClient } from '../shared/api/client';
 import WithdrawalWaiverModal from '../components/Payment/WithdrawalWaiverModal';
 
-const analyticsFeatures = [
-  { icon: <AutoGraphIcon fontSize="small" />, text: "Advanced search behavior insights", highlighted: true },
-  { icon: <CheckIcon fontSize="small" />, text: "Detailed apartment view tracking" },
-  { icon: <CheckIcon fontSize="small" />, text: "Message response analytics" },
-  { icon: <CheckIcon fontSize="small" />, text: "ML-powered price predictions (Landlords)" },
-];
-
-const listingFeatures = [
-  { icon: <HomeIcon fontSize="small" />, text: "Objavi oglas za stan ili kuću", highlighted: true },
-  { icon: <CheckIcon fontSize="small" />, text: "Oglas aktivan 30 dana" },
-  { icon: <CheckIcon fontSize="small" />, text: "Neograničen broj fotografija" },
-  { icon: <CheckIcon fontSize="small" />, text: "Direktne poruke od zainteresovanih stanara" },
-  { icon: <CheckIcon fontSize="small" />, text: "Upravljanje prijavama stanara" },
-];
-
-const boostProfileFeatures = [
-  { icon: <RocketLaunchIcon fontSize="small" />, text: "Tvoj profil se prikazuje prvi u pretrazi cimera", highlighted: true },
-  { icon: <CheckIcon fontSize="small" />, text: "Vidljiv korisnicima koji odgovaraju tvojim preferencijama" },
-  { icon: <CheckIcon fontSize="small" />, text: "Boost aktivan 7 dana" },
-  { icon: <CheckIcon fontSize="small" />, text: "Do 3× više pregleda profila" },
-];
-
-const priorityInboxFeatures = [
-  { icon: <MarkEmailReadIcon fontSize="small" />, text: "Notifikacija ko je pregledao tvoj oglas", highlighted: true },
-  { icon: <CheckIcon fontSize="small" />, text: "Poruke od verifikovanih korisnika označene prioritetom" },
-  { icon: <CheckIcon fontSize="small" />, text: "Aktivan 30 dana" },
-  { icon: <CheckIcon fontSize="small" />, text: "Uvid u broj pregleda po danu" },
-];
-
-const featuredFeatures = [
-  { icon: <StarIcon fontSize="small" />, text: "Rank at the top of search results", highlighted: true },
-  { icon: <VisibilityIcon fontSize="small" />, text: "Get up to 5x more profile/apartment views" },
-  { icon: <CheckIcon fontSize="small" />, text: "Special 'Featured' badge on your listing" },
-  { icon: <CheckIcon fontSize="small" />, text: "Priority in email recommendations" },
-];
-
 const PricingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('subscriptions');
   const { addNotification } = useNotifications();
   const { isAuthenticated } = useAuth();
   const [tabIndex, setTabIndex] = useState(0);
@@ -94,11 +60,64 @@ const PricingPage: React.FC = () => {
   const [waiverPlanName, setWaiverPlanName] = useState('');
   const [waiverAmount, setWaiverAmount] = useState('');
 
+  // Feature lists (built inside component to use t())
+  const analyticsFeatures = [
+    { icon: <AutoGraphIcon fontSize="small" />, text: t('planAnalytics_feat1'), highlighted: true },
+    { icon: <CheckIcon fontSize="small" />, text: t('planAnalytics_feat2') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planAnalytics_feat3') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planAnalytics_feat4') },
+  ];
+
+  const listingFeatures = [
+    { icon: <HomeIcon fontSize="small" />, text: t('planListing_feat1'), highlighted: true },
+    { icon: <CheckIcon fontSize="small" />, text: t('planListing_feat2') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planListing_feat3') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planListing_feat4') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planListing_feat5') },
+  ];
+
+  const boostProfileFeatures = [
+    { icon: <RocketLaunchIcon fontSize="small" />, text: t('planBoost_feat1'), highlighted: true },
+    { icon: <CheckIcon fontSize="small" />, text: t('planBoost_feat2') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planBoost_feat3') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planBoost_feat4') },
+  ];
+
+  const priorityInboxFeatures = [
+    { icon: <MarkEmailReadIcon fontSize="small" />, text: t('planPriority_feat1'), highlighted: true },
+    { icon: <CheckIcon fontSize="small" />, text: t('planPriority_feat2') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planPriority_feat3') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planPriority_feat4') },
+  ];
+
+  const featuredFeatures = [
+    { icon: <StarIcon fontSize="small" />, text: t('planFeatured_feat1'), highlighted: true },
+    { icon: <VisibilityIcon fontSize="small" />, text: t('planFeatured_feat2') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planFeatured_feat3') },
+    { icon: <CheckIcon fontSize="small" />, text: t('planFeatured_feat4') },
+  ];
+
+  // Plan labels for waiver modal
+  const PLAN_LABELS: Record<string, { name: string; amount: string }> = {
+    'analytics-monthly':  { name: t('planLabelAnalyticsMonthly'), amount: '€4.99' },
+    'analytics-yearly':   { name: t('planLabelAnalyticsYearly'),  amount: '€49.99' },
+    'tokens-10':          { name: t('planLabelTokens10'),          amount: '€2.99' },
+    'tokens-50':          { name: t('planLabelTokens50'),          amount: '€9.99' },
+    'tokens-150':         { name: t('planLabelTokens150'),         amount: '€24.99' },
+    'featured-7':         { name: t('planLabelFeatured7'),         amount: '€9.99' },
+    'featured-30':        { name: t('planLabelFeatured30'),        amount: '€29.99' },
+    'listing-1':          { name: t('planLabelListing1'),          amount: '€5.00' },
+    'listing-3':          { name: t('planLabelListing3'),          amount: '€15.00' },
+    'listing-5':          { name: t('planLabelListing5'),          amount: '€25.00' },
+    'boost-7':            { name: t('planLabelBoost7'),            amount: '€2.00' },
+    'priority-30':        { name: t('planLabelPriority30'),        amount: '€2.00' },
+  };
+
   // Load user's apartments when on the Featured tab
   useEffect(() => {
     if (tabIndex !== 1 || !isAuthenticated || myApartments.length > 0) return;
     setApartmentsLoading(true);
-    apiClient.get('/api/v1/apartments/my-apartments')
+    apiClient.get('/api/v1/rent/get-my-apartments')
       .then(res => {
         const items = (res.data?.items ?? res.data ?? []) as { apartmentId: number; title: string }[];
         setMyApartments(items);
@@ -108,21 +127,12 @@ const PricingPage: React.FC = () => {
       .finally(() => setApartmentsLoading(false));
   }, [tabIndex, isAuthenticated]);
 
-  const comingSoon = () => {
-    addNotification({
-      title: 'Uskoro dostupno',
-      message: 'Online plaćanje za ovu uslugu će biti dostupno uskoro. Kontaktirajte nas na info@turentaj.com.',
-      type: 'info',
-    });
-  };
-
-  // All flows now wired to Monri via handleSubscribe
   const handleBoostProfile   = () => handleSubscribe('boost-7');
   const handlePriorityInbox  = () => handleSubscribe('priority-30');
   const handlePublishListing = () => handleSubscribe(`listing-${listingCount}`);
   const handlePromoteFeature = () => {
     if (!selectedApartmentId) {
-      addNotification({ title: 'Odaberi oglas', message: 'Molimo odaberi oglas koji želiš istaknuti.', type: 'warning' });
+      addNotification({ title: t('selectApartmentTitle'), message: t('selectApartmentMessage'), type: 'warning' });
       return;
     }
     handleSubscribeWithApartment(
@@ -131,23 +141,6 @@ const PricingPage: React.FC = () => {
     );
   };
 
-  // Plan name/amount lookup for the waiver modal
-  const PLAN_LABELS: Record<string, { name: string; amount: string }> = {
-    'analytics-monthly':  { name: 'Analytics (Mesečno)',           amount: '€4.99' },
-    'analytics-yearly':   { name: 'Analytics (Godišnje)',           amount: '€49.99' },
-    'tokens-10':          { name: 'Starter Pack (10 Tokena)',        amount: '€2.99' },
-    'tokens-50':          { name: 'Power User (50 Tokena)',          amount: '€9.99' },
-    'tokens-150':         { name: 'Elite Bundle (150 Tokena)',       amount: '€24.99' },
-    'featured-7':         { name: 'Istaknut Oglas (7 Dana)',         amount: '€9.99' },
-    'featured-30':        { name: 'Istaknut Oglas (30 Dana)',        amount: '€29.99' },
-    'listing-1':          { name: 'Objavi Oglas (1)',                amount: '€5.00' },
-    'listing-3':          { name: 'Objavi Oglas (3)',                amount: '€15.00' },
-    'listing-5':          { name: 'Objavi Oglas (5)',                amount: '€25.00' },
-    'boost-7':            { name: 'Boost Profila Cimera (7 Dana)',   amount: '€2.00' },
-    'priority-30':        { name: 'Priority Inbox (30 Dana)',        amount: '€2.00' },
-  };
-
-  /** Opens the mandatory withdrawal waiver modal, then proceeds to payment on confirm. */
   const handleSubscribe = (planId: string) => {
     const info = PLAN_LABELS[planId] ?? { name: planId, amount: '' };
     setPendingPlanId(planId);
@@ -157,7 +150,6 @@ const PricingPage: React.FC = () => {
     setWaiverOpen(true);
   };
 
-  /** Same as handleSubscribe but passes an apartmentId (for featured-* plans). */
   const handleSubscribeWithApartment = (planId: string, apartmentId: number) => {
     const info = PLAN_LABELS[planId] ?? { name: planId, amount: '' };
     setPendingPlanId(planId);
@@ -167,7 +159,6 @@ const PricingPage: React.FC = () => {
     setWaiverOpen(true);
   };
 
-  /** Called when user confirms the waiver — proceeds to actual Monri payment. */
   const handleWaiverConfirm = async () => {
     if (!pendingPlanId) return;
     setWaiverOpen(false);
@@ -180,18 +171,16 @@ const PricingPage: React.FC = () => {
         pendingApartmentId ?? undefined,
       );
       submitMonriForm(formFields);
-      // Page navigates away — setLoading not needed
     } catch (error: any) {
       addNotification({
-        title: 'Greška',
-        message: error.response?.data?.message || 'Nije moguće pokrenuti plaćanje. Pokušajte ponovo.',
+        title: t('paymentErrorTitle'),
+        message: error.response?.data?.message || t('paymentErrorMessage'),
         type: 'error',
       });
       setLoading(false);
     }
   };
 
-  // Analytics: delegate to handleSubscribe with the correct planId
   const handleSubscribeAnalytics = () =>
     handleSubscribe(analyticsCycle === 'Monthly' ? 'analytics-monthly' : 'analytics-yearly');
 
@@ -210,14 +199,14 @@ const PricingPage: React.FC = () => {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h6" sx={{ flex: 1, textAlign: 'center', fontWeight: 'bold' }}>
-          Premium Services
+          {t('pageTitle')}
         </Typography>
       </Box>
 
       {/* Product Tabs */}
-      <Tabs 
-        value={tabIndex} 
-        onChange={(_, newValue) => setTabIndex(newValue)} 
+      <Tabs
+        value={tabIndex}
+        onChange={(_, newValue) => setTabIndex(newValue)}
         centered
         sx={{
           mb: 4,
@@ -226,21 +215,20 @@ const PricingPage: React.FC = () => {
           '& .Mui-selected': { color: '#fff !important', fontWeight: 'bold' }
         }}
       >
-        <Tab label="Analytics" />
-        <Tab label="Promote" />
-        <Tab label="Oglas" />
-        <Tab label="Boost" />
-        <Tab label="Tokens" />
+        <Tab label={t('tabAnalytics')} />
+        <Tab label={t('tabPromote')} />
+        <Tab label={t('tabListing')} />
+        <Tab label={t('tabBoost')} />
+        <Tab label={t('tabTokens')} />
       </Tabs>
 
-      {/* Content for Analytics (Tab 0) */}
+      {/* Analytics (Tab 0) */}
       {tabIndex === 0 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
-            Otključaj moćnu analitiku i uvide
+            {t('analyticsSubtitle')}
           </Typography>
 
-          {/* Toggle */}
           <Box sx={{ display: 'flex', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.3)', mb: 4, p: '2px' }}>
             <Button
               fullWidth
@@ -253,7 +241,7 @@ const PricingPage: React.FC = () => {
               }}
               onClick={() => setAnalyticsCycle('Monthly')}
             >
-              Mesečno
+              {t('cycleMonthly')}
             </Button>
             <Button
               fullWidth
@@ -266,11 +254,10 @@ const PricingPage: React.FC = () => {
               }}
               onClick={() => setAnalyticsCycle('Yearly')}
             >
-              Godišnje
+              {t('cycleYearly')}
             </Button>
           </Box>
 
-          {/* Card */}
           <Box sx={{
             background: 'rgba(255,255,255,0.1)',
             backdropFilter: 'blur(10px)',
@@ -280,24 +267,24 @@ const PricingPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                TuRentaj Analitika {analyticsCycle === 'Monthly' ? '(Mesečno)' : '(Godišnje)'}
+                {analyticsCycle === 'Monthly' ? t('analyticsPlanMonthly') : t('analyticsPlanYearly')}
               </Typography>
               {analyticsCycle === 'Yearly' && (
-                 <Chip label="Uštedi ~16%" size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
+                <Chip label={t('savePercent')} size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
               )}
             </Box>
-            
+
             <Box sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 1 }}>
                 <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
                 <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                   {analyticsCycle === 'Yearly' ? '4.15' : '4.99'}
                 </Typography>
-                <Typography variant="body2" sx={{ ml: 0.5, opacity: 0.8 }}>/mesečno</Typography>
+                <Typography variant="body2" sx={{ ml: 0.5, opacity: 0.8 }}>{t('perMonth')}</Typography>
               </Box>
-              
+
               {analyticsCycle === 'Yearly' && (
-                <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>€49.99 naplata jednom godišnje</Typography>
+                <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>{t('yearlyBilling')}</Typography>
               )}
 
               <List sx={{ mt: 2 }}>
@@ -318,21 +305,20 @@ const PricingPage: React.FC = () => {
                   '&:hover': { backgroundColor: '#6FC9F0' }
                 }}
               >
-                {loading ? 'Obrađuje se...' : 'Pretplati se'}
+                {loading ? t('processing') : t('btnSubscribe')}
               </Button>
             </Box>
           </Box>
         </>
       )}
 
-      {/* Content for Featured Listing (Tab 1) */}
+      {/* Promote (Tab 1) */}
       {tabIndex === 1 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
-            Poboljšaj vidljivost svog oglasa
+            {t('promoteSubtitle')}
           </Typography>
 
-          {/* Toggle */}
           <Box sx={{ display: 'flex', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.3)', mb: 4, p: '2px' }}>
             <Button
               fullWidth
@@ -345,7 +331,7 @@ const PricingPage: React.FC = () => {
               }}
               onClick={() => setFeaturedDuration('7 Days')}
             >
-              7 Dana
+              {t('duration7Days')}
             </Button>
             <Button
               fullWidth
@@ -358,26 +344,25 @@ const PricingPage: React.FC = () => {
               }}
               onClick={() => setFeaturedDuration('30 Days')}
             >
-              30 Dana
+              {t('duration30Days')}
             </Button>
           </Box>
 
-          {/* Apartment selector */}
           {isAuthenticated && (
             <Box sx={{ mb: 3 }}>
               {apartmentsLoading ? (
                 <Box sx={{ textAlign: 'center' }}><CircularProgress size={24} sx={{ color: '#89D9F8' }} /></Box>
               ) : myApartments.length === 0 ? (
                 <Typography variant="body2" sx={{ opacity: 0.7, textAlign: 'center' }}>
-                  Nemate objavljenih oglasa. Prvo objavite oglas (Oglas tab), a potom ga istaknite.
+                  {t('noApartments')}
                 </Typography>
               ) : (
                 <FormControl fullWidth size="small">
-                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Odaberi oglas za isticanje</InputLabel>
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>{t('selectApartmentLabel')}</InputLabel>
                   <Select
                     value={selectedApartmentId}
                     onChange={e => setSelectedApartmentId(e.target.value as number)}
-                    label="Odaberi oglas za isticanje"
+                    label={t('selectApartmentLabel')}
                     sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' }, '.MuiSvgIcon-root': { color: '#fff' } }}
                   >
                     {myApartments.map(apt => (
@@ -389,7 +374,6 @@ const PricingPage: React.FC = () => {
             </Box>
           )}
 
-          {/* Card */}
           <Box sx={{
             background: 'rgba(255,255,255,0.1)',
             backdropFilter: 'blur(10px)',
@@ -399,11 +383,11 @@ const PricingPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                Istaknut Oglas
+                {t('featuredPlanTitle')}
               </Typography>
               <Chip label="Top Tier" size="small" sx={{ backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold' }} />
             </Box>
-            
+
             <Box sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 1 }}>
                 <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
@@ -412,7 +396,7 @@ const PricingPage: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-                Jednokratna uplata za {featuredDuration === '7 Days' ? '7 dana' : '30 dana'} promocije
+                {t('oneTimePaymentFor', { duration: featuredDuration === '7 Days' ? t('oneTimeFor7') : t('oneTimeFor30') })}
               </Typography>
 
               <List sx={{ mt: 2 }}>
@@ -433,21 +417,20 @@ const PricingPage: React.FC = () => {
                   '&:hover': { backgroundColor: '#F0CA00' }
                 }}
               >
-                {loading ? 'Obrađuje se...' : `Promoviši na ${featuredDuration === '7 Days' ? '7 dana' : '30 dana'}`}
+                {loading ? t('processing') : t('btnPromote', { duration: featuredDuration === '7 Days' ? t('oneTimeFor7') : t('oneTimeFor30') })}
               </Button>
             </Box>
           </Box>
         </>
       )}
 
-      {/* Content for Listing (Tab 2) */}
+      {/* Listing (Tab 2) */}
       {tabIndex === 2 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
-            Objavi oglas i pronađi stanare brzo i lako
+            {t('listingSubtitle')}
           </Typography>
 
-          {/* Quantity selector */}
           <Box sx={{ display: 'flex', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.3)', mb: 4, p: '2px' }}>
             {[1, 3, 5].map((n) => (
               <Button
@@ -462,12 +445,11 @@ const PricingPage: React.FC = () => {
                 }}
                 onClick={() => setListingCount(n)}
               >
-                {n === 1 ? '1 oglas' : `${n} oglasa`}
+                {n === 1 ? t('listing1') : t('listingN', { count: n })}
               </Button>
             ))}
           </Box>
 
-          {/* Card */}
           <Box sx={{
             background: 'rgba(255,255,255,0.1)',
             backdropFilter: 'blur(10px)',
@@ -477,10 +459,10 @@ const PricingPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                Oglašavanje stana
+                {t('listingPlanTitle')}
               </Typography>
               {listingCount >= 3 && (
-                <Chip label={listingCount === 3 ? 'Uštedi vremena' : 'Najpovoljnije'} size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
+                <Chip label={listingCount === 3 ? t('chipSaveTime') : t('chipBestValue')} size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
               )}
             </Box>
 
@@ -491,11 +473,11 @@ const PricingPage: React.FC = () => {
                   {(listingCount * 5).toFixed(0)}
                 </Typography>
                 <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>
-                  ({listingCount} × €5 / oglas)
+                  {t('listingPriceNote', { count: listingCount })}
                 </Typography>
               </Box>
               <Typography variant="body2" sx={{ opacity: 0.7, mb: 2 }}>
-                Jednokratna uplata — oglas aktivan 30 dana
+                {t('oneTimeListingNote')}
               </Typography>
 
               <List sx={{ mt: 2 }}>
@@ -516,18 +498,18 @@ const PricingPage: React.FC = () => {
                   '&:hover': { backgroundColor: '#6FC9F0' }
                 }}
               >
-                {loading ? 'Obrađuje se...' : `Objavi ${listingCount === 1 ? 'oglas' : `${listingCount} oglasa`}`}
+                {loading ? t('processing') : listingCount === 1 ? t('btnPublish1') : t('btnPublishN', { count: listingCount })}
               </Button>
             </Box>
           </Box>
         </>
       )}
 
-      {/* Content for Boost (Tab 3) */}
+      {/* Boost (Tab 3) */}
       {tabIndex === 3 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 4 }}>
-            Povećaj svoju vidljivost i dobij pravi uvid u interes
+            {t('boostSubtitle')}
           </Typography>
 
           {/* Boost Profila card */}
@@ -542,15 +524,15 @@ const PricingPage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <RocketLaunchIcon sx={{ color: '#89D9F8' }} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Boost Profila Cimera</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{t('boostProfileTitle')}</Typography>
               </Box>
-              <Chip label="7 dana" size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
+              <Chip label={t('boostChip7Days')} size="small" sx={{ backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold' }} />
             </Box>
             <Box sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
                 <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
                 <Typography variant="h3" sx={{ fontWeight: 'bold' }}>2</Typography>
-                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>/ 7 dana</Typography>
+                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>{t('boostPer7Days')}</Typography>
               </Box>
               <List dense>
                 {boostProfileFeatures.map((feature, idx) => (
@@ -566,7 +548,7 @@ const PricingPage: React.FC = () => {
                 fullWidth variant="contained" onClick={handleBoostProfile} disabled={loading}
                 sx={{ mt: 1, backgroundColor: '#89D9F8', color: '#0A2540', fontWeight: 'bold', borderRadius: '24px', py: 1.5, textTransform: 'none', fontSize: '1rem', '&:hover': { backgroundColor: '#6FC9F0' } }}
               >
-                {loading ? 'Obrađuje se...' : 'Aktiviraj Boost'}
+                {loading ? t('processing') : t('btnActivateBoost')}
               </Button>
             </Box>
           </Box>
@@ -582,15 +564,15 @@ const PricingPage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <MarkEmailReadIcon sx={{ color: '#FFD700' }} />
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>Priority Inbox</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{t('priorityInboxTitle')}</Typography>
               </Box>
-              <Chip label="30 dana" size="small" sx={{ backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold' }} />
+              <Chip label={t('priorityChip30Days')} size="small" sx={{ backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold' }} />
             </Box>
             <Box sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
                 <Typography variant="h6" sx={{ mr: 0.5 }}>€</Typography>
                 <Typography variant="h3" sx={{ fontWeight: 'bold' }}>2</Typography>
-                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>/ 30 dana</Typography>
+                <Typography variant="body2" sx={{ ml: 1, opacity: 0.8 }}>{t('priorityPer30Days')}</Typography>
               </Box>
               <List dense>
                 {priorityInboxFeatures.map((feature, idx) => (
@@ -606,24 +588,24 @@ const PricingPage: React.FC = () => {
                 fullWidth variant="contained" onClick={handlePriorityInbox} disabled={loading}
                 sx={{ mt: 1, backgroundColor: '#FFD700', color: '#0A2540', fontWeight: 'bold', borderRadius: '24px', py: 1.5, textTransform: 'none', fontSize: '1rem', '&:hover': { backgroundColor: '#F0CA00' } }}
               >
-                {loading ? 'Obrađuje se...' : 'Aktiviraj Priority Inbox'}
+                {loading ? t('processing') : t('btnActivatePriority')}
               </Button>
             </Box>
           </Box>
         </>
       )}
 
-      {/* Content for Tokens (Tab 4) */}
+      {/* Tokens (Tab 4) */}
       {tabIndex === 4 && (
         <>
           <Typography variant="body1" sx={{ textAlign: 'center', mb: 3 }}>
-            Kupi tokene za Super-Like i direktne poruke
+            {t('tokensSubtitle')}
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
             {[
-              { tokens: 10, price: 2.99, label: 'Starter Pack', icon: '💎' },
-              { tokens: 50, price: 9.99, label: 'Power User', icon: '🔥', popular: true },
+              { tokens: 10,  price: 2.99,  label: 'Starter Pack', icon: '💎' },
+              { tokens: 50,  price: 9.99,  label: 'Power User',   icon: '🔥', popular: true },
               { tokens: 150, price: 24.99, label: 'Elite Bundle', icon: '👑' }
             ].map((pack) => (
               <Box key={pack.tokens} sx={{
@@ -641,7 +623,7 @@ const PricingPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Typography variant="h4">{pack.icon}</Typography>
                   <Box>
-                    <Typography variant="h6" fontWeight="bold">{pack.tokens} Tokena</Typography>
+                    <Typography variant="h6" fontWeight="bold">{t('tokensCount', { count: pack.tokens })}</Typography>
                     <Typography variant="body2" sx={{ opacity: 0.7 }}>{pack.label}</Typography>
                   </Box>
                 </Box>
@@ -661,25 +643,25 @@ const PricingPage: React.FC = () => {
                       fontWeight: 'bold',
                     }}
                   >
-                    {loading ? '...' : 'Kupi'}
+                    {loading ? '...' : t('btnBuy')}
                   </Button>
                 </Box>
               </Box>
             ))}
           </Box>
           <Typography variant="body2" sx={{ textAlign: 'center', mt: 4, opacity: 0.6 }}>
-            Tokeni se koriste za "Super-Like" cimera i slanje poruka stanodavcima pre zvanične prijave.
+            {t('tokensFootnote')}
           </Typography>
         </>
       )}
-    {/* Mandatory withdrawal waiver modal — ZZP čl. 30 */}
-    <WithdrawalWaiverModal
-      open={waiverOpen}
-      planName={waiverPlanName}
-      amount={waiverAmount}
-      onConfirm={handleWaiverConfirm}
-      onCancel={() => setWaiverOpen(false)}
-    />
+
+      <WithdrawalWaiverModal
+        open={waiverOpen}
+        planName={waiverPlanName}
+        amount={waiverAmount}
+        onConfirm={handleWaiverConfirm}
+        onCancel={() => setWaiverOpen(false)}
+      />
     </Box>
   );
 };

@@ -17,6 +17,7 @@ import { usersApi } from '../../shared/api/usersApi';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import StarIcon from '@mui/icons-material/Star';
+import { useTranslation } from 'react-i18next';
 
 interface LandlordProfileModalProps {
     open: boolean;
@@ -25,6 +26,8 @@ interface LandlordProfileModalProps {
 }
 
 const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClose, userId }) => {
+    const { t } = useTranslation('common');
+
     const { data: profile, isLoading } = useQuery({
         queryKey: ['user-profile', userId],
         queryFn: () => usersApi.getProfile(userId),
@@ -35,7 +38,7 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle>
                 <Typography variant="h5" component="div">
-                    Landlord Profile
+                    {t('landlordProfile')}
                 </Typography>
             </DialogTitle>
             <DialogContent>
@@ -74,7 +77,7 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
                                         icon={<StarIcon fontSize="inherit" />}
                                     />
                                     <Typography variant="body2" color="text.secondary">
-                                        {profile.averageRating.toFixed(1)} ({profile.reviewCount} {profile.reviewCount === 1 ? 'review' : 'reviews'})
+                                        {profile.averageRating.toFixed(1)} ({t('reviewCount', { count: profile.reviewCount })})
                                     </Typography>
                                 </Box>
                             </Box>
@@ -83,7 +86,7 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
                         {profile.reviewCount === 0 && (
                             <Box mb={3}>
                                 <Typography variant="body2" color="text.secondary">
-                                    No reviews yet
+                                    {t('noReviews')}
                                 </Typography>
                             </Box>
                         )}
@@ -93,7 +96,7 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
                         {/* Contact Information */}
                         <Box>
                             <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-                                Contact Information
+                                {t('contactInfo')}
                             </Typography>
 
                             {profile.email && (
@@ -112,11 +115,11 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
                         </Box>
                     </Box>
                 ) : (
-                    <Typography color="error">Failed to load profile</Typography>
+                    <Typography color="error">{t('loadFailed')}</Typography>
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>{t('close')}</Button>
             </DialogActions>
         </Dialog>
     );

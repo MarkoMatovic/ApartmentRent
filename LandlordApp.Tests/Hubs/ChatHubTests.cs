@@ -3,6 +3,8 @@ using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
 namespace LandlordApp.Tests.Hubs;
@@ -41,7 +43,12 @@ public class ChatHubTests
         _mockGroups.Setup(g => g.RemoveFromGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _hub = new ChatHub(_mockMessageService.Object)
+        // Real in-memory distributed cache — a loose IDistributedCache mock returns
+        // an empty byte[] which the rate limiter would misparse.
+        var cache = new MemoryDistributedCache(
+            Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions()));
+
+        _hub = new ChatHub(_mockMessageService.Object, cache)
         {
             Clients = _mockClients.Object,
             Groups  = _mockGroups.Object,
@@ -65,23 +72,25 @@ public class ChatHubTests
     // ─── JoinChatRoom ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task JoinChatRoom_AddsConnectionToCorrectGroup()
+    public async Task JoinChatRoom_OwnRoom_AddsConnectionToCorrectGroup()
     {
-        await _hub.JoinChatRoom(42);
+        // Caller's "userId" claim is 1 — joining own room succeeds
+        await _hub.JoinChatRoom(1);
 
         _mockGroups.Verify(
-            g => g.AddToGroupAsync("conn-1", "user_42", It.IsAny<CancellationToken>()),
+            g => g.AddToGroupAsync("conn-1", "user_1", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task JoinChatRoom_DifferentUserId_UsesCorrectGroupName()
+    public async Task JoinChatRoom_OtherUsersRoom_ThrowsUnauthorized()
     {
-        await _hub.JoinChatRoom(99);
+        var act = () => _hub.JoinChatRoom(99);
 
+        await act.Should().ThrowAsync<HubException>().WithMessage("Unauthorized");
         _mockGroups.Verify(
-            g => g.AddToGroupAsync("conn-1", "user_99", It.IsAny<CancellationToken>()),
-            Times.Once);
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ─── SendMessage ─────────────────────────────────────────────────────────
@@ -181,7 +190,7 @@ public class ChatHubTests
     [Fact]
     public async Task UserTyping_SendsUserTypingEventToReceiverGroup()
     {
-        await _hub.UserTyping(1, 3);
+        await _hub.UserTyping(3);
 
         _mockClients.Verify(c => c.Group("user_3"), Times.Once);
         _mockClientProxy.Verify(
@@ -192,7 +201,7 @@ public class ChatHubTests
     [Fact]
     public async Task UserTyping_DoesNotSendToSenderGroup()
     {
-        await _hub.UserTyping(1, 3);
+        await _hub.UserTyping(3);
 
         // Verify group "user_1" was never requested
         _mockClients.Verify(c => c.Group("user_1"), Times.Never);

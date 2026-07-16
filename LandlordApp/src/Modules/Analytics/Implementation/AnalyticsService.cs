@@ -14,6 +14,7 @@ public class AnalyticsService : IAnalyticsService
     private readonly ListingsContext _listingsContext;
     private readonly RoommatesContext _roommatesContext;
     private readonly UsersContext _usersContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AnalyticsService> _logger;
 
     // Known bot/crawler User-Agent substrings — extend as needed
@@ -29,12 +30,14 @@ public class AnalyticsService : IAnalyticsService
         ListingsContext listingsContext,
         RoommatesContext roommatesContext,
         UsersContext usersContext,
+        IServiceScopeFactory scopeFactory,
         ILogger<AnalyticsService> logger)
     {
         _context = context;
         _listingsContext = listingsContext;
         _roommatesContext = roommatesContext;
         _usersContext = usersContext;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -73,6 +76,16 @@ public class AnalyticsService : IAnalyticsService
     {
         try
         {
+            // Callers fire-and-forget this method (`_ = TrackEventAsync(...)`), so it runs
+            // concurrently with the rest of the request. Scoped DbContexts are not thread-safe
+            // and the request scope may even be disposed before we finish — so resolve fresh
+            // contexts from our own scope instead of using the injected ones.
+            using var scope = _scopeFactory.CreateScope();
+            var analyticsContext = scope.ServiceProvider.GetRequiredService<AnalyticsContext>();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+            var listingsContext = scope.ServiceProvider.GetRequiredService<ListingsContext>();
+            var roommatesContext = scope.ServiceProvider.GetRequiredService<RoommatesContext>();
+
             // 1. Drop bot/crawler traffic — keeps view counts clean
             if (!string.IsNullOrEmpty(userAgent))
             {
@@ -84,7 +97,7 @@ public class AnalyticsService : IAnalyticsService
             // 2. Incognito opt-out — single query using AsNoTracking to avoid EF overhead
             if (userId.HasValue)
             {
-                var isIncognito = await _usersContext.Users
+                var isIncognito = await usersContext.Users
                     .AsNoTracking()
                     .Where(u => u.UserId == userId.Value)
                     .Select(u => u.IsIncognito)
@@ -100,7 +113,7 @@ public class AnalyticsService : IAnalyticsService
                 (eventType == "ApartmentView" || eventType == "RoommateView"))
             {
                 var window = DateTime.UtcNow.AddMinutes(-30);
-                var alreadyTracked = await _context.AnalyticsEvents
+                var alreadyTracked = await analyticsContext.AnalyticsEvents
                     .AsNoTracking()
                     .AnyAsync(e =>
                         e.UserId == userId &&
@@ -115,14 +128,14 @@ public class AnalyticsService : IAnalyticsService
             {
                 if (eventType == "ApartmentView")
                 {
-                    var isOwner = await _listingsContext.Apartments
+                    var isOwner = await listingsContext.Apartments
                         .AsNoTracking()
                         .AnyAsync(a => a.ApartmentId == entityId && a.LandlordId == userId);
                     if (isOwner) return;
                 }
                 else if (eventType == "RoommateView")
                 {
-                    var isOwner = await _roommatesContext.Roommates
+                    var isOwner = await roommatesContext.Roommates
                         .AsNoTracking()
                         .AnyAsync(r => r.RoommateId == entityId && r.UserId == userId);
                     if (isOwner) return;
@@ -142,8 +155,8 @@ public class AnalyticsService : IAnalyticsService
                 UserAgent = userAgent,
                 CreatedDate = DateTime.UtcNow
             };
-            _context.AnalyticsEvents.Add(analyticsEvent);
-            await _context.SaveChangesAsync();
+            analyticsContext.AnalyticsEvents.Add(analyticsEvent);
+            await analyticsContext.SaveChangesAsync();
         }
         catch (Exception ex)
         {

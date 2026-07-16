@@ -226,6 +226,13 @@ public class EmailService : IEmailService
         return await SendTemplatedEmailAsync(to, subject, "PasswordResetEmail", templateData);
     }
 
+    public async Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur)
+    {
+        var subject = $"Potvrda narudžbe — {planName}";
+        var templateData = new { UserName = userName, PlanName = planName, OrderNumber = orderNumber, AmountEur = amountEur.ToString("F2") };
+        return await SendTemplatedEmailAsync(to, subject, "OrderConfirmationEmail", templateData);
+    }
+
     private async Task LogEmailAsync(int? userId, string recipientEmail, string subject, string htmlContent,
         string? templateId, bool isDelivered, string? providerMessageId, string? errorMessage)
     {

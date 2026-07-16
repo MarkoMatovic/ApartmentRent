@@ -160,22 +160,23 @@ public class GlobalExceptionHandlerMiddlewareTests
         ctx.Response.StatusCode.Should().Be(400);
         var resp = ReadBody(body);
         resp.StatusCode.Should().Be(400);
-        resp.Message.Should().Be("Invalid input");
+        // Message is generic on purpose — raw ArgumentException text may leak internals
+        resp.Message.Should().Be("The request contains invalid data.");
     }
 
     // ── InvalidOperationException → 400 ──────────────────────────────────────
 
     [Fact]
-    public async Task InvalidOperationException_Returns400WithMessage()
+    public async Task InvalidOperationException_Returns500WithGenericMessage()
     {
         var (mw, ctx, body) = BuildMiddleware(new InvalidOperationException("Operation not allowed"));
 
         await mw.InvokeAsync(ctx);
 
-        ctx.Response.StatusCode.Should().Be(400);
+        ctx.Response.StatusCode.Should().Be(500);
         var resp = ReadBody(body);
-        resp.StatusCode.Should().Be(400);
-        resp.Message.Should().Be("Operation not allowed");
+        resp.StatusCode.Should().Be(500);
+        resp.Message.Should().Be("An error occurred while processing your request.");
     }
 
     // ── Generic exception → 500 ───────────────────────────────────────────────

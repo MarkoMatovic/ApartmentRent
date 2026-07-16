@@ -9,7 +9,6 @@ import {
   Alert,
 } from '@mui/material';
 import {
-  Phone as PhoneIcon,
   Email as EmailIcon,
   AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
@@ -57,7 +56,7 @@ const SupportPage: React.FC = () => {
                 info@turentaj.com
               </Link>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Za opća pitanja, tehničku podršku i fakture
+                Za opšta pitanja, tehničku podršku i fakture
               </Typography>
             </Box>
           </Grid>
@@ -74,7 +73,7 @@ const SupportPage: React.FC = () => {
             >
               <AccessTimeIcon sx={{ fontSize: 40, color: 'secondary.main', mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Radno vrijeme podrške
+                Radno vreme podrške
               </Typography>
               <Typography variant="body1">
                 Pon – Pet: 09:00 – 17:00 (CET)

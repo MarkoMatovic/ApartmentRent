@@ -26,7 +26,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentInputDto, ApartmentType } from '../shared/types/apartment';
 import { useAuth } from '../shared/context/AuthContext';
-import { Chip } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import PriceSuggestion from '../components/PriceSuggestion';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -54,7 +53,6 @@ const ListingCreditsInfo: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const credits = user?.listingCredits ?? null;
-    const isLandlord = user?.roleName?.toLowerCase().includes('landlord') || user?.roleName?.toLowerCase().includes('tenant') === false;
 
     // Landlords with premium role don't consume credits — no need to show banner
     if (credits === null || (credits > 0)) return null;
@@ -367,8 +365,8 @@ const CreateApartmentPage: React.FC = () => {
         setError('');
 
         try {
-            const uploadedUrls = await apartmentsApi.uploadImages(selectedFiles);
-            const newImageUrls = [...(formData.imageUrls || []), ...uploadedUrls];
+            const uploaded = await apartmentsApi.uploadImages(selectedFiles);
+            const newImageUrls = [...(formData.imageUrls || []), ...uploaded.map(u => u.url)];
             setFormData({ ...formData, imageUrls: newImageUrls });
             setSelectedFiles([]);
         } catch (err: any) {
@@ -403,8 +401,8 @@ const CreateApartmentPage: React.FC = () => {
             setUploading(true);
             setError('');
             try {
-                const uploadedUrls = await apartmentsApi.uploadImages(selectedFiles);
-                const newImageUrls = [...(formData.imageUrls || []), ...uploadedUrls];
+                const uploaded = await apartmentsApi.uploadImages(selectedFiles);
+                const newImageUrls = [...(formData.imageUrls || []), ...uploaded.map(u => u.url)];
                 setFormData({ ...formData, imageUrls: newImageUrls });
                 setSelectedFiles([]);
                 setUploading(false);

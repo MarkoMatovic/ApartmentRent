@@ -57,6 +57,8 @@ export const SavedSearchesPage: React.FC = () => {
     const [error, setError] = useState('');
     const [newSearchOpen, setNewSearchOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const [newSearchForm, setNewSearchForm] = useState<SavedSearchInput>({
         searchName: '',
         city: '',
@@ -104,15 +106,24 @@ export const SavedSearchesPage: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm(t('confirmDelete'))) {
-            try {
-                await savedSearchesApi.deleteSavedSearch(id);
-                setSearches(searches.filter(s => s.savedSearchId !== id));
-            } catch (err) {
-                console.error('Error deleting search:', err);
-                setError('Failed to delete search');
-            }
+    const handleDelete = (id: number) => {
+        setDeleteTargetId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteTargetId === null) return;
+        const id = deleteTargetId;
+        try {
+            setDeleting(true);
+            await savedSearchesApi.deleteSavedSearch(id);
+            setSearches(prev => prev.filter(s => s.savedSearchId !== id));
+            setDeleteTargetId(null);
+        } catch (err) {
+            console.error('Error deleting search:', err);
+            setDeleteTargetId(null);
+            setError(t('failedToDelete', 'Greška pri brisanju pretrage'));
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -312,6 +323,22 @@ export const SavedSearchesPage: React.FC = () => {
                         disabled={saving || !newSearchForm.searchName.trim()}
                     >
                         {saving ? <CircularProgress size={20} /> : t('saveSearch')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteTargetId !== null} onClose={() => !deleting && setDeleteTargetId(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>{t('deleteSearch', 'Obriši pretragu')}</DialogTitle>
+                <DialogContent>
+                    <Typography>{t('confirmDelete')}</Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setDeleteTargetId(null)} disabled={deleting}>
+                        {t('common:cancel', { defaultValue: 'Otkaži' })}
+                    </Button>
+                    <Button variant="contained" color="error" onClick={confirmDelete} disabled={deleting}>
+                        {deleting ? <CircularProgress size={20} /> : t('deleteSearch', 'Obriši')}
                     </Button>
                 </DialogActions>
             </Dialog>

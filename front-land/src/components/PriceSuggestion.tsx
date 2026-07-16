@@ -13,6 +13,7 @@ import {
     Divider,
 } from '@mui/material';
 import { AutoAwesome as AutoAwesomeIcon, TrendingUp as TrendingUpIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { mlApi } from '../shared/api/analytics';
 import { PricePredictionRequest } from '../shared/types/analytics';
 
@@ -22,6 +23,7 @@ interface PriceSuggestionProps {
 }
 
 const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPriceSelected }) => {
+    const { t } = useTranslation('apartments');
     const [prediction, setPrediction] = useState<{ price: number; confidence: number } | null>(null);
 
     const predictMutation = useMutation({
@@ -52,10 +54,10 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
     };
 
     const getConfidenceLabel = (confidence: number) => {
-        if (confidence >= 80) return 'High Confidence';
-        if (confidence >= 60) return 'Medium Confidence';
-        if (confidence >= 40) return 'Low Confidence';
-        return 'Very Low Confidence';
+        if (confidence >= 80) return t('highConfidence');
+        if (confidence >= 60) return t('mediumConfidence');
+        if (confidence >= 40) return t('lowConfidence');
+        return t('veryLowConfidence');
     };
 
     return (
@@ -63,13 +65,13 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
             <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <AutoAwesomeIcon color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="h6">AI Price Suggestion</Typography>
+                    <Typography variant="h6">{t('aiPriceSuggestion')}</Typography>
                 </Box>
 
                 {!prediction && !predictMutation.isPending && (
                     <Box>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Get an AI-powered price suggestion based on your apartment's features
+                            {t('aiPriceDesc')}
                         </Typography>
                         <Button
                             variant="contained"
@@ -78,11 +80,11 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
                             sx={{ mt: 2 }}
                             disabled={!apartmentData.sizeSquareMeters || !apartmentData.numberOfRooms}
                         >
-                            Get Price Suggestion
+                            {t('getPriceSuggestion')}
                         </Button>
                         {(!apartmentData.sizeSquareMeters || !apartmentData.numberOfRooms) && (
                             <Typography variant="caption" color="error" display="block" sx={{ mt: 1 }}>
-                                Please fill in size and number of rooms first
+                                {t('aiPriceFillFields')}
                             </Typography>
                         )}
                     </Box>
@@ -91,13 +93,13 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
                 {predictMutation.isPending && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <CircularProgress size={24} />
-                        <Typography>Calculating optimal price...</Typography>
+                        <Typography>{t('aiPriceCalculating')}</Typography>
                     </Box>
                 )}
 
                 {predictMutation.isError && (
                     <Alert severity="error">
-                        Failed to get price suggestion. {(predictMutation.error as AxiosError<{ message?: string }>)?.response?.data?.message || 'Please try again.'}
+                        {t('aiPriceError')} {(predictMutation.error as AxiosError<{ message?: string }>)?.response?.data?.message || ''}
                     </Alert>
                 )}
 
@@ -107,7 +109,7 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                             <Box>
                                 <Typography variant="body2" color="text.secondary">
-                                    Suggested Price
+                                    {t('suggestedPrice')}
                                 </Typography>
                                 <Typography variant="h4" color="primary.main">
                                     €{prediction.price.toFixed(2)}
@@ -121,20 +123,20 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
                         </Box>
 
                         <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                            Confidence: {prediction.confidence.toFixed(1)}%
+                            {t('aiConfidenceLevel', { percent: prediction.confidence.toFixed(1) })}
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                             <Button variant="contained" onClick={handleUseSuggestion} disabled={!onPriceSelected}>
-                                Use This Price
+                                {t('useThisPrice')}
                             </Button>
                             <Button variant="outlined" onClick={handleGetSuggestion}>
-                                Recalculate
+                                {t('recalculate')}
                             </Button>
                         </Box>
 
                         <Alert severity="info" sx={{ mt: 2 }}>
-                            This suggestion is based on similar apartments in the database. You can adjust it based on your specific needs.
+                            {t('aiPriceDisclaimer')}
                         </Alert>
                     </Box>
                 )}

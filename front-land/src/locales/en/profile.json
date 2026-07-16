@@ -24,5 +24,18 @@
   "deleteConfirmMsg": "Are you sure you want to permanently delete your account? This action cannot be undone.",
   "deleteForever": "DELETE FOREVER",
   "deactivate": "Deactivate",
-  "imageSizeError": "Image size must be less than 5MB"
+  "imageSizeError": "Image size must be less than 5MB",
+  "updateSuccess": "Profile updated successfully!",
+  "privacyUpdateSuccess": "Privacy settings updated successfully",
+  "passwordMismatch": "Passwords do not match",
+  "loginRequired": "Please log in to view your profile",
+  "accountDeleted": "Account deleted. You will be logged out.",
+  "premiumBadge": "PREMIUM",
+  "incognitoTooltip": "Incognito Mode is a premium feature",
+  "userGuidNotFound": "User GUID not found",
+  "security": "Security",
+  "changePassword": "Change Password",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password",
+  "confirmNewPassword": "Confirm New Password"
 }

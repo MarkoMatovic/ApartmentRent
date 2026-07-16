@@ -25,6 +25,7 @@ public class UserProfileService : IUserProfileService
     private readonly IUserRoleUpgradeService _roleUpgradeService;
     private readonly ILogger<UserProfileService> _logger;
     private readonly IAuditLogService _auditLog;
+    private readonly RefreshTokenService _refreshTokenService;
 
     public UserProfileService(
         UsersContext context,
@@ -35,7 +36,8 @@ public class UserProfileService : IUserProfileService
         IEnumerable<IUserDeletedHandler> deletionHandlers,
         IUserRoleUpgradeService roleUpgradeService,
         ILogger<UserProfileService> logger,
-        IAuditLogService auditLog)
+        IAuditLogService auditLog,
+        RefreshTokenService refreshTokenService)
     {
         _context = context;
         _reviewsContext = reviewsContext;
@@ -46,6 +48,7 @@ public class UserProfileService : IUserProfileService
         _roleUpgradeService = roleUpgradeService;
         _logger = logger;
         _auditLog = auditLog;
+        _refreshTokenService = refreshTokenService;
     }
 
     public async Task<User?> GetUserByGuidAsync(Guid userGuid)
@@ -106,7 +109,7 @@ public class UserProfileService : IUserProfileService
 
         if (updateDto.FirstName != null) user.FirstName = updateDto.FirstName;
         if (updateDto.LastName != null) user.LastName = updateDto.LastName;
-        if (updateDto.Email != null) user.Email = updateDto.Email;
+        // Email se ne mijenja ovdje — promjena emaila zahtijeva verifikaciju nove adrese (poseban endpoint).
         if (updateDto.PhoneNumber != null) user.PhoneNumber = updateDto.PhoneNumber;
         if (updateDto.ProfilePicture != null) user.ProfilePicture = updateDto.ProfilePicture;
         if (updateDto.DateOfBirth.HasValue) user.DateOfBirth = updateDto.DateOfBirth.Value;
@@ -182,6 +185,7 @@ public class UserProfileService : IUserProfileService
 
         user.IsActive = false;
         await _context.SaveEntitiesAsync();
+        await _refreshTokenService.RevokeAllByUserIdAsync(user.UserId);
     }
 
     public async Task ReactivateUserAsync(ReactivateUserInputDto dto)
@@ -197,6 +201,8 @@ public class UserProfileService : IUserProfileService
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == dto.UserGuid);
         if (user == null) return true;
+
+        await _refreshTokenService.RevokeAllByUserIdAsync(user.UserId);
 
         foreach (var handler in _deletionHandlers)
             await handler.HandleAsync(user.UserId);

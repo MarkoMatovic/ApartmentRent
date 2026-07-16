@@ -1,6 +1,6 @@
 namespace Lander.src.Modules.Payments.Models;
 
-public class ProcessedMonriOrder
+public class ProcessedOrder
 {
     public int Id { get; set; }
     public string OrderNumber { get; set; } = null!;

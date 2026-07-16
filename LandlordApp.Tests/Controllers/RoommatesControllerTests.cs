@@ -9,6 +9,7 @@ using Lander.src.Modules.Roommates.Controllers;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
+using Lander.src.Modules.Roommates.Models;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 
@@ -53,7 +54,7 @@ public class RoommatesControllerTests
     public async Task GetAllRoommates_NoParams_ReturnsOkList()
     {
         _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            null, null, null, null, null, null, null, null, null, null, 1, 20))
+            null, null, null, null, null, null, null, null, null, null, null, null, 1, 20))
             .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
             {
                 Items = new List<RoommateDto> { SampleRoommate },
@@ -72,6 +73,7 @@ public class RoommatesControllerTests
             It.IsAny<string?>(), It.IsAny<decimal?>(), It.IsAny<decimal?>(),
             It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string?>(),
             It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            It.IsAny<RoommateGender?>(), It.IsAny<WorkSchedule?>(),
             It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
             {
@@ -95,7 +97,7 @@ public class RoommatesControllerTests
             Items = new List<RoommateDto>(), TotalCount = 0
         };
         _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            null, null, null, null, null, null, null, null, null, null, 1, 10))
+            null, null, null, null, null, null, null, null, null, null, null, null, 1, 10))
             .ReturnsAsync(paged);
 
         var result = await _controller.GetAllRoommates(page: 1, pageSize: 10);
@@ -201,15 +203,17 @@ public class RoommatesControllerTests
     }
 
     [Fact]
-    public async Task UpdateRoommate_ServiceThrows_ReturnsBadRequest()
+    public async Task UpdateRoommate_ServiceThrows_PropagatesToMiddleware()
     {
+        // Controllers no longer swallow service exceptions — the global
+        // exception middleware maps them to the proper status code.
         _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync(TestUser);
         _mockRoommateService.Setup(s => s.UpdateRoommateAsync(1, 3, It.IsAny<RoommateInputDto>()))
             .ThrowsAsync(new Exception("Not found"));
 
-        var result = await _controller.UpdateRoommate(1, new RoommateInputDto());
+        var act = () => _controller.UpdateRoommate(1, new RoommateInputDto());
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("Not found");
     }
 
     // ─── DeleteRoommate ───────────────────────────────────────────────────────

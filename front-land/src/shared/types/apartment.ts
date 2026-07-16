@@ -50,7 +50,13 @@ export interface ApartmentImage {
   imageId: number;
   apartmentId: number;
   imageUrl: string;
+  thumbnailUrl?: string | null;
   isPrimary: boolean;
+}
+
+export interface UploadedImage {
+  url: string;
+  thumbnailUrl: string | null;
 }
 
 export interface ApartmentDto {

@@ -41,6 +41,7 @@ const ReportsPage: React.FC = () => {
     const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
     const [adminNotes, setAdminNotes] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('All');
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
     const { data: reports, isLoading, error } = useQuery<ReportedMessage[]>({
         queryKey: ['abuse-reports'],
@@ -95,8 +96,13 @@ const ReportsPage: React.FC = () => {
     };
 
     const handleDelete = (reportId: number) => {
-        if (window.confirm(t('chat:confirmDeleteReport'))) {
-            deleteMutation.mutate(reportId);
+        setDeleteTargetId(reportId);
+    };
+
+    const confirmDelete = () => {
+        if (deleteTargetId !== null) {
+            deleteMutation.mutate(deleteTargetId);
+            setDeleteTargetId(null);
         }
     };
 
@@ -324,6 +330,26 @@ const ReportsPage: React.FC = () => {
                             {t('chat:resolve')}
                         </Button>
                     )}
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteTargetId !== null} onClose={() => setDeleteTargetId(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>{t('common:delete', { defaultValue: 'Obriši' })}</DialogTitle>
+                <DialogContent>
+                    <Typography>{t('chat:confirmDeleteReport')}</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteTargetId(null)}>{t('common:cancel')}</Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={confirmDelete}
+                        disabled={deleteMutation.isPending}
+                        startIcon={<DeleteIcon />}
+                    >
+                        {t('common:delete', { defaultValue: 'Obriši' })}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Box>

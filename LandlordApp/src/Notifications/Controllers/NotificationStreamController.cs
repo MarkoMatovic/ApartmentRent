@@ -1,5 +1,6 @@
 using Lander.src.Notifications.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Text.Json;
@@ -18,7 +19,10 @@ public class NotificationStreamController : ControllerBase
         _streamService = streamService;
     }
 
+    // SSE connections are long-lived; the global UseRequestTimeouts (default 30s) would
+    // otherwise kill and churn every stream every 30 seconds. Opt this endpoint out.
     [HttpGet("stream")]
+    [DisableRequestTimeout]
     public async Task StreamNotifications(CancellationToken cancellationToken)
     {
         var userId = GetCurrentUserId();

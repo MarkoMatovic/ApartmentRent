@@ -21,7 +21,7 @@ public class AnalyticsE2eTests : E2eTestBase
     [Fact]
     public async Task TrackEvent_Anonymous_Returns200()
     {
-        var response = await new TrackEventEndpoint(HttpClient).CallAsync("View", "Apartment", 1);
+        var response = await new TrackEventEndpoint(HttpClient).CallAsync("ApartmentView", "Apartment", 1);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -32,7 +32,7 @@ public class AnalyticsE2eTests : E2eTestBase
         var user   = await Data.CreateUserAsync("anl-track@e2e.com");
         var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
 
-        var response = await new TrackEventEndpoint(client).CallAsync("Search", "Roommate", null, "Roommate");
+        var response = await new TrackEventEndpoint(client).CallAsync("RoommateSearch", "Roommate", null, "Roommate");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }

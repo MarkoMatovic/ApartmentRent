@@ -9,6 +9,7 @@ import {
     Box,
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { useTranslation } from 'react-i18next';
 
 interface RejectionDialogProps {
     open: boolean;
@@ -23,20 +24,22 @@ const RejectionDialog: React.FC<RejectionDialogProps> = ({
     onKeep,
     onRemove,
 }) => {
+    const { t } = useTranslation('applications');
+
     return (
         <Dialog open={open} maxWidth="sm" fullWidth>
             <DialogTitle>
                 <Box display="flex" alignItems="center" gap={1}>
                     <WarningAmberIcon color="warning" />
-                    <Typography variant="h6">Application Not Approved</Typography>
+                    <Typography variant="h6">{t('rejectedTitle')}</Typography>
                 </Box>
             </DialogTitle>
             <DialogContent>
                 <Typography variant="body1" gutterBottom>
-                    Your application for <strong>"{apartmentTitle}"</strong> has been rejected by the landlord.
+                    {t('rejectedBody', { title: apartmentTitle })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Would you like to keep this apartment in your search results?
+                    {t('keepApartmentQuestion')}
                 </Typography>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
@@ -45,13 +48,13 @@ const RejectionDialog: React.FC<RejectionDialogProps> = ({
                     color="error"
                     onClick={onRemove}
                 >
-                    No, remove it
+                    {t('removeApartment')}
                 </Button>
                 <Button
                     variant="contained"
                     onClick={onKeep}
                 >
-                    Yes, keep it
+                    {t('keepApartment')}
                 </Button>
             </DialogActions>
         </Dialog>

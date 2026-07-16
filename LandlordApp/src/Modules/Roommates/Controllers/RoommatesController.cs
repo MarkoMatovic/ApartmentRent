@@ -3,6 +3,7 @@ using Lander.src.Common;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Modules.Roommates.Dtos.InputDto;
 using Lander.src.Modules.Roommates.Interfaces;
+using Lander.src.Modules.Roommates.Models;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +38,8 @@ public class RoommatesController : ApiControllerBase
         [FromQuery] DateOnly? availableFrom = null,
         [FromQuery] int? stayDuration = null,
         [FromQuery] int? apartmentId = null,
+        [FromQuery] RoommateGender? gender = null,
+        [FromQuery] WorkSchedule? workSchedule = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
@@ -53,7 +56,12 @@ public class RoommatesController : ApiControllerBase
 
         var pagedResult = await _roommateService.GetAllRoommatesAsync(
             location, minBudget, maxBudget, smokingAllowed, petFriendly,
-            lifestyle, profession, availableFrom, stayDuration, apartmentId, page, pageSize);
+            lifestyle, profession, availableFrom, stayDuration, apartmentId, gender, workSchedule, page, pageSize);
+
+        var viewerId = TryGetCurrentUserId();
+        foreach (var item in pagedResult.Items)
+            SanitizePii(item, viewerId);
+
         return Ok(pagedResult);
     }
 
@@ -71,22 +79,31 @@ public class RoommatesController : ApiControllerBase
         var roommate = await _roommateService.GetRoommateByIdAsync(id);
         if (roommate == null) return NotFound();
 
-        // Strip PII for unauthenticated callers — phone and DOB are private
-        if (!User.Identity?.IsAuthenticated ?? true)
-        {
-            roommate.PhoneNumber = null;
-            roommate.DateOfBirth = null;
-        }
-
+        SanitizePii(roommate, TryGetCurrentUserId());
         return Ok(roommate);
     }
 
     [HttpGet(ApiActionsV1.GetRoommateByUserId, Name = nameof(ApiActionsV1.GetRoommateByUserId))]
+    [AllowAnonymous]
     public async Task<ActionResult<RoommateDto>> GetRoommateByUserId([FromQuery] int userId)
     {
         var roommate = await _roommateService.GetRoommateByUserIdAsync(userId);
         if (roommate == null) return NotFound();
+
+        SanitizePii(roommate, TryGetCurrentUserId());
         return Ok(roommate);
+    }
+
+    // Phone number and date of birth are private PII. Only the profile owner may
+    // see them; everyone else (anonymous or other authenticated users) gets them
+    // stripped, which prevents both anonymous enumeration and single-account scraping.
+    private static void SanitizePii(RoommateDto roommate, int? viewerUserId)
+    {
+        if (viewerUserId is null || roommate.UserId != viewerUserId.Value)
+        {
+            roommate.PhoneNumber = null;
+            roommate.DateOfBirth = null;
+        }
     }
 
     [HttpPost(ApiActionsV1.CreateRoommate, Name = nameof(ApiActionsV1.CreateRoommate))]

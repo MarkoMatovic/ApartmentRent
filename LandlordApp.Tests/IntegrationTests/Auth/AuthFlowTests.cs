@@ -158,14 +158,23 @@ public class AuthFlowTests : IntegrationTestBase, IClassFixture<LanderWebApplica
         logoutResp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    // ── Rate limiting ────────────────────────────────────────────────────────
+}
+
+/// <summary>
+/// Rate-limit test lives in its OWN class (own WebApplicationFactory → own host
+/// and rate limiter). The login limiter is 5/15min per IP; if this ran inside
+/// AuthFlowTests it would exhaust the budget for every other login test.
+/// </summary>
+public class LoginRateLimitTests : IntegrationTestBase, IClassFixture<LanderWebApplicationFactory>
+{
+    public LoginRateLimitTests(LanderWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task Login_ExceedingRateLimit_Returns429()
     {
         var client = CreateAnonymousClient();
 
-        // Auth rate limit is 5 per 30 seconds — fire 6 identical requests
+        // Login rate limit is 5 per window — fire 6 identical requests
         HttpResponseMessage? lastResponse = null;
         for (int i = 0; i < 6; i++)
         {

@@ -3,86 +3,39 @@ using Microsoft.EntityFrameworkCore;
 namespace Lander.src.Modules.Communication.Services;
 
 /// <summary>
-/// Nightly background service that purges <see cref="Models.EmailLog"/> rows older than
-/// the configured retention window.  Prevents unbounded table growth and satisfies GDPR
+/// Hangfire recurring job (daily 03:00 UTC) that purges <see cref="Models.EmailLog"/> rows older
+/// than the configured retention window. Prevents unbounded table growth and satisfies GDPR
 /// Article 5(1)(e) storage-limitation obligations.
 ///
-/// Configuration (appsettings.json / env):
-///   "EmailLog:RetentionDays"   — rows older than this many days are deleted (default 90).
-///   "EmailLog:CleanupHourUtc"  — UTC hour at which the nightly run fires (default 3).
+/// Configuration: "EmailLog:RetentionDays" (default 90).
 /// </summary>
-public sealed class EmailLogCleanupService : BackgroundService
+public sealed class EmailLogCleanupService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly CommunicationsContext _context;
     private readonly ILogger<EmailLogCleanupService> _logger;
-    private readonly int _retentionDays;
-    private readonly int _cleanupHourUtc;
+    private readonly IConfiguration _configuration;
 
     public EmailLogCleanupService(
-        IServiceScopeFactory scopeFactory,
+        CommunicationsContext context,
         ILogger<EmailLogCleanupService> logger,
         IConfiguration configuration)
     {
-        _scopeFactory   = scopeFactory;
-        _logger         = logger;
-        _retentionDays  = configuration.GetValue("EmailLog:RetentionDays",  90);
-        _cleanupHourUtc = configuration.GetValue("EmailLog:CleanupHourUtc",  3);
+        _context       = context;
+        _logger        = logger;
+        _configuration = configuration;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task RunAsync()
     {
-        _logger.LogInformation(
-            "EmailLogCleanupService started. RetentionDays={RetentionDays}, CleanupHourUtc={Hour}",
-            _retentionDays, _cleanupHourUtc);
+        var retentionDays = _configuration.GetValue("EmailLog:RetentionDays", 90);
+        var cutoff        = DateTime.UtcNow.AddDays(-retentionDays);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await WaitUntilNextRunAsync(stoppingToken);
+        _logger.LogInformation("EmailLogCleanup: deleting rows with SentAt < {Cutoff:u}", cutoff);
 
-            if (stoppingToken.IsCancellationRequested)
-                break;
+        var deleted = await _context.EmailLogs
+            .Where(e => e.SentAt < cutoff)
+            .ExecuteDeleteAsync();
 
-            await RunCleanupAsync(stoppingToken);
-        }
-    }
-
-    private async Task WaitUntilNextRunAsync(CancellationToken ct)
-    {
-        var now  = DateTime.UtcNow;
-        var next = now.Date.AddHours(_cleanupHourUtc);
-        if (next <= now)
-            next = next.AddDays(1);
-
-        var delay = next - now;
-        _logger.LogDebug("EmailLogCleanupService: next run in {Delay:hh\\:mm\\:ss} at {Next:u}", delay, next);
-        await Task.Delay(delay, ct);
-    }
-
-    private async Task RunCleanupAsync(CancellationToken ct)
-    {
-        try
-        {
-            var cutoff = DateTime.UtcNow.AddDays(-_retentionDays);
-            _logger.LogInformation("EmailLogCleanupService: deleting EmailLog rows with SentAt < {Cutoff:u}", cutoff);
-
-            await using var scope   = _scopeFactory.CreateAsyncScope();
-            var             context = scope.ServiceProvider.GetRequiredService<CommunicationsContext>();
-
-            // ExecuteDeleteAsync issues a single DELETE ... WHERE statement — no entity materialisation.
-            var deleted = await context.EmailLogs
-                .Where(e => e.SentAt < cutoff)
-                .ExecuteDeleteAsync(ct);
-
-            _logger.LogInformation("EmailLogCleanupService: deleted {Count} rows (cutoff={Cutoff:u})", deleted, cutoff);
-        }
-        catch (OperationCanceledException)
-        {
-            // Shutdown signal — exit gracefully.
-        }
-        catch (Exception ex)
-        {
-            // Log but do NOT crash the host — next nightly run will retry.
-            _logger.LogError(ex, "EmailLogCleanupService: cleanup run failed");
-        }
+        _logger.LogInformation("EmailLogCleanup: deleted {Count} rows.", deleted);
     }
 }

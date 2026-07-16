@@ -166,6 +166,8 @@ public class ListingsContext : DbContext, IUnitOfWork
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.ImageUrl).HasMaxLength(255);
+            entity.Property(e => e.BlobPath).HasMaxLength(512);
+            entity.Property(e => e.ThumbnailPath).HasMaxLength(512);
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
 
             entity.HasOne(d => d.Apartment).WithMany(p => p.ApartmentImages)

@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Lander.src.Common.Exceptions;
 using Lander.Helpers;
@@ -24,6 +25,7 @@ public class AuthService : IAuthService
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly IJwtBlacklistService _jwtBlacklist;
 
     public AuthService(
         UsersContext context,
@@ -35,7 +37,8 @@ public class AuthService : IAuthService
         IPasswordService passwordService,
         IConfiguration configuration,
         ILogger<AuthService> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IJwtBlacklistService jwtBlacklist)
     {
         _context = context;
         _passwordHashingService = passwordHashingService;
@@ -47,6 +50,7 @@ public class AuthService : IAuthService
         _configuration = configuration;
         _logger = logger;
         _timeProvider = timeProvider;
+        _jwtBlacklist = jwtBlacklist;
     }
 
     public async Task<AuthTokenDto?> LoginUserAsync(LoginUserInputDto dto)
@@ -71,11 +75,20 @@ public class AuthService : IAuthService
 
         if (!_passwordHashingService.Verify(dto.Password, user.Password))
         {
-            // Atomic increment to avoid lost-update race on concurrent login attempts
-            await _context.Database.ExecuteSqlRawAsync(
-                "UPDATE [UsersRoles].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
-                user.UserId);
-            await _context.Entry(user).ReloadAsync();
+            if (_context.Database.IsRelational())
+            {
+                // Atomic increment to avoid lost-update race on concurrent login attempts
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE [UsersRoles].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
+                    user.UserId);
+                await _context.Entry(user).ReloadAsync();
+            }
+            else
+            {
+                // Non-relational provider (InMemory in tests) — plain increment
+                user.FailedLoginAttempts += 1;
+                await _context.SaveEntitiesAsync();
+            }
             var maxAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);
             var lockoutMinutes = _configuration.GetValue<int>("Security:LockoutMinutes", 15);
             if (user.FailedLoginAttempts >= maxAttempts)
@@ -128,7 +141,7 @@ public class AuthService : IAuthService
         
         var existingUser = await _context.Users.AnyAsync(u => u.Email == dto.Email);
         if (existingUser)
-            throw new ConflictException("User with this email already exists.");
+            throw new ConflictException("Registration failed. Please check your details or try logging in.");
 
         Guid? callerGuid = Guid.TryParse(currentUserGuid, out var authCg) ? authCg : null;
 
@@ -202,9 +215,28 @@ public class AuthService : IAuthService
 
     public async Task LogoutUserAsync(string? rawRefreshToken = null)
     {
-        _httpContextAccessor.HttpContext?.SignOutAsync();
-        if (!string.IsNullOrEmpty(rawRefreshToken))
+        var httpCtx = _httpContextAccessor.HttpContext;
+
+        // Blacklist the current access token so it cannot be reused until it naturally expires.
+        var jti = httpCtx?.User?.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        if (!string.IsNullOrEmpty(jti))
+        {
+            var expClaim = httpCtx!.User.FindFirstValue(JwtRegisteredClaimNames.Exp);
+            if (long.TryParse(expClaim, out var expUnix))
+            {
+                var expiry = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                await _jwtBlacklist.BlacklistAsync(jti, expiry);
+            }
+        }
+
+        // Revoke ALL active refresh tokens for this user so every device is logged out.
+        var userId = httpCtx?.User?.FindFirstValue("userId");
+        if (int.TryParse(userId, out var parsedId))
+            await _refreshTokenService.RevokeAllByUserIdAsync(parsedId);
+        else if (!string.IsNullOrEmpty(rawRefreshToken))
             await _refreshTokenService.RevokeAsync(rawRefreshToken);
+
+        httpCtx?.SignOutAsync();
     }
 
     private void FireAndForget(Task task, string operation)

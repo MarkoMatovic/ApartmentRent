@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
 using System.Security.Claims;
 
 namespace Lander.src.Modules.Communication.Hubs;
@@ -11,16 +11,15 @@ namespace Lander.src.Modules.Communication.Hubs;
 public class ChatHub : Hub
 {
     private readonly IMessageService _messageService;
+    private readonly IDistributedCache _cache;
 
-    // Per-user sliding window: max 30 poruka u 60 sekundi (S-13 fix)
-    // ConcurrentDictionary<userId, (windowStart, count)>
-    private static readonly ConcurrentDictionary<int, (DateTime WindowStart, int Count)> _messageCounts = new();
     private const int MessageRateLimitPerMinute = 30;
     private const int MaxMessageLength = 4000;
 
-    public ChatHub(IMessageService messageService)
+    public ChatHub(IMessageService messageService, IDistributedCache cache)
     {
         _messageService = messageService;
+        _cache = cache;
     }
 
     private int GetCurrentUserId()
@@ -31,20 +30,22 @@ public class ChatHub : Hub
         return id;
     }
 
-    private static void EnforceMessageRateLimit(int userId)
+    // Uses IDistributedCache (Redis in prod, in-memory in dev) so the rate limit
+    // is shared across all horizontally scaled instances.
+    private async Task EnforceMessageRateLimitAsync(int userId)
     {
-        var now = DateTime.UtcNow;
-        _messageCounts.AddOrUpdate(
-            userId,
-            _ => (now, 1),
-            (_, existing) =>
-            {
-                if ((now - existing.WindowStart).TotalSeconds >= 60)
-                    return (now, 1);
-                if (existing.Count >= MessageRateLimitPerMinute)
-                    throw new HubException("Previše poruka — pričekajte trenutak.");
-                return (existing.WindowStart, existing.Count + 1);
-            });
+        var minute = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 60;
+        var key = $"chat:rl:{userId}:{minute}";
+
+        var raw = await _cache.GetStringAsync(key);
+        // TryParse — a missing or corrupted cache entry must never break messaging
+        var count = int.TryParse(raw, out var parsed) ? parsed : 0;
+
+        if (count >= MessageRateLimitPerMinute)
+            throw new HubException("Previše poruka — pričekajte trenutak.");
+
+        await _cache.SetStringAsync(key, (count + 1).ToString(),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2) });
     }
 
     public async Task JoinChatRoom(int userId)
@@ -62,7 +63,7 @@ public class ChatHub : Hub
             throw new HubException($"Poruka ne smije biti duža od {MaxMessageLength} znakova.");
 
         var senderId = GetCurrentUserId();
-        EnforceMessageRateLimit(senderId);
+        await EnforceMessageRateLimitAsync(senderId);
 
         MessageDto? message;
         try
@@ -113,7 +114,6 @@ public class ChatHub : Hub
     {
         var callerId = GetCurrentUserId();
 
-        // Samo primatelj može označiti poruku kao pročitanu (S-3 fix)
         if (!await _messageService.IsMessageRecipientAsync(messageId, callerId))
             throw new HubException("Unauthorized");
 
@@ -129,23 +129,9 @@ public class ChatHub : Hub
         }
     }
 
-    public async Task UserTyping(int userId, int receiverId)
+    public async Task UserTyping(int receiverId)
     {
+        var userId = GetCurrentUserId();
         await Clients.Group($"user_{receiverId}").SendAsync("UserTyping", new { userId });
-    }
-
-    public override async Task OnConnectedAsync()
-    {
-        await base.OnConnectedAsync();
-    }
-
-    public override async Task OnDisconnectedAsync(Exception? exception)
-    {
-        // Čišćenje rate limit entrija pri diskonektu
-        var claim = Context.User?.FindFirstValue("userId");
-        if (int.TryParse(claim, out var userId))
-            _messageCounts.TryRemove(userId, out _);
-
-        await base.OnDisconnectedAsync(exception);
     }
 }

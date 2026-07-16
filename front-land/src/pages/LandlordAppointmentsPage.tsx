@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { appointmentsApi } from '../shared/api/appointments';
 import { AppointmentStatus, AppointmentDto } from '../shared/types/appointment';
 import { format, parseISO } from 'date-fns';
@@ -26,7 +25,6 @@ import { CalendarToday as CalendarIcon, LocationOn as LocationIcon, Person as Pe
 
 const LandlordAppointmentsPage: React.FC = () => {
     const { t } = useTranslation(['common', 'apartments']);
-    const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentDto | null>(null);
     const [landlordNotes, setLandlordNotes] = useState('');
@@ -47,7 +45,8 @@ const LandlordAppointmentsPage: React.FC = () => {
     });
 
     const getStatusColor = (status: AppointmentStatus) => {
-        switch (status) {
+        const s = typeof status === 'string' ? AppointmentStatus[status as keyof typeof AppointmentStatus] : status;
+        switch (s) {
             case AppointmentStatus.Confirmed:
                 return 'success';
             case AppointmentStatus.Pending:
@@ -63,8 +62,8 @@ const LandlordAppointmentsPage: React.FC = () => {
     };
 
     const getStatusLabel = (status: AppointmentStatus) => {
-        const statusKey = AppointmentStatus[status].toLowerCase();
-        return t(`apartments:status.${statusKey}`, { defaultValue: AppointmentStatus[status] });
+        const statusName = typeof status === 'string' ? status : AppointmentStatus[status];
+        return t(`apartments:status.${statusName.toLowerCase()}`, { defaultValue: statusName });
     };
 
     const handleOpenDialog = (appointment: AppointmentDto, action: 'confirm' | 'reject') => {

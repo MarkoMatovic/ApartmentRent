@@ -49,7 +49,7 @@ export const machineLearningApi = {
 
     // Train ML Model (Admin only)
     trainModel: async (): Promise<ModelMetrics> => {
-        const response = await apiClient.post('/api/v1/ml/train-model');
+        const response = await apiClient.post('/api/v1/ml/train-price-model');
         return response.data;
     },
 
@@ -73,7 +73,7 @@ export const machineLearningApi = {
 
     // Calculate match score between two users
     calculateMatchScore: async (userId1: number, userId2: number): Promise<number> => {
-        const response = await apiClient.get(`/api/v1/ml/calculate-match-score?userId1=${userId1}&userId2=${userId2}`);
+        const response = await apiClient.get(`/api/v1/ml/match-score?userId1=${userId1}&userId2=${userId2}`);
         return response.data.matchScore;
     },
 };

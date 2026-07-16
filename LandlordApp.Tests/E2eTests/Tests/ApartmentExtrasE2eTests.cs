@@ -103,7 +103,7 @@ public class ApartmentExtrasE2eTests : E2eTestBase
     }
 
     [Fact]
-    public async Task ActivateApartment_AsOtherUser_Returns401()
+    public async Task ActivateApartment_AsOtherUser_Returns403()
     {
         var landlord = await Data.CreateUserAsync("apt-act-own2@e2e.com");
         var intruder = await Data.CreateUserAsync("apt-act-int@e2e.com");
@@ -112,8 +112,8 @@ public class ApartmentExtrasE2eTests : E2eTestBase
 
         var response = await new ActivateApartmentEndpoint(client).CallAsync(apt.ApartmentId);
 
-        // RequireOwnerAsync throws UnauthorizedAccessException → 401 via GlobalExceptionHandlerMiddleware
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        // RequireOwnerAsync throws ForbiddenException → 403 via GlobalExceptionHandlerMiddleware
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

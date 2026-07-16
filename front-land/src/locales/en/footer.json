@@ -1,4 +1,12 @@
 {
   "support": "Support",
-  "pricing": "Pricing"
+  "pricing": "Pricing",
+  "mySubscriptions": "My Subscriptions",
+  "paymentHistory": "Payment History",
+  "privacy": "Privacy Policy",
+  "terms": "Terms of Use",
+  "cookies": "Cookie Policy",
+  "refund": "Refund Policy",
+  "copyright": "All rights reserved.",
+  "disclaimer": "TuRentaj is an advertising platform and does not act as an intermediary in real estate transactions or rentals. Contact:"
 }

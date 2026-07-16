@@ -1,6 +1,7 @@
 {
   "title": "Messages",
   "messages": "Messages",
+  "unknownUser": "User",
   "noMessages": "You have no messages",
   "typeMessage": "Type a message...",
   "send": "Send",
@@ -91,5 +92,6 @@
   "resolve": "Resolve",
   "confirmDeleteReport": "Are you sure you want to delete this report?",
   "unblockUser": "Unblock user",
-  "userUnblocked": "User has been unblocked"
+  "userUnblocked": "User has been unblocked",
+  "startChattingHint": "Select a conversation on the left to start chatting"
 }

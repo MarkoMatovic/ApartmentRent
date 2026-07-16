@@ -81,7 +81,10 @@ const LandlordAvailabilityPage: React.FC = () => {
     }, [availabilityData, loaded]);
 
     const saveMutation = useMutation({
-        mutationFn: () => appointmentsApi.setMyAvailability({ slots }),
+        // Explicit payload — callers pass the exact slot list to persist so that
+        // delete can save immediately without racing the local state update.
+        mutationFn: (payload: AvailabilitySlotInput[]) =>
+            appointmentsApi.setMyAvailability({ slots: payload }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['my-availability'] });
             setSnackbar({ open: true, message: t('availability.saved'), severity: 'success' });
@@ -99,7 +102,11 @@ const LandlordAvailabilityPage: React.FC = () => {
     };
 
     const removeSlot = (index: number) => {
-        setSlots((prev) => prev.filter((_, i) => i !== index));
+        // Delete must persist immediately — a trash icon that only edits local
+        // state until "Save Changes" reads as a bug (refresh brings slots back).
+        const next = slots.filter((_, i) => i !== index);
+        setSlots(next);
+        saveMutation.mutate(next);
     };
 
     const updateSlot = (index: number, field: keyof AvailabilitySlotInput, value: number | string) => {
@@ -137,7 +144,7 @@ const LandlordAvailabilityPage: React.FC = () => {
                 <Button
                     variant="contained"
                     startIcon={saveMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-                    onClick={() => saveMutation.mutate()}
+                    onClick={() => saveMutation.mutate(slots)}
                     disabled={saveMutation.isPending}
                 >
                     {saveMutation.isPending ? t('availability.saving') : t('availability.saveChanges')}

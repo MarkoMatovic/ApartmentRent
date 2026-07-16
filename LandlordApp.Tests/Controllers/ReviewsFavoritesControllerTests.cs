@@ -172,10 +172,11 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task GetUserFavorites_ReturnsOkWithFavorites()
     {
+        // Caller may only read their own favorites (userId claim = 1)
         var favResponse = new GetFavoritesResponse();
-        _mockGrpc.Setup(g => g.GetUserFavoritesAsync(2)).ReturnsAsync(favResponse);
+        _mockGrpc.Setup(g => g.GetUserFavoritesAsync(1)).ReturnsAsync(favResponse);
 
-        var result = await _controller.GetUserFavorites(2);
+        var result = await _controller.GetUserFavorites(1);
 
         result.Should().BeOfType<OkObjectResult>();
     }
@@ -186,7 +187,7 @@ public class ReviewsFavoritesControllerTests
         _mockGrpc.Setup(g => g.GetUserFavoritesAsync(It.IsAny<int>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
-        Func<Task> act = () => _controller.GetUserFavorites(2);
+        Func<Task> act = () => _controller.GetUserFavorites(1);
 
         await act.Should().ThrowAsync<Exception>().WithMessage("gRPC unavailable");
     }
@@ -195,7 +196,12 @@ public class ReviewsFavoritesControllerTests
 
     private static ControllerContext MakeAuthContext(int userId = 1)
     {
-        var claims = new List<Claim> { new("userId", userId.ToString()) };
+        // Controller requires both the numeric "userId" and the "sub" GUID claim
+        var claims = new List<Claim>
+        {
+            new("userId", userId.ToString()),
+            new("sub", Guid.NewGuid().ToString()),
+        };
         var httpContext = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))

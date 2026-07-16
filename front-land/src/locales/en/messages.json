@@ -6,5 +6,11 @@
     "errorLoadingMessages": "Failed to load messages",
     "sendMessage": "Send message",
     "messageSent": "Message sent",
-    "conversationWith": "Conversation with"
+    "conversationWith": "Conversation with",
+    "noMessagesYet": "No messages in this conversation yet",
+    "superLikePremiumRequired": "Super-Like is a premium feature",
+    "superLikeNoTokens": "No tokens remaining",
+    "superLikeTooltip": "Super-Like ({{count}} token{{count, plural, one{} other{s}}} remaining)",
+    "superLikeActive": "Super-Like · {{count}} token{{count, plural, one{} other{s}}} remaining",
+    "priorityMessage": "Priority message — verified sender"
 }

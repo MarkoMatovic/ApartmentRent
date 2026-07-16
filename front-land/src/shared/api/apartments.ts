@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Apartment, ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentInputDto, ApartmentUpdateInputDto } from '../types/apartment';
+import { ApartmentDto, GetApartmentDto, ApartmentFilters, ApartmentInputDto, ApartmentUpdateInputDto, UploadedImage } from '../types/apartment';
 
 export interface PagedResponse<T> {
   items: T[];
@@ -8,6 +8,24 @@ export interface PagedResponse<T> {
   pageSize: number;
   totalPages: number;
 }
+
+// The backend serializes enums as string names (JsonStringEnumConverter) —
+// normalize them back to the backend's numeric values on every read.
+const LISTING_TYPE_VALUES: Record<string, number> = { Rent: 1, Sale: 2 };
+// Mirrors ApartmentType in LandlordApp/src/Modules/Listings/Models/ApartmentType.cs
+const APARTMENT_TYPE_VALUES: Record<string, number> = {
+  Studio: 0, OneRoom: 1, TwoRoom: 2, ThreeRoom: 3, FourRoom: 4, House: 5,
+};
+
+const normalizeApartment = <T extends { listingType?: any; apartmentType?: any }>(a: T): T => ({
+  ...a,
+  listingType: typeof a.listingType === 'string'
+    ? (LISTING_TYPE_VALUES[a.listingType] ?? a.listingType)
+    : a.listingType,
+  apartmentType: typeof a.apartmentType === 'string'
+    ? (APARTMENT_TYPE_VALUES[a.apartmentType] ?? a.apartmentType)
+    : a.apartmentType,
+});
 
 export const apartmentsApi = {
   getAll: async (filters?: ApartmentFilters): Promise<PagedResponse<ApartmentDto>> => {
@@ -35,14 +53,14 @@ export const apartmentsApi = {
       params,
     });
 
-    return response.data;
+    return { ...response.data, items: (response.data.items ?? []).map(normalizeApartment) };
   },
 
   getById: async (id: number): Promise<GetApartmentDto> => {
     const response = await apiClient.get<GetApartmentDto>(`/api/v1/rent/get-apartment`, {
       params: { id },
     });
-    return response.data;
+    return normalizeApartment(response.data);
   },
 
   getMyApartments: async (): Promise<ApartmentDto[]> => {
@@ -51,17 +69,17 @@ export const apartmentsApi = {
     if (!Array.isArray(apartments)) {
       apartments = [];
     }
-    return apartments;
+    return apartments.map(normalizeApartment);
   },
 
   create: async (data: ApartmentInputDto): Promise<GetApartmentDto> => {
     const response = await apiClient.post<GetApartmentDto>(`/api/v1/rent/create-apartment`, data);
-    return response.data;
+    return normalizeApartment(response.data);
   },
 
   update: async (id: number, data: ApartmentUpdateInputDto): Promise<ApartmentDto> => {
     const response = await apiClient.put<ApartmentDto>(`/api/v1/rent/update-apartment/${id}`, data);
-    return response.data;
+    return normalizeApartment(response.data);
   },
 
   delete: async (id: number): Promise<void> => {
@@ -72,13 +90,13 @@ export const apartmentsApi = {
     await apiClient.put(`/api/v1/rent/activate-apartment/${id}`);
   },
 
-  uploadImages: async (files: File[]): Promise<string[]> => {
+  uploadImages: async (files: File[]): Promise<UploadedImage[]> => {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('files', file);
     });
 
-    const response = await apiClient.post<string[]>(`/api/v1/rent/upload-images`, formData, {
+    const response = await apiClient.post<UploadedImage[]>(`/api/v1/rent/upload-images`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

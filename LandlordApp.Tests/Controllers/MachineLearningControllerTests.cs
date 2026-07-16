@@ -59,27 +59,29 @@ public class MachineLearningControllerTests
     }
 
     [Fact]
-    public async Task PredictPrice_ServiceThrows_ReturnsBadRequest()
+    public async Task PredictPrice_ServiceThrows_PropagatesToMiddleware()
     {
+        // Controllers no longer swallow service exceptions — the global
+        // exception middleware maps them to the proper status code.
         var request = new PricePredictionRequestDto { City = "Beograd" };
         _mockPricePrediction.Setup(s => s.PredictPriceAsync(It.IsAny<PricePredictionRequestDto>()))
             .ThrowsAsync(new Exception("Model not trained"));
 
-        var result = await _controller.PredictPrice(request);
+        var act = () => _controller.PredictPrice(request);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("Model not trained");
     }
 
     [Fact]
-    public async Task PredictPrice_ModelNotTrained_ReturnsBadRequest()
+    public async Task PredictPrice_ModelNotTrained_PropagatesToMiddleware()
     {
         var request = new PricePredictionRequestDto { NumberOfRooms = 1 };
         _mockPricePrediction.Setup(s => s.PredictPriceAsync(It.IsAny<PricePredictionRequestDto>()))
             .ThrowsAsync(new InvalidOperationException("Model is not trained yet"));
 
-        var result = await _controller.PredictPrice(request);
+        var act = () => _controller.PredictPrice(request);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     // ─── TrainModel ───────────────────────────────────────────────────────────
@@ -103,14 +105,14 @@ public class MachineLearningControllerTests
     }
 
     [Fact]
-    public async Task TrainModel_ServiceThrows_ReturnsBadRequest()
+    public async Task TrainModel_ServiceThrows_PropagatesToMiddleware()
     {
         _mockPricePrediction.Setup(s => s.TrainModelAsync())
             .ThrowsAsync(new Exception("Insufficient training data"));
 
-        var result = await _controller.TrainModel();
+        var act = () => _controller.TrainModel();
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("Insufficient training data");
     }
 
     // ─── GetModelMetrics ──────────────────────────────────────────────────────
@@ -203,14 +205,14 @@ public class MachineLearningControllerTests
     }
 
     [Fact]
-    public async Task GetRoommateMatches_ServiceThrows_ReturnsBadRequest()
+    public async Task GetRoommateMatches_ServiceThrows_PropagatesToMiddleware()
     {
         _mockRoommateMatching.Setup(s => s.GetMatchesForUserAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("Matching service error"));
 
-        var result = await _controller.GetRoommateMatches(CurrentUserId, 10);
+        var act = () => _controller.GetRoommateMatches(CurrentUserId, 10);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("Matching service error");
     }
 
     // ─── CalculateMatchScore ──────────────────────────────────────────────────
@@ -229,14 +231,14 @@ public class MachineLearningControllerTests
     }
 
     [Fact]
-    public async Task CalculateMatchScore_ServiceThrows_ReturnsBadRequest()
+    public async Task CalculateMatchScore_ServiceThrows_PropagatesToMiddleware()
     {
         _mockRoommateMatching.Setup(s => s.CalculateMatchScoreAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("User not found"));
 
-        var result = await _controller.CalculateMatchScore(1, 999);
+        var act = () => _controller.CalculateMatchScore(1, 999);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("User not found");
     }
 
     [Fact]

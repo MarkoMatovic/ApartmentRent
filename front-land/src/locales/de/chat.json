@@ -1,6 +1,7 @@
 {
   "title": "Nachrichten",
   "messages": "Nachrichten",
+  "unknownUser": "Benutzer",
   "noMessages": "Sie haben keine Nachrichten",
   "typeMessage": "Nachricht schreiben...",
   "send": "Senden",
@@ -91,5 +92,6 @@
   "adminNotes": "Administratornotizen",
   "markAsReviewed": "Als überprüft markieren",
   "resolve": "Lösen",
-  "confirmDeleteReport": "Sind Sie sicher, dass Sie diese Meldung löschen möchten?"
+  "confirmDeleteReport": "Sind Sie sicher, dass Sie diese Meldung löschen möchten?",
+  "startChattingHint": "Wählen Sie links ein Gespräch aus, um mit dem Chatten zu beginnen"
 }

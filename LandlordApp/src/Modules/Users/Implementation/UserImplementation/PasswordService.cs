@@ -77,6 +77,7 @@ public class PasswordService : IPasswordService
         var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
                            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
         user.EmailVerificationToken = token;
+        user.EmailVerificationTokenExpiry = _timeProvider.GetUtcNow().UtcDateTime.AddHours(24);
         user.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _context.SaveEntitiesAsync();
 
@@ -92,9 +93,15 @@ public class PasswordService : IPasswordService
         if (user == null) return false;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // Reject expired tokens (24h TTL set at send time).
+        if (user.EmailVerificationTokenExpiry.HasValue && user.EmailVerificationTokenExpiry.Value < now)
+            return false;
+
         user.IsActive = true;
         user.EmailVerifiedAt = now;
         user.EmailVerificationToken = null;
+        user.EmailVerificationTokenExpiry = null;
         user.ModifiedDate = now;
         await _context.SaveEntitiesAsync();
         return true;

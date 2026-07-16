@@ -31,5 +31,28 @@
         "city": "Город",
         "minBudget": "Мин. бюджет",
         "maxBudget": "Макс. бюджет"
+    },
+    "dialog": {
+        "newRequestTitle": "Новый поисковый запрос",
+        "type": "Тип",
+        "title": "Заголовок",
+        "description": "Описание",
+        "city": "Город",
+        "budget": "Бюджет (€)",
+        "moveInDate": "Предпочтительная дата заезда",
+        "cancel": "Отмена",
+        "saving": "Сохранение...",
+        "createRequest": "Создать запрос",
+        "titleRequired": "Заголовок обязателен.",
+        "descriptionRequired": "Описание обязательно."
+    },
+    "card": {
+        "upTo": "До €{{amount}}",
+        "postedBy": "Опубликовал: {{name}}",
+        "yourRequest": "Ваш запрос",
+        "contact": "Связаться",
+        "loginToContact": "Войдите чтобы связаться",
+        "failedToDelete": "Не удалось удалить запрос",
+        "failedToLoad": "Не удалось загрузить запросы"
     }
 }

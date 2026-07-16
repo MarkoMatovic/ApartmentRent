@@ -42,7 +42,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat', 'payments']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
@@ -218,7 +218,7 @@ const Header: React.FC = () => {
                       size="small"
                       onClick={() => navigate('/pricing')}
                       sx={{ cursor: 'pointer', mr: 0.5, bgcolor: 'rgba(255,255,255,0.15)', color: 'inherit', borderColor: 'rgba(255,255,255,0.4)', border: 1 }}
-                      title="Tokeni — klikni za kupovinu"
+                      title={t('common:tokensBuyTooltip')}
                     />
                   )}
                   <IconButton color="inherit" onClick={() => navigate('/profile')} size="medium">
@@ -270,10 +270,10 @@ const Header: React.FC = () => {
                   {t('roommates:matches', { defaultValue: 'Roommate Matches' })}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/moje-pretplate'); handleMenuClose(); }}>
-                  Moje pretplate
+                  {t('payments:btnSubscriptions')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/istorija-placanja'); handleMenuClose(); }}>
-                  Istorija plaćanja
+                  {t('payments:historyTitle')}
                 </MenuItem>
                 {!user?.roleName?.includes('Premium') && (
                   <MenuItem

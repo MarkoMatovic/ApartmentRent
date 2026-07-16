@@ -150,15 +150,17 @@ public class ApartmentApplicationsControllerTests
     }
 
     [Fact]
-    public async Task UpdateStatus_UnauthorizedAccess_ReturnsForbid()
+    public async Task UpdateStatus_UnauthorizedAccess_PropagatesToMiddleware()
     {
+        // Controller no longer catches — the global exception middleware maps
+        // UnauthorizedAccessException to 401.
         _mockUserService.Setup(s => s.GetUserByGuidAsync(TestGuid)).ReturnsAsync(TestUser);
         _mockAppService.Setup(s => s.UpdateApplicationStatusAsync(1, "Approved", 5))
             .ThrowsAsync(new UnauthorizedAccessException("not your application"));
 
-        var result = await _controller.UpdateStatus(1, new UpdateApplicationStatusInputDto { Status = "Approved" });
+        var act = () => _controller.UpdateStatus(1, new UpdateApplicationStatusInputDto { Status = "Approved" });
 
-        result.Should().BeOfType<ForbidResult>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     // ─── CheckApprovalStatus ─────────────────────────────────────────────────
