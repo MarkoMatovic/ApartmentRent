@@ -3,6 +3,7 @@ using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.MachineLearning.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text.Json;
 
 namespace Lander.src.Modules.Listings.Controllers;
@@ -14,13 +15,17 @@ public partial class ApartmentsController
     
     [HttpGet("semantic-search")]
     [AllowAnonymous]
+    [EnableRateLimiting("semantic-search")]
     public async Task<ActionResult<List<ApartmentDto>>> SemanticSearch(
         [FromQuery] string query,
         [FromQuery] int topN = 10)
     {
         if (string.IsNullOrWhiteSpace(query))
             return BadRequest(new { error = "Query cannot be empty" });
-        
+
+        // Clamp topN — an unbounded value lets a caller force a huge sort/serialize.
+        topN = Math.Clamp(topN, 1, 50);
+
         var queryEmbedding = _embeddingService.GenerateEmbedding(query);
         
         var apartments = await _apartmentService.GetAllApartmentsForSemanticSearchAsync();

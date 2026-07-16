@@ -36,7 +36,7 @@ public class RefreshTokenService
         {
             UserId = userId,
             TokenHash = HashToken(raw),
-            ExpiresAt = DateTime.UtcNow.AddDays(30),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
         });
 
         await _context.SaveEntitiesAsync();

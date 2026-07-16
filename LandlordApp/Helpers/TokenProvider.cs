@@ -29,6 +29,7 @@ public sealed class TokenProvider
         
         var claims = new List<Claim>
         {
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, user.UserGuid.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.UserGuid.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),

@@ -19,8 +19,6 @@ public static class StartupValidation
         "Jwt:Issuer",
         "Jwt:Audience",
         "Brevo:ApiKey",       // actual email provider used by EmailService
-        "Monri:AuthenticityToken",
-        "Monri:MerchantKey",
         "ConnectionStrings:DefaultConnection",
     ];
 

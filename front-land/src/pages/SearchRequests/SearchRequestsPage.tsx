@@ -70,6 +70,10 @@ export const SearchRequestsPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
 
+    // Delete confirmation state
+    const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
     useEffect(() => {
         loadRequests();
         if (user?.userId) {
@@ -100,16 +104,25 @@ export const SearchRequestsPage: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (window.confirm(t('confirmDelete'))) {
-            try {
-                await searchRequestsApi.deleteSearchRequest(id);
-                setMyRequests(myRequests.filter(r => r.searchRequestId !== id));
-                setRequests(requests.filter(r => r.searchRequestId !== id));
-            } catch (err) {
-                console.error('Error deleting request:', err);
-                setError('Failed to delete request');
-            }
+    const handleDelete = (id: number) => {
+        setDeleteTargetId(id);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteTargetId === null) return;
+        const id = deleteTargetId;
+        try {
+            setDeleting(true);
+            await searchRequestsApi.deleteSearchRequest(id);
+            setMyRequests(prev => prev.filter(r => r.searchRequestId !== id));
+            setRequests(prev => prev.filter(r => r.searchRequestId !== id));
+            setDeleteTargetId(null);
+        } catch (err) {
+            console.error('Error deleting request:', err);
+            setDeleteTargetId(null);
+            setError(t('card.failedToDelete', 'Greška pri brisanju zahteva'));
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -364,6 +377,22 @@ export const SearchRequestsPage: React.FC = () => {
                     <Button onClick={() => setDialogOpen(false)} disabled={submitting}>Cancel</Button>
                     <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
                         {submitting ? 'Saving...' : 'Create Request'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteTargetId !== null} onClose={() => !deleting && setDeleteTargetId(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>{t('deleteRequest', 'Obriši zahtev')}</DialogTitle>
+                <DialogContent>
+                    <Typography>{t('confirmDelete')}</Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setDeleteTargetId(null)} disabled={deleting}>
+                        {t('dialog.cancel', 'Otkaži')}
+                    </Button>
+                    <Button variant="contained" color="error" onClick={confirmDelete} disabled={deleting}>
+                        {deleting ? <CircularProgress size={20} /> : t('deleteRequest', 'Obriši')}
                     </Button>
                 </DialogActions>
             </Dialog>

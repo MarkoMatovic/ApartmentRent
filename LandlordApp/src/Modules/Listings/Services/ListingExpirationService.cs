@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Lander.src.Modules.Listings.Services;
 
 /// <summary>
-/// Nightly background service that manages listing lifecycle:
+/// Hangfire recurring job (daily 02:00 UTC) that manages listing lifecycle:
 ///   • 2 days before expiry  → sends an in-app reminder notification to the landlord.
 ///   • On expiry day         → sets IsActive = false (listing hidden from search).
 ///   • After grace period    → sets IsDeleted = true (soft-deleted, awaiting cleanup).
@@ -14,65 +14,37 @@ namespace Lander.src.Modules.Listings.Services;
 ///   ExpirationDays          – how long a listing stays active after creation  (default 30)
 ///   GraceDays               – days after expiry before hard soft-delete        (default 7)
 ///   ReminderDaysBeforeExpiry– days before expiry to fire the reminder          (default 2)
-///   CheckHourUtc            – UTC hour at which the job runs daily             (default 2)
 /// </summary>
-public sealed class ListingExpirationService : BackgroundService
+public sealed class ListingExpirationService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ListingsContext _db;
+    private readonly INotificationService _notifService;
     private readonly ILogger<ListingExpirationService> _logger;
     private readonly IConfiguration _configuration;
 
     public ListingExpirationService(
-        IServiceScopeFactory scopeFactory,
+        ListingsContext db,
+        INotificationService notifService,
         ILogger<ListingExpirationService> logger,
         IConfiguration configuration)
     {
-        _scopeFactory   = scopeFactory;
-        _logger         = logger;
-        _configuration  = configuration;
+        _db            = db;
+        _notifService  = notifService;
+        _logger        = logger;
+        _configuration = configuration;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("ListingExpirationService started.");
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await WaitUntilNextRunAsync(stoppingToken);
-            if (stoppingToken.IsCancellationRequested) break;
-
-            try
-            {
-                await RunExpirationCheckAsync(stoppingToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "ListingExpirationService encountered an error during the daily check.");
-            }
-        }
-
-        _logger.LogInformation("ListingExpirationService stopped.");
-    }
-
-    // ─── Core logic ─────────────────────────────────────────────────────────────
-
-    private async Task RunExpirationCheckAsync(CancellationToken ct)
+    public async Task RunAsync()
     {
         int graceDays    = _configuration.GetValue<int>("Listings:GraceDays",               7);
         int reminderDays = _configuration.GetValue<int>("Listings:ReminderDaysBeforeExpiry", 2);
 
         var now = DateTime.UtcNow;
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db          = scope.ServiceProvider.GetRequiredService<ListingsContext>();
-        var notifService = scope.ServiceProvider.GetRequiredService<INotificationService>();
-
         // ── 1. Send reminder notifications ──────────────────────────────────────
-        //    Target: active listings that expire within `reminderDays` and haven't
-        //    been notified yet (ReminderSentAt IS NULL).
         var reminderCutoff = now.AddDays(reminderDays);
 
-        var toRemind = await db.Apartments
+        var toRemind = await _db.Apartments
             .IgnoreQueryFilters()
             .Where(a =>
                 !a.IsDeleted &&
@@ -83,14 +55,14 @@ public sealed class ListingExpirationService : BackgroundService
                 a.ListingExpiresAt.Value > now &&
                 a.ReminderSentAt == null)
             .Select(a => new { a.ApartmentId, a.LandlordId, a.Title, a.ListingExpiresAt })
-            .ToListAsync(ct);
+            .ToListAsync();
 
         foreach (var apt in toRemind)
         {
             var daysLeft = (int)Math.Ceiling((apt.ListingExpiresAt!.Value - now).TotalDays);
             try
             {
-                await notifService.SendNotificationAsync(new CreateNotificationInputDto
+                await _notifService.SendNotificationAsync(new CreateNotificationInputDto
                 {
                     Title           = "Oglas uskoro ističe",
                     Message         = $"Vaš oglas \"{apt.Title}\" ističe za {daysLeft} dan(a). Obnovite ga kako bi ostao vidljiv.",
@@ -101,11 +73,10 @@ public sealed class ListingExpirationService : BackgroundService
                     RecipientUserId = apt.LandlordId.Value
                 });
 
-                // Mark as notified so we don't spam on subsequent ticks
-                await db.Apartments
+                await _db.Apartments
                     .IgnoreQueryFilters()
                     .Where(a => a.ApartmentId == apt.ApartmentId)
-                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReminderSentAt, now), ct);
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.ReminderSentAt, now));
 
                 _logger.LogInformation(
                     "Listing expiry reminder sent: ApartmentId={ApartmentId}, LandlordId={LandlordId}, DaysLeft={Days}",
@@ -113,14 +84,12 @@ public sealed class ListingExpirationService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "Failed to send expiry reminder for ApartmentId={ApartmentId}.", apt.ApartmentId);
+                _logger.LogError(ex, "Failed to send expiry reminder for ApartmentId={ApartmentId}.", apt.ApartmentId);
             }
         }
 
         // ── 2. Deactivate expired listings ──────────────────────────────────────
-        //    Target: active listings whose expiry timestamp is in the past.
-        int deactivated = await db.Apartments
+        int deactivated = await _db.Apartments
             .IgnoreQueryFilters()
             .Where(a =>
                 !a.IsDeleted &&
@@ -129,17 +98,15 @@ public sealed class ListingExpirationService : BackgroundService
                 a.ListingExpiresAt.Value <= now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.IsActive, false)
-                .SetProperty(a => a.ModifiedDate, now),
-                ct);
+                .SetProperty(a => a.ModifiedDate, now));
 
         if (deactivated > 0)
             _logger.LogInformation("Deactivated {Count} expired listing(s).", deactivated);
 
-        // ── 3. Soft-delete listings that have been inactive past the grace period ─
-        //    Target: deactivated listings whose expiry + grace period has passed.
+        // ── 3. Soft-delete listings past grace period ───────────────────────────
         var graceDeadline = now.AddDays(-graceDays);
 
-        int softDeleted = await db.Apartments
+        int softDeleted = await _db.Apartments
             .IgnoreQueryFilters()
             .Where(a =>
                 !a.IsDeleted &&
@@ -148,16 +115,13 @@ public sealed class ListingExpirationService : BackgroundService
                 a.ListingExpiresAt.Value <= graceDeadline)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.IsDeleted, true)
-                .SetProperty(a => a.ModifiedDate, now),
-                ct);
+                .SetProperty(a => a.ModifiedDate, now));
 
         if (softDeleted > 0)
             _logger.LogInformation("Soft-deleted {Count} listing(s) past grace period.", softDeleted);
 
         // ── 4. Deactivate expired featured promotions ───────────────────────────
-        //    When FeaturedUntil has passed, clear IsFeatured so the listing no longer
-        //    appears at the top of search results.
-        int featuredExpired = await db.Apartments
+        int featuredExpired = await _db.Apartments
             .IgnoreQueryFilters()
             .Where(a =>
                 !a.IsDeleted &&
@@ -167,31 +131,9 @@ public sealed class ListingExpirationService : BackgroundService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.IsFeatured, false)
                 .SetProperty(a => a.FeaturedUntil, (DateTime?)null)
-                .SetProperty(a => a.ModifiedDate, now),
-                ct);
+                .SetProperty(a => a.ModifiedDate, now));
 
         if (featuredExpired > 0)
             _logger.LogInformation("Cleared {Count} expired featured listing promotion(s).", featuredExpired);
-    }
-
-    // ─── Scheduling ─────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Sleeps until the configured UTC hour today (or tomorrow if that hour has already passed).
-    /// </summary>
-    private async Task WaitUntilNextRunAsync(CancellationToken ct)
-    {
-        int targetHour = _configuration.GetValue<int>("Listings:CheckHourUtc", 2);
-
-        var now      = DateTime.UtcNow;
-        var nextRun  = new DateTime(now.Year, now.Month, now.Day, targetHour, 0, 0, DateTimeKind.Utc);
-        if (nextRun <= now)
-            nextRun = nextRun.AddDays(1);
-
-        var delay = nextRun - now;
-        _logger.LogDebug("ListingExpirationService next run in {Minutes:F0} min (at {NextRun:u}).",
-            delay.TotalMinutes, nextRun);
-
-        await Task.Delay(delay, ct);
     }
 }

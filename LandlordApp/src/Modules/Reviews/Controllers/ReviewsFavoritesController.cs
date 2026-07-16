@@ -44,6 +44,7 @@ namespace Lander.src.Modules.Reviews.Controllers
         }
 
         [HttpPost(ApiActionsV1.CreateReview, Name = nameof(ApiActionsV1.CreateReview))]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("create-review")]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest request)
         {
             var callerId = TryGetCurrentUserId();

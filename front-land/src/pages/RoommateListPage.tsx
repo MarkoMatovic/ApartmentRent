@@ -7,18 +7,19 @@ import {
 import {
   Add as AddIcon, AutoAwesome as AIIcon,
   FilterList as FilterIcon, Close as CloseIcon,
-  SmokingRooms as SmokingIcon, SmokeFree as NoSmokingIcon,
-  Pets as PetsIcon, MusicNote as MusicIcon, Search as SearchIcon,
+
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../shared/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { roommatesApi } from '../shared/api/roommates';
 import { mlApi, analyticsApi } from '../shared/api/analytics';
 import {
   RoommateFilters, Roommate,
-  LIFESTYLE_ICONS, LIFESTYLE_LABELS,
-  SCHEDULE_ICONS, SCHEDULE_LABELS,
+  LIFESTYLE_ICONS, LIFESTYLE_KEYS,
+  SCHEDULE_ICONS, SCHEDULE_KEYS,
 } from '../shared/types/roommate';
 import RoommateCard from '../components/Roommate/RoommateCard';
 
@@ -34,6 +35,7 @@ const FilterChip: React.FC<{
 );
 
 const RoommateListPage: React.FC = () => {
+  const { t } = useTranslation('roommates');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAuth();
@@ -81,8 +83,8 @@ const RoommateListPage: React.FC = () => {
 
   useEffect(() => {
     if (!filters.location?.trim()) return;
-    const t = setTimeout(() => analyticsApi.trackEvent('RoommateSearch', 'Roommates'), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => analyticsApi.trackEvent('RoommateSearch', 'Roommates'), 2000);
+    return () => clearTimeout(timer);
   }, [filters.location]);
 
   const sorted = useMemo(() => {
@@ -107,14 +109,14 @@ const RoommateListPage: React.FC = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 1 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">Cimeri</Typography>
-          <Typography variant="body2" color="text.secondary">Pronađi idealnog cimera u Srbiji</Typography>
+          <Typography variant="h4" fontWeight="bold">{t('pageTitle')}</Typography>
+          <Typography variant="body2" color="text.secondary">{t('pageSubtitle')}</Typography>
         </Box>
         {isAuthenticated && (
           <Button variant="contained" color="secondary"
             startIcon={myCard ? undefined : <AddIcon />}
             onClick={() => navigate('/roommates/create')}>
-            {myCard ? 'Uredi profil' : 'Kreiraj profil'}
+            {myCard ? t('editMyProfile') : t('createMyProfile')}
           </Button>
         )}
       </Box>
@@ -123,19 +125,19 @@ const RoommateListPage: React.FC = () => {
       <Paper sx={{ p: 2, mb: 3, borderRadius: 3 }}>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
           <TextField
-            placeholder="Grad, opština ili kvart..."
+            placeholder={t('searchPlaceholder')}
             value={filters.location || ''}
             onChange={e => set('location', e.target.value || undefined)}
             size="small"
             InputProps={{ startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 18 }} /> }}
             sx={{ minWidth: 220, flex: 1 }}
           />
-          <TextField placeholder="Budžet od (€)" type="number"
+          <TextField placeholder={t('budgetFrom')} type="number"
             value={filters.minBudget || ''}
             onChange={e => set('minBudget', e.target.value ? parseFloat(e.target.value) : undefined)}
             size="small" sx={{ width: 130 }}
           />
-          <TextField placeholder="Budžet do (€)" type="number"
+          <TextField placeholder={t('budgetTo')} type="number"
             value={filters.maxBudget || ''}
             onChange={e => set('maxBudget', e.target.value ? parseFloat(e.target.value) : undefined)}
             size="small" sx={{ width: 130 }}
@@ -145,12 +147,12 @@ const RoommateListPage: React.FC = () => {
             endIcon={activeCount > 0
               ? <Chip label={activeCount} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem', ml: -0.5 }} />
               : undefined}>
-            Filteri
+            {t('filtersButton')}
           </Button>
           {activeCount > 0 && (
             <Button size="small" color="error" startIcon={<CloseIcon />}
               onClick={() => setFilters({ location: '', minBudget: undefined, maxBudget: undefined, smokingAllowed: undefined, petFriendly: undefined, lifestyle: undefined, workSchedule: undefined })}>
-              Resetuj
+              {t('resetFilters')}
             </Button>
           )}
         </Box>
@@ -158,30 +160,30 @@ const RoommateListPage: React.FC = () => {
         <Collapse in={showFilters}>
           <Divider sx={{ my: 1.5 }} />
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>Pušenje:</Typography>
-            <FilterChip label="🚬 Pušač" active={filters.smokingAllowed === true}
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>{t('filterSmoking')}</Typography>
+            <FilterChip label={t('filterSmoker')} active={filters.smokingAllowed === true}
               onClick={() => toggleBool('smokingAllowed', true)} />
-            <FilterChip label="🚭 Nepušač" active={filters.smokingAllowed === false}
+            <FilterChip label={t('filterNonSmoker')} active={filters.smokingAllowed === false}
               onClick={() => toggleBool('smokingAllowed', false)} />
 
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>Stil:</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>{t('filterStyle')}</Typography>
             {(['quiet', 'social', 'mixed'] as const).map(ls => (
               <FilterChip key={ls}
-                label={`${LIFESTYLE_ICONS[ls]} ${LIFESTYLE_LABELS[ls]}`}
+                label={`${LIFESTYLE_ICONS[ls]} ${t(LIFESTYLE_KEYS[ls])}`}
                 active={filters.lifestyle === ls}
                 onClick={() => toggleString('lifestyle', ls)} />
             ))}
 
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-            <FilterChip label="🐾 Ljubimci OK" active={filters.petFriendly === true}
+            <FilterChip label={t('filterPetsOk')} active={filters.petFriendly === true}
               onClick={() => toggleBool('petFriendly', true)} />
 
             <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>Ritam:</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.3 }}>{t('filterRhythm')}</Typography>
             {([1, 2, 3] as const).map(ws => (
               <FilterChip key={ws}
-                label={`${SCHEDULE_ICONS[ws]} ${SCHEDULE_LABELS[ws]}`}
+                label={`${SCHEDULE_ICONS[ws]} ${t(SCHEDULE_KEYS[ws])}`}
                 active={filters.workSchedule === ws}
                 onClick={() => setFilters(prev => ({ ...prev, workSchedule: prev.workSchedule === ws ? undefined : ws }))} />
             ))}
@@ -192,16 +194,18 @@ const RoommateListPage: React.FC = () => {
       {/* Results header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="body1" color="text.secondary">
-          {isLoading ? 'Učitava...' : `${sorted.length} ${sorted.length === 1 ? 'profil' : 'profila'}`}
+          {isLoading
+            ? t('loadingProfiles')
+            : t('profileCount', { count: sorted.length })}
         </Typography>
         <ToggleButtonGroup value={sortBy} exclusive size="small"
           onChange={(_, v) => v && setSortBy(v)}>
-          <ToggleButton value="default">Najnoviji</ToggleButton>
-          <ToggleButton value="soonest">📅 Useljenje</ToggleButton>
+          <ToggleButton value="default">{t('sortNewest')}</ToggleButton>
+          <ToggleButton value="soonest">{t('sortSoonest')}</ToggleButton>
           {isAuthenticated && (
             <ToggleButton value="bestMatch" disabled={matchesLoading}>
               <AIIcon sx={{ mr: 0.5, fontSize: 16 }} />
-              {matchesLoading ? 'Računam...' : 'AI poklapanje'}
+              {matchesLoading ? t('sortCalculating') : t('sortAiMatch')}
             </ToggleButton>
           )}
         </ToggleButtonGroup>
@@ -209,15 +213,15 @@ const RoommateListPage: React.FC = () => {
 
       {sortBy === 'bestMatch' && !matchesLoading && !myCard && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Kreiraj roommate profil da vidiš AI poklapanje s drugima.{' '}
-          <Button size="small" onClick={() => navigate('/roommates/create')}>Kreiraj profil</Button>
+          {t('aiMatchPrompt')}{' '}
+          <Button size="small" onClick={() => navigate('/roommates/create')}>{t('createMyProfile')}</Button>
         </Alert>
       )}
 
       {/* My card at top */}
       {myCard && (
         <Box sx={{ mb: 3 }}>
-          <Typography variant="overline" color="text.secondary">Moj profil</Typography>
+          <Typography variant="overline" color="text.secondary">{t('myProfile')}</Typography>
           <Grid container spacing={2.5} sx={{ mt: 0 }}>
             <Grid item xs={12} sm={6} md={4} lg={3}>
               <RoommateCard roommate={myCard} isOwn />
@@ -239,13 +243,13 @@ const RoommateListPage: React.FC = () => {
       ) : sorted.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 10 }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            Nema rezultata za ove filtere
+            {t('noResults')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Pokušaj sa manje filtera
+            {t('noResultsHint')}
           </Typography>
           {activeCount > 0 && (
-            <Button variant="outlined" onClick={() => setFilters({})}>Ukloni sve filtere</Button>
+            <Button variant="outlined" onClick={() => setFilters({})}>{t('removeAllFilters')}</Button>
           )}
         </Box>
       ) : (

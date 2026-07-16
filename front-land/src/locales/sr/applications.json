@@ -1,0 +1,21 @@
+{
+  "applyTitle": "Prijavi se za {{title}}",
+  "applyConfirm": "Da li ste sigurni da želite da se prijavite za ovaj stan? Stanodavac će biti odmah obavešten.",
+  "priorityApplication": "Prioritetna prijava",
+  "priorityDesc": "Vaša prijava se prikazuje na vrhu liste stanodavca.",
+  "premium": "Premium",
+  "cancel": "Odustani",
+  "sending": "Šalje se...",
+  "sendPriority": "Pošalji prioritetnu prijavu",
+  "confirmApplication": "Potvrdi prijavu",
+  "applicationSent": "Prijava je poslata",
+  "priorityApplicationSent": "Prioritetna prijava je poslata",
+  "applicationSuccess": "Uspešno ste se prijavili za {{title}}{{priority}}",
+  "applicationError": "Greška pri prijavi. Pokušajte ponovo.",
+  "rejectedTitle": "Prijava nije odobrena",
+  "rejectedBody": "Vaša prijava za \"{{title}}\" je odbijena od strane stanodavca.",
+  "keepApartmentQuestion": "Da li želite da zadržite ovaj stan u rezultatima pretrage?",
+  "removeApartment": "Ne, ukloni",
+  "keepApartment": "Da, zadrži",
+  "prioritySuffix": " (prioritet)"
+}

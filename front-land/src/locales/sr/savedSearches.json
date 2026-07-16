@@ -23,5 +23,16 @@
         "petFriendly": "Dozvoljeni kućni ljubimci",
         "parking": "Parking",
         "balcony": "Terasa"
-    }
+    },
+    "chips": {
+        "furnished": "Namešteno",
+        "parking": "Parking",
+        "balcony": "Balkon",
+        "petFriendly": "Dozvoljeni ljubimci"
+    },
+    "applySearch": "Primeni pretragu",
+    "rooms": "sobe",
+    "failedToLoad": "Greška pri učitavanju sačuvanih pretraga",
+    "failedToCreate": "Greška pri kreiranju pretrage",
+    "failedToDelete": "Greška pri brisanju pretrage"
 }

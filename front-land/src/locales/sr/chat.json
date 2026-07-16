@@ -1,6 +1,7 @@
 {
   "title": "Poruke",
   "messages": "Poruke",
+  "unknownUser": "Korisnik",
   "noMessages": "Nemate poruka",
   "typeMessage": "Napiši poruku...",
   "send": "Pošalji",
@@ -72,7 +73,6 @@
   "conversationUnarchived": "Razgovor je vraćen iz arhive",
   "conversationMuted": "Razgovor je utišan",
   "conversationUnmuted": "Razgovor je uključen",
-  "userBlocked": "Korisnik je blokiran",
   "conversationDeleted": "Razgovor je obrisan",
   "errorLoadingMessages": "Greška pri učitavanju poruka",
   "abuseReports": "Prijave zloupotrebi",
@@ -92,5 +92,6 @@
   "adminNotes": "Administratorske beleške",
   "markAsReviewed": "Označi kao pregledano",
   "resolve": "Reši",
-  "confirmDeleteReport": "Da li ste sigurni da želite da obrišete ovu prijavu?"
+  "confirmDeleteReport": "Da li ste sigurni da želite da obrišete ovu prijavu?",
+  "startChattingHint": "Izaberi konverzaciju sa leve strane da počneš sa dopisivanjem"
 }

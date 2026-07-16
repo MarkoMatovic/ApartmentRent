@@ -60,12 +60,22 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUserNotifications_Empty_ReturnsOkWithEmptyList()
     {
+        // Caller may only read their own notifications — authenticate as user 99
+        _controller.ControllerContext = MakeAuthContext(99);
         _mockService.Setup(s => s.GetUserNotificationsAsync(99))
             .ReturnsAsync(new List<NotificationDto>());
 
         var result = await _controller.GetUserNotifications(99);
 
         result.Result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetUserNotifications_OtherUsersId_ReturnsForbid()
+    {
+        var result = await _controller.GetUserNotifications(99);
+
+        result.Result.Should().BeOfType<ForbidResult>();
     }
 
     [Fact]
@@ -110,6 +120,9 @@ public class NotificationsControllerTests
     [Fact]
     public async Task MarkRead_ReturnsOk()
     {
+        // Controller verifies the caller is the recipient before marking as read
+        _mockService.Setup(s => s.GetNotificationByIdAsync(1))
+            .ReturnsAsync(new NotificationDto { Id = 1, RecipientUserId = CurrentUserId });
         _mockService.Setup(s => s.MarkAsReadAsync(1)).Returns(Task.CompletedTask);
 
         var result = await _controller.MarkRead(1);
@@ -118,8 +131,22 @@ public class NotificationsControllerTests
     }
 
     [Fact]
+    public async Task MarkRead_NotRecipient_ReturnsForbid()
+    {
+        _mockService.Setup(s => s.GetNotificationByIdAsync(1))
+            .ReturnsAsync(new NotificationDto { Id = 1, RecipientUserId = CurrentUserId + 1 });
+
+        var result = await _controller.MarkRead(1);
+
+        result.Should().BeOfType<ForbidResult>();
+        _mockService.Verify(s => s.MarkAsReadAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
     public async Task MarkRead_ServiceThrows_PropagatesException()
     {
+        _mockService.Setup(s => s.GetNotificationByIdAsync(1))
+            .ReturnsAsync(new NotificationDto { Id = 1, RecipientUserId = CurrentUserId });
         _mockService.Setup(s => s.MarkAsReadAsync(It.IsAny<int>()))
             .ThrowsAsync(new Exception("Mark error"));
 
@@ -133,6 +160,9 @@ public class NotificationsControllerTests
     [Fact]
     public async Task DeleteNotification_Found_ReturnsOk()
     {
+        // Controller verifies the caller is the recipient before deleting
+        _mockService.Setup(s => s.GetNotificationByIdAsync(1))
+            .ReturnsAsync(new NotificationDto { Id = 1, RecipientUserId = CurrentUserId });
         _mockService.Setup(s => s.DeleteNotificationAsync(1)).ReturnsAsync(true);
 
         var result = await _controller.DeleteNotification(1);
@@ -143,11 +173,12 @@ public class NotificationsControllerTests
     [Fact]
     public async Task DeleteNotification_NotFound_ReturnsNotFound()
     {
-        _mockService.Setup(s => s.DeleteNotificationAsync(99)).ReturnsAsync(false);
+        _mockService.Setup(s => s.GetNotificationByIdAsync(99)).ReturnsAsync((NotificationDto?)null);
 
         var result = await _controller.DeleteNotification(99);
 
-        result.Result.Should().BeOfType<NotFoundObjectResult>();
+        result.Result.Should().BeOfType<NotFoundResult>();
+        _mockService.Verify(s => s.DeleteNotificationAsync(It.IsAny<int>()), Times.Never);
     }
 
     // ─── MarkAllAsRead ────────────────────────────────────────────────────────

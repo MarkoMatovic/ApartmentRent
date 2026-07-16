@@ -55,14 +55,30 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   }, []);
 
   useEffect(() => {
+    // NotificationHub is [Authorize] — without a token the handshake is rejected
+    // and notifications silently die. Skip connecting until we have a token.
+    const initialToken = getAccessToken();
+    if (!initialToken) return;
+
     const notificationHubUrl = import.meta.env.VITE_SIGNALR_URL || (apiBaseUrl + '/notificationHub');
     const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(notificationHubUrl)
+      .withUrl(notificationHubUrl, {
+        accessTokenFactory: () => getAccessToken() ?? '',
+      })
       .withAutomaticReconnect()
       .build();
 
+    let userId = 0;
+    try {
+      const payload = JSON.parse(atob(initialToken.split('.')[1]));
+      userId = parseInt(payload.userId);
+    } catch { /* malformed token — connection will simply not join a group */ }
+
     newConnection
       .start()
+      .then(() => {
+        if (userId) return newConnection.invoke('JoinNotificationGroup', userId);
+      })
       .catch(() => { });
 
     newConnection.on('ReceiveNotification', (title: string, message: string, type: string, metadata?: string) => {

@@ -53,10 +53,12 @@ public class RoommateE2eTests : E2eTestBase
     [Fact]
     public async Task GetAllRoommates_ReturnsSeededProfile()
     {
+        // Unique location → unique service-cache key; a directly seeded roommate
+        // does not bump the list-cache version, so the default list may be stale.
         var user = await Data.CreateUserAsync("rm-list@e2e.com");
-        await Data.CreateRoommateAsync(user.UserId, profession: "Arhitekt");
+        await Data.CreateRoommateAsync(user.UserId, profession: "Arhitekt", location: "Arhitektgrad");
 
-        var response = await new GetAllRoommatesEndpoint(HttpClient).CallAsync();
+        var response = await new GetAllRoommatesEndpoint(HttpClient).CallAsync(location: "Arhitektgrad");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -217,5 +219,102 @@ public class RoommateE2eTests : E2eTestBase
         var response = await new DeleteRoommateEndpoint(HttpClient).CallAsync(roommate.RoommateId);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ── Smoke: new profile fields, filters & list-cache invalidation ─────────
+
+    [Fact]
+    public async Task CreateRoommate_WithNewFields_PersistsAndReturnsThem()
+    {
+        var user   = await Data.CreateUserAsync("rm-newfields@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var create = await new CreateRoommateEndpoint(client).CallAsync(new
+        {
+            Bio           = "Profil sa novim poljima.",
+            Gender        = 2, // Female
+            Languages     = "Srpski,Engleski",
+            WorkSchedule  = 3, // Night
+            MusicFriendly = true,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.OK);
+        var created = await create.Content.ReadFromJsonAsync<JsonElement>();
+        var id = created.GetProperty("roommateId").GetInt32();
+
+        var get = await new GetRoommateEndpoint(HttpClient).CallAsync(id);
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await get.Content.ReadFromJsonAsync<JsonElement>();
+
+        // Enums are serialized as string names (global JsonStringEnumConverter)
+        body.GetProperty("gender").GetString().Should().Be("Female");
+        body.GetProperty("languages").GetString().Should().Be("Srpski,Engleski");
+        body.GetProperty("workSchedule").GetString().Should().Be("Night");
+        body.GetProperty("musicFriendly").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAllRoommates_FilterByGenderAndWorkSchedule_ReturnsMatchingOnly()
+    {
+        var userA = await Data.CreateUserAsync("rm-filter-a@e2e.com");
+        var userB = await Data.CreateUserAsync("rm-filter-b@e2e.com");
+        var clientA = CreateAuthenticatedClient(userA.UserId, userA.UserGuid);
+        var clientB = CreateAuthenticatedClient(userB.UserId, userB.UserGuid);
+
+        (await new CreateRoommateEndpoint(clientA).CallAsync(new
+        {
+            Bio = "Filter test profil A.",
+            Profession = "FilterMatch", Gender = 1, WorkSchedule = 2, // Male, Evening
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await new CreateRoommateEndpoint(clientB).CallAsync(new
+        {
+            Bio = "Filter test profil B.",
+            Profession = "FilterMiss", Gender = 2, WorkSchedule = 1, // Female, Morning
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await new GetAllRoommatesEndpoint(HttpClient)
+            .CallAsync(gender: 1, workSchedule: 2);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body  = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.ValueKind == JsonValueKind.Array ? body : body.GetProperty("items");
+
+        items.EnumerateArray().Should().OnlyContain(r =>
+            r.GetProperty("gender").GetString() == "Male" &&
+            r.GetProperty("workSchedule").GetString() == "Evening");
+        items.EnumerateArray().Should().Contain(r =>
+            r.GetProperty("profession").GetString() == "FilterMatch");
+    }
+
+    [Fact]
+    public async Task DeleteRoommate_RemovesProfileFromCachedList()
+    {
+        var user   = await Data.CreateUserAsync("rm-cacheinv@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        // Create through the API so the list cache is invalidated for the create too
+        var create = await new CreateRoommateEndpoint(client).CallAsync(new { Bio = "Cache test profil.", Profession = "CacheTest" });
+        create.StatusCode.Should().Be(HttpStatusCode.OK);
+        var roommateId = (await create.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("roommateId").GetInt32();
+
+        // Warm the list cache — the profile must be present
+        var warm = await new GetAllRoommatesEndpoint(HttpClient).CallAsync();
+        warm.StatusCode.Should().Be(HttpStatusCode.OK);
+        var warmBody  = await warm.Content.ReadFromJsonAsync<JsonElement>();
+        var warmItems = warmBody.ValueKind == JsonValueKind.Array ? warmBody : warmBody.GetProperty("items");
+        warmItems.EnumerateArray().Should().Contain(r =>
+            r.GetProperty("roommateId").GetInt32() == roommateId);
+
+        (await new DeleteRoommateEndpoint(client).CallAsync(roommateId))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Deleted profile must disappear immediately (no stale 2–5 min cache)
+        var after = await new GetAllRoommatesEndpoint(HttpClient).CallAsync();
+        after.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterBody  = await after.Content.ReadFromJsonAsync<JsonElement>();
+        var afterItems = afterBody.ValueKind == JsonValueKind.Array ? afterBody : afterBody.GetProperty("items");
+        afterItems.EnumerateArray().Should().NotContain(r =>
+            r.GetProperty("roommateId").GetInt32() == roommateId);
     }
 }

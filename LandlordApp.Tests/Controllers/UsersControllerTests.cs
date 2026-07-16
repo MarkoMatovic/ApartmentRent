@@ -50,7 +50,7 @@ public class UsersControllerTests : IDisposable
         _tokenProvider = new TokenProvider(cfg, _usersContext);
         _refreshTokenService = new RefreshTokenService(_usersContext);
 
-        _controller = new UsersController(_mockUserService.Object, _tokenProvider, _usersContext, _refreshTokenService);
+        _controller = new UsersController(_mockUserService.Object, _tokenProvider, _refreshTokenService);
         _controller.ControllerContext = MakeAuthContext(TestUserId, TestGuid);
     }
 

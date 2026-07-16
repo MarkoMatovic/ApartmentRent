@@ -175,6 +175,9 @@ namespace Lander.Migrations.Users
                     b.Property<bool>("AnalyticsConsent")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("AnalyticsUntil")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("ChatHistoryConsent")
                         .HasColumnType("bit");
 
@@ -197,6 +200,9 @@ namespace Lander.Migrations.Users
                     b.Property<string>("EmailVerificationToken")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("EmailVerificationTokenExpiry")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("EmailVerifiedAt")
                         .HasColumnType("datetime2");

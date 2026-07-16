@@ -27,7 +27,7 @@ public class NotificationStreamServiceTests
         // Start streaming (creates the channel) — run in background so we don't block
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var _ in service.StreamNotificationsAsync(1, cts.Token)) { }
+            await foreach (var _ in service.StreamNotificationsAsync(1, "test-conn", cts.Token)) { }
         });
 
         // Give time for the channel to be registered
@@ -47,7 +47,7 @@ public class NotificationStreamServiceTests
 
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var _ in service.StreamNotificationsAsync(1, cts.Token)) { }
+            await foreach (var _ in service.StreamNotificationsAsync(1, "test-conn", cts.Token)) { }
         });
 
         await Task.Delay(50);
@@ -82,7 +82,7 @@ public class NotificationStreamServiceTests
 
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var n in service.StreamNotificationsAsync(1, cts.Token))
+            await foreach (var n in service.StreamNotificationsAsync(1, "test-conn", cts.Token))
             {
                 received.Add(n);
                 cts.Cancel(); // cancel after first message
@@ -111,7 +111,7 @@ public class NotificationStreamServiceTests
 
         var streamTask = Task.Run(async () =>
         {
-            await foreach (var n in service.StreamNotificationsAsync(userId: 1, cts.Token))
+            await foreach (var n in service.StreamNotificationsAsync(userId: 1, connectionId: "test-conn", cts.Token))
                 received.Add(n);
         });
 
@@ -152,7 +152,7 @@ public class NotificationStreamServiceTests
 
         var task1 = Task.Run(async () =>
         {
-            await foreach (var n in service.StreamNotificationsAsync(1, cts1.Token))
+            await foreach (var n in service.StreamNotificationsAsync(1, "test-conn-1", cts1.Token))
             {
                 received1.Add(n);
                 cts1.Cancel();
@@ -161,7 +161,7 @@ public class NotificationStreamServiceTests
 
         var task2 = Task.Run(async () =>
         {
-            await foreach (var n in service.StreamNotificationsAsync(2, cts2.Token))
+            await foreach (var n in service.StreamNotificationsAsync(2, "test-conn-2", cts2.Token))
             {
                 received2.Add(n);
                 cts2.Cancel();

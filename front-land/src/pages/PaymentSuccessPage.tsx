@@ -2,34 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Container, Typography, Paper, Button, Box, CircularProgress, Alert } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '../shared/api/auth';
 import { useAuth } from '../shared/context/AuthContext';
 import { setAccessToken } from '../shared/api/tokenStore';
 
-/** Infer a friendly description from the Monri order_number query param. */
-const getSuccessMessage = (orderNumber: string | null): { title: string; body: string; primaryPath: string; primaryLabel: string } => {
-    if (!orderNumber) return { title: 'Plaćanje uspešno!', body: 'Vaša usluga je aktivirana.', primaryPath: '/moje-pretplate', primaryLabel: 'Moje pretplate' };
-
-    const parts = orderNumber.split('_');
-    const planId = parts[1] ?? '';
-
-    if (planId.startsWith('analytics'))
-        return { title: 'Analitika aktivirana!', body: 'Pristup naprednoj analitici i ML predviđanju cena je sada aktivan.', primaryPath: '/analytics/roommate', primaryLabel: 'Otvori analitiku' };
-    if (planId.startsWith('tokens'))
-        return { title: 'Tokeni dodati!', body: 'Tokeni su dodati na vaš balans. Koristite ih za Super-Like i direktne poruke.', primaryPath: '/roommates', primaryLabel: 'Pronađi cimere' };
-    if (planId.startsWith('featured'))
-        return { title: 'Oglas istaknut!', body: 'Vaš oglas će se prikazivati na vrhu pretrage dok je istaknuće aktivno.', primaryPath: '/my-apartments', primaryLabel: 'Moji oglasi' };
-    if (planId.startsWith('listing'))
-        return { title: 'Listing krediti dodati!', body: 'Možete objaviti nove oglase koristeći kupljene kredite.', primaryPath: '/apartments/create', primaryLabel: 'Objavi oglas' };
-    if (planId === 'boost-7')
-        return { title: 'Boost aktiviran!', body: 'Vaš profil cimera prikazuje se prvi u rezultatima pretrage narednih 7 dana.', primaryPath: '/roommates', primaryLabel: 'Pregled profila' };
-    if (planId === 'priority-30')
-        return { title: 'Priority Inbox aktiviran!', body: 'Poruke od verifikovanih korisnika biće označene prioritetom narednih 30 dana.', primaryPath: '/messages', primaryLabel: 'Poruke' };
-
-    return { title: 'Plaćanje uspešno!', body: 'Vaša usluga je aktivirana.', primaryPath: '/moje-pretplate', primaryLabel: 'Moje pretplate' };
-};
-
 const PaymentSuccessPage: React.FC = () => {
+    const { t } = useTranslation('payments');
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { updateUser } = useAuth();
@@ -37,18 +16,35 @@ const PaymentSuccessPage: React.FC = () => {
     const [refreshFailed, setRefreshFailed] = useState(false);
 
     const orderNumber = searchParams.get('order_number');
-    const { title, body, primaryPath, primaryLabel } = getSuccessMessage(orderNumber);
+
+    const getSuccessContent = (): { title: string; body: string; primaryPath: string; primaryLabel: string } => {
+        if (!orderNumber) return { title: t('successDefault_title'), body: t('successDefault_body'), primaryPath: '/moje-pretplate', primaryLabel: t('btnSubscriptions') };
+
+        const planId = orderNumber.split('_')[1] ?? '';
+
+        if (planId.startsWith('analytics'))
+            return { title: t('successAnalytics_title'), body: t('successAnalytics_body'), primaryPath: '/analytics/roommate', primaryLabel: t('successAnalytics_btn') };
+        if (planId.startsWith('tokens'))
+            return { title: t('successTokens_title'), body: t('successTokens_body'), primaryPath: '/roommates', primaryLabel: t('successTokens_btn') };
+        if (planId.startsWith('featured'))
+            return { title: t('successFeatured_title'), body: t('successFeatured_body'), primaryPath: '/my-apartments', primaryLabel: t('successFeatured_btn') };
+        if (planId.startsWith('listing'))
+            return { title: t('successListing_title'), body: t('successListing_body'), primaryPath: '/apartments/create', primaryLabel: t('successListing_btn') };
+        if (planId === 'boost-7')
+            return { title: t('successBoost_title'), body: t('successBoost_body'), primaryPath: '/roommates', primaryLabel: t('successBoost_btn') };
+        if (planId === 'priority-30')
+            return { title: t('successPriority_title'), body: t('successPriority_body'), primaryPath: '/messages', primaryLabel: t('successPriority_btn') };
+
+        return { title: t('successDefault_title'), body: t('successDefault_body'), primaryPath: '/moje-pretplate', primaryLabel: t('btnSubscriptions') };
+    };
 
     useEffect(() => {
         const refreshSession = async () => {
             try {
-                // Rotate tokens so JWT reflects updated role/tokenBalance
                 const tokens = await authApi.rotateTokens();
                 if (tokens?.accessToken) {
-                    // Keep access token in memory only — never write to sessionStorage (XSS risk).
                     setAccessToken(tokens.accessToken);
                     window.dispatchEvent(new Event('authTokenChanged'));
-                    // Decode and push updated user into AuthContext without a full page reload
                     const parts = tokens.accessToken.split('.');
                     if (parts.length === 3) {
                         const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
@@ -71,7 +67,6 @@ const PaymentSuccessPage: React.FC = () => {
                     }
                 }
             } catch {
-                // Monri webhook may not have fired yet — user can refresh manually
                 setRefreshFailed(true);
             } finally {
                 setRefreshing(false);
@@ -85,10 +80,12 @@ const PaymentSuccessPage: React.FC = () => {
         return (
             <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
                 <CircularProgress />
-                <Typography sx={{ mt: 2 }}>Aktiviramo vašu uslugu...</Typography>
+                <Typography sx={{ mt: 2 }}>{t('activating')}</Typography>
             </Container>
         );
     }
+
+    const { title, body, primaryPath, primaryLabel } = getSuccessContent();
 
     return (
         <Container maxWidth="sm" sx={{ py: 8 }}>
@@ -98,8 +95,7 @@ const PaymentSuccessPage: React.FC = () => {
 
                 {refreshFailed ? (
                     <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
-                        Usluga je aktivirana ali nismo uspeli automatski osvežiti sesiju.
-                        Odjavite se i ponovo prijavite da vidite promjene.
+                        {t('sessionRefreshFailed')}
                     </Alert>
                 ) : (
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
@@ -109,7 +105,7 @@ const PaymentSuccessPage: React.FC = () => {
 
                 {orderNumber && (
                     <Typography variant="caption" color="text.disabled" display="block" sx={{ mb: 3 }}>
-                        Br. narudžbine: {orderNumber}
+                        {t('orderRef')}: {orderNumber}
                     </Typography>
                 )}
 
@@ -118,10 +114,10 @@ const PaymentSuccessPage: React.FC = () => {
                         {primaryLabel}
                     </Button>
                     <Button variant="outlined" onClick={() => navigate('/moje-pretplate')}>
-                        Moje pretplate
+                        {t('btnSubscriptions')}
                     </Button>
                     <Button variant="outlined" onClick={() => navigate('/istorija-placanja')}>
-                        Istorija plaćanja
+                        {t('btnPaymentHistory')}
                     </Button>
                 </Box>
             </Paper>

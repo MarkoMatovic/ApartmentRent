@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Box } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 // Fix for default marker icon — Leaflet's _getIconUrl is an internal property
 // not exposed in the type definitions; the cast is intentional and unavoidable.
@@ -27,6 +28,8 @@ const ApartmentMap: React.FC<ApartmentMapProps> = ({
   address,
   height = '400px',
 }) => {
+  const { t } = useTranslation('common');
+
   return (
     <Box sx={{ width: '100%', height, borderRadius: 2, overflow: 'hidden' }}>
       <MapContainer
@@ -40,7 +43,7 @@ const ApartmentMap: React.FC<ApartmentMapProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Marker position={[latitude, longitude]}>
-          <Popup>{address || 'Apartment Location'}</Popup>
+          <Popup>{address || t('apartmentLocation')}</Popup>
         </Marker>
       </MapContainer>
     </Box>

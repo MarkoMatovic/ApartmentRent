@@ -28,8 +28,9 @@ public interface IMessageService
     // Conversation management
     Task DeleteConversationAsync(int userId, int otherUserId);
     
-    // File upload
+    // File upload / download
     Task<string> UploadFileAsync(IFormFile file, int userId);
+    Task<bool> IsFileAccessibleAsync(string filename, int userId);
     
     // Search
     Task<List<MessageDto>> SearchMessagesAsync(int userId, string query);

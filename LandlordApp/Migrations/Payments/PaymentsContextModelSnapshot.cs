@@ -22,7 +22,7 @@ namespace Lander.Migrations.Payments
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Lander.src.Modules.Payments.Models.ProcessedMonriOrder", b =>
+            modelBuilder.Entity("Lander.src.Modules.Payments.Models.ProcessedOrder", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

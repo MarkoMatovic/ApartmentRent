@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:api": "openapi-typescript openapi/swagger.json -o src/shared/api/schema.d.ts",
+    "gen:api:fetch": "curl -sf -o openapi/swagger.json http://localhost:5197/swagger/v1/swagger.json && npm run gen:api"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -42,6 +44,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
     "vite-plugin-pwa": "^1.2.0"

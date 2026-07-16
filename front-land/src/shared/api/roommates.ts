@@ -27,6 +27,21 @@ export interface RoommateInputDto {
   musicFriendly?: boolean;
 }
 
+// The backend serializes enums as string names (JsonStringEnumConverter),
+// while our types use numeric values — normalize on every read.
+const GENDER_NAMES = ['PreferNotToSay', 'Male', 'Female', 'NonBinary', 'Other'];
+const SCHEDULE_NAMES = ['Flexible', 'Morning', 'Evening', 'Night'];
+
+const normalizeRoommate = (r: Roommate): Roommate => ({
+  ...r,
+  gender: typeof r.gender === 'string'
+    ? (Math.max(0, GENDER_NAMES.indexOf(r.gender)) as Roommate['gender'])
+    : r.gender,
+  workSchedule: typeof r.workSchedule === 'string'
+    ? (Math.max(0, SCHEDULE_NAMES.indexOf(r.workSchedule)) as Roommate['workSchedule'])
+    : r.workSchedule,
+});
+
 export const roommatesApi = {
   getAll: async (filters?: RoommateFilters): Promise<Roommate[]> => {
     const params: Record<string, any> = {};
@@ -44,27 +59,28 @@ export const roommatesApi = {
     if (filters?.gender !== undefined)       params.gender = filters.gender;
 
     const response = await apiClient.get<any>(`/api/v1/roommates/get-all-roommates`, { params });
-    return Array.isArray(response.data) ? response.data : (response.data?.items ?? []);
+    const items: Roommate[] = Array.isArray(response.data) ? response.data : (response.data?.items ?? []);
+    return items.map(normalizeRoommate);
   },
 
   getById: async (id: number): Promise<Roommate> => {
     const response = await apiClient.get<Roommate>(`/api/v1/roommates/get-roommate`, { params: { id } });
-    return response.data;
+    return normalizeRoommate(response.data);
   },
 
   getByUserId: async (userId: number): Promise<Roommate> => {
     const response = await apiClient.get<Roommate>(`/api/v1/roommates/get-roommate-by-user-id`, { params: { userId } });
-    return response.data;
+    return normalizeRoommate(response.data);
   },
 
   create: async (data: RoommateInputDto): Promise<Roommate> => {
     const response = await apiClient.post<Roommate>(`/api/v1/roommates/create-roommate`, data);
-    return response.data;
+    return normalizeRoommate(response.data);
   },
 
   update: async (id: number, data: RoommateInputDto): Promise<Roommate> => {
     const response = await apiClient.put<Roommate>(`/api/v1/roommates/update-roommate/${id}`, data);
-    return response.data;
+    return normalizeRoommate(response.data);
   },
 
   delete: async (id: number): Promise<void> => {

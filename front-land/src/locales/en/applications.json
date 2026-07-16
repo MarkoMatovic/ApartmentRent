@@ -1,0 +1,21 @@
+{
+  "applyTitle": "Apply for {{title}}",
+  "applyConfirm": "Are you sure you want to apply for this apartment? The landlord will be notified immediately.",
+  "priorityApplication": "Priority Application",
+  "priorityDesc": "Your application appears at the top of the landlord's list.",
+  "premium": "Premium",
+  "cancel": "Cancel",
+  "sending": "Sending...",
+  "sendPriority": "Send Priority Application",
+  "confirmApplication": "Confirm Application",
+  "applicationSent": "Application Sent",
+  "priorityApplicationSent": "Priority Application Sent",
+  "applicationSuccess": "Successfully applied for {{title}}{{priority}}",
+  "applicationError": "Failed to apply. Please try again.",
+  "rejectedTitle": "Application Not Approved",
+  "rejectedBody": "Your application for \"{{title}}\" has been rejected by the landlord.",
+  "keepApartmentQuestion": "Would you like to keep this apartment in your search results?",
+  "removeApartment": "No, remove it",
+  "keepApartment": "Yes, keep it",
+  "prioritySuffix": " (Priority)"
+}

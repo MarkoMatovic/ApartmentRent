@@ -6,6 +6,7 @@ using Lander.src.Modules.Analytics.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Lander.src.Modules.Analytics.Controllers;
 
@@ -16,6 +17,14 @@ public class AnalyticsController : ApiControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
 
+    // Only these event types may be recorded. Without a whitelist a bot can pump the
+    // analytics table with arbitrary event types (storage cost + skewing "top viewed").
+    private static readonly HashSet<string> AllowedEventTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ApartmentView", "RoommateView", "ApartmentSearch", "RoommateSearch",
+        "ContactClick", "MessageSent",
+    };
+
     public AnalyticsController(
         IAnalyticsService analyticsService,
         IUserInterface userService) : base(userService)
@@ -25,8 +34,12 @@ public class AnalyticsController : ApiControllerBase
 
     [HttpPost(ApiActionsV1.TrackEvent, Name = nameof(ApiActionsV1.TrackEvent))]
     [AllowAnonymous] // Views must be tracked for both logged-in and anonymous visitors
+    [EnableRateLimiting("analytics-track")]
     public async Task<IActionResult> TrackEvent([FromBody] TrackEventInputDto input)
     {
+        if (string.IsNullOrWhiteSpace(input.EventType) || !AllowedEventTypes.Contains(input.EventType))
+            return BadRequest(new { error = "Unsupported event type." });
+
         await _analyticsService.TrackEventAsync(
             input.EventType, input.EventCategory,
             input.EntityId, input.EntityType,

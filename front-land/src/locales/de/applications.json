@@ -1,0 +1,21 @@
+{
+  "applyTitle": "Bewerben für {{title}}",
+  "applyConfirm": "Möchten Sie sich wirklich für diese Wohnung bewerben? Der Vermieter wird sofort benachrichtigt.",
+  "priorityApplication": "Prioritätsbewerbung",
+  "priorityDesc": "Ihre Bewerbung erscheint ganz oben in der Liste des Vermieters.",
+  "premium": "Premium",
+  "cancel": "Abbrechen",
+  "sending": "Wird gesendet...",
+  "sendPriority": "Prioritätsbewerbung senden",
+  "confirmApplication": "Bewerbung bestätigen",
+  "applicationSent": "Bewerbung gesendet",
+  "priorityApplicationSent": "Prioritätsbewerbung gesendet",
+  "applicationSuccess": "Erfolgreich beworben für {{title}}{{priority}}",
+  "applicationError": "Bewerbung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+  "rejectedTitle": "Bewerbung nicht genehmigt",
+  "rejectedBody": "Ihre Bewerbung für \"{{title}}\" wurde vom Vermieter abgelehnt.",
+  "keepApartmentQuestion": "Möchten Sie diese Wohnung in Ihren Suchergebnissen behalten?",
+  "removeApartment": "Nein, entfernen",
+  "keepApartment": "Ja, behalten",
+  "prioritySuffix": " (Priorität)"
+}

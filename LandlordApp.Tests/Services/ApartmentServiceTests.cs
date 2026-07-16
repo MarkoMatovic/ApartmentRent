@@ -151,7 +151,8 @@ public class ApartmentServiceTests : IDisposable
             new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
-            new Mock<IConfiguration>().Object
+            new ConfigurationBuilder().Build(),
+            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object
         );
     }
 
@@ -218,7 +219,7 @@ public class ApartmentServiceTests : IDisposable
             PostalCode = "11000",
             NumberOfRooms = 2,
             SizeSquareMeters = 60,
-            ApartmentType = ApartmentType.TwoBedroom,
+            ApartmentType = ApartmentType.TwoRoom,
             ListingType = ListingType.Rent,
             IsFurnished = true,
             HasBalcony = true,
@@ -267,7 +268,7 @@ public class ApartmentServiceTests : IDisposable
             .FirstOrDefaultAsync(a => a.ApartmentId == result.ApartmentId);
         apartmentInDb.Should().NotBeNull();
         apartmentInDb!.ApartmentImages.Should().HaveCount(3);
-        apartmentInDb.ApartmentImages.Should().Contain(img => img.ImageUrl == "image1.jpg");
+        apartmentInDb.ApartmentImages.Should().Contain(img => img.BlobPath == "image1.jpg");
     }
 
     [Fact]
@@ -424,7 +425,7 @@ public class ApartmentServiceTests : IDisposable
         var studio = await CreateTestApartment("Studio Apartment", 1000);
         studio.ApartmentType = ApartmentType.Studio;
         var room = await CreateTestApartment("Single Room", 500);
-        room.ApartmentType = ApartmentType.Room;
+        room.ApartmentType = ApartmentType.ThreeRoom;
         await _context.SaveChangesAsync();
 
         // Act
@@ -743,8 +744,8 @@ public class ApartmentServiceTests : IDisposable
         // Act
         var act = async () => await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId, updateDto);
 
-        // Assert
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        // Assert — authenticated non-owner maps to 403 (ForbiddenException)
+        await act.Should().ThrowAsync<Lander.src.Common.Exceptions.ForbiddenException>();
     }
 
     #endregion
@@ -791,8 +792,8 @@ public class ApartmentServiceTests : IDisposable
         // Act
         var act = async () => await _apartmentService.DeleteApartmentAsync(apartment.ApartmentId);
 
-        // Assert
-        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+        // Assert — authenticated non-owner maps to 403 (ForbiddenException)
+        await act.Should().ThrowAsync<Lander.src.Common.Exceptions.ForbiddenException>();
     }
 
     [Fact]
@@ -821,7 +822,9 @@ public class ApartmentServiceTests : IDisposable
             UserId = notifiedUser.UserId,
             Name = "My saved search",
             SearchType = "apartment",
-            FiltersJson = JsonSerializer.Serialize(new { ApartmentId = apartment.ApartmentId }),
+            // camelCase key — matches what the frontend stores and what
+            // ApartmentNotificationService searches for ("apartmentId":N)
+            FiltersJson = $"{{\"apartmentId\":{apartment.ApartmentId}}}",
             EmailNotificationsEnabled = true,
             IsActive = true,
             CreatedDate = DateTime.UtcNow
@@ -866,7 +869,9 @@ public class ApartmentServiceTests : IDisposable
             UserId = silentUser.UserId,
             Name = "Disabled notifications search",
             SearchType = "apartment",
-            FiltersJson = JsonSerializer.Serialize(new { ApartmentId = apartment.ApartmentId }),
+            // camelCase key — matches what the frontend stores and what
+            // ApartmentNotificationService searches for ("apartmentId":N)
+            FiltersJson = $"{{\"apartmentId\":{apartment.ApartmentId}}}",
             EmailNotificationsEnabled = false, // disabled
             IsActive = true,
             CreatedDate = DateTime.UtcNow
@@ -960,7 +965,7 @@ public class ApartmentServiceTests : IDisposable
             CreatedDate = DateTime.UtcNow,
             IsActive = true,
             IsDeleted = false,
-            ApartmentType = ApartmentType.OneBedroom,
+            ApartmentType = ApartmentType.OneRoom,
             ListingType = ListingType.Rent
         };
         _context.Apartments.Add(otherApartment);
@@ -991,7 +996,7 @@ public class ApartmentServiceTests : IDisposable
             CreatedDate = DateTime.UtcNow,
             IsActive = true,
             IsDeleted = false,
-            ApartmentType = ApartmentType.OneBedroom,
+            ApartmentType = ApartmentType.OneRoom,
             ListingType = ListingType.Rent
         };
 

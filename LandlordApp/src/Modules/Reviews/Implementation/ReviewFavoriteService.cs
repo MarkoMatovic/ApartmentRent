@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using Google.Protobuf.WellKnownTypes;
 using Lander.Helpers;
 using Grpc.Core;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.Reviews.Implementation;
@@ -21,6 +23,16 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
     {
         _context = context;
     }
+
+    /// <summary>
+    /// Resolves the caller's identity from the authenticated JWT ("sub" claim) rather than
+    /// any client-supplied field. Ownership checks MUST use this — trusting a guid carried
+    /// in the request lets any authenticated caller delete another user's data.
+    /// </summary>
+    // Null-safe: a missing call context means an unauthenticated caller,
+    // which callers translate into an "Unauthorized" response.
+    private static string? GetAuthenticatedUserGuid(ServerCallContext? context)
+        => context?.GetHttpContext()?.User?.FindFirstValue("sub");
     public override async Task<FavoriteResponse> CreateFavorite(CreateFavoriteRequest request, ServerCallContext context)
     {
         if (!Guid.TryParse(request.CreatedByGuid, out var favGuid))
@@ -215,7 +227,8 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             };
         }
 
-        if (review.CreatedByGuid?.ToString() != request.RequestUserGuid)
+        var callerGuid = GetAuthenticatedUserGuid(context);
+        if (string.IsNullOrEmpty(callerGuid) || review.CreatedByGuid?.ToString() != callerGuid)
         {
             return new DeleteResponse
             {
@@ -246,7 +259,8 @@ public class ReviewFavoriteService : ReviewFavoriteGrpcService.ReviewFavoriteGrp
             };
         }
 
-        if (favorite.CreatedByGuid?.ToString() != request.RequestUserGuid)
+        var callerGuid = GetAuthenticatedUserGuid(context);
+        if (string.IsNullOrEmpty(callerGuid) || favorite.CreatedByGuid?.ToString() != callerGuid)
         {
             return new DeleteResponse
             {

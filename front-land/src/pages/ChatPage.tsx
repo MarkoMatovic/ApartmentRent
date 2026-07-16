@@ -88,34 +88,31 @@ const ChatPage: React.FC = () => {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!loading && targetUserIdParam) {
-      const targetId = Number(targetUserIdParam);
+    if (loading || !targetUserIdParam) return;
+    const targetId = Number(targetUserIdParam);
+    if (isNaN(targetId)) return;
 
-      if (!isNaN(targetId)) {
-        // Ako konverzacije nisu učitane, učitaj ih prvo
-        if (conversations.length === 0) {
-          messagesApi.getUserConversations(currentUserId).then((conversationsData) => {
-            setConversations(conversationsData);
-            const existing = conversationsData.find(c => c.otherUserId === targetId);
-            if (existing) {
-              setSelectedConversation(existing);
-              loadMessages(existing);
-            } else {
-              loadUserInfoAndCreateConversation(targetId);
-            }
-          });
-        } else {
-          const existing = conversations.find(c => c.otherUserId === targetId);
-          if (existing) {
-            setSelectedConversation(existing);
-            loadMessages(existing);
-          } else {
-            loadUserInfoAndCreateConversation(targetId);
-          }
-        }
+    // IMPORTANT: do NOT depend on `conversations` here. This effect calls
+    // setConversations, so including `conversations` in the deps created an
+    // infinite fetch → setState → re-run loop whenever the target user had no
+    // existing conversation (e.g. messaging someone for the first time). That
+    // loop fired hundreds of requests/minute and tripped the server rate limit
+    // (429 on send/unread-count). Fetch fresh once per target/auth change instead.
+    let cancelled = false;
+    messagesApi.getUserConversations(currentUserId).then((conversationsData) => {
+      if (cancelled) return;
+      setConversations(conversationsData);
+      const existing = conversationsData.find(c => c.otherUserId === targetId);
+      if (existing) {
+        setSelectedConversation(existing);
+        loadMessages(existing);
+      } else {
+        loadUserInfoAndCreateConversation(targetId);
       }
-    }
-  }, [targetUserIdParam, conversations, loading, currentUserId]);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUserIdParam, loading, currentUserId]);
 
   useEffect(() => {
     if (newMessage) {
@@ -178,7 +175,7 @@ const ChatPage: React.FC = () => {
       }
 
       // Ako ne postoji, pokušaj da dohvatiš korisnika direktno
-      const response = await apiClient.get(`/api/v1/users/${userId}`);
+      const response = await apiClient.get(`/api/v1/auth/profile/${userId}`);
       const userData = response.data;
       const newConv: ConversationDto = {
         otherUserId: userId,
@@ -207,7 +204,7 @@ const ChatPage: React.FC = () => {
           // Fallback - koristi userId kao ime samo ako stvarno ne postoji
           const newConv: ConversationDto = {
             otherUserId: userId,
-            otherUserName: `User ${userId}`,
+            otherUserName: t('unknownUser', 'Korisnik'),
             unreadCount: 0
           };
           setSelectedConversation(newConv);
@@ -223,7 +220,7 @@ const ChatPage: React.FC = () => {
         // Apsolutni fallback
         const newConv: ConversationDto = {
           otherUserId: userId,
-          otherUserName: `User ${userId}`,
+          otherUserName: t('unknownUser', 'Korisnik'),
           unreadCount: 0
         };
         setSelectedConversation(newConv);

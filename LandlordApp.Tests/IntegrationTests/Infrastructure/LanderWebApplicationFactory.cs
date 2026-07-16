@@ -34,8 +34,10 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"]                        = TestJwtGenerator.TestIssuer,
                 ["Jwt:Audience"]                      = TestJwtGenerator.TestAudience,
                 ["Brevo:ApiKey"]                      = "test-brevo-key",
-                ["Monri:AuthenticityToken"]           = "test-auth-token",
-                ["Monri:MerchantKey"]                 = "test-merchant-key",
+                // BrevoSettings has [Required] members validated on startup
+                // outside Development/E2eTesting environments
+                ["Brevo:SenderEmail"]                 = "test@landlander.test",
+                ["Brevo:SenderName"]                  = "Landlander Test",
                 ["ConnectionStrings:DefaultConnection"] = "test-not-used",
                 ["GrpcServerUrl"]                     = "http://localhost:9999",
                 ["Redis:Configuration"]               = "",  // empty → skip Redis
@@ -79,9 +81,13 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
 
     private void SwapToInMemory<TContext>(IServiceCollection services) where TContext : DbContext
     {
-        // Remove the real (SQL Server) options descriptor; AddDbContext re-adds an InMemory one
+        // Remove the real (SQL Server) options descriptor; AddDbContext re-adds an InMemory one.
+        // Since EF Core 8 the configuration action is registered separately as
+        // IDbContextOptionsConfiguration<TContext> — it must be removed too, otherwise
+        // both providers end up registered and the context refuses to initialize.
         var existing = services
-            .Where(d => d.ServiceType == typeof(DbContextOptions<TContext>))
+            .Where(d => d.ServiceType == typeof(DbContextOptions<TContext>)
+                     || d.ServiceType == typeof(Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<TContext>))
             .ToList();
         foreach (var d in existing) services.Remove(d);
 
@@ -117,6 +123,7 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
         public Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason) => Task.FromResult(true);
         public Task<bool> SendEmailVerificationAsync(string to, string userName, string verificationLink) => Task.FromResult(true);
         public Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink) => Task.FromResult(true);
+        public Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur) => Task.FromResult(true);
     }
 
     private sealed class NoopGrpcServiceClient : IGrpcServiceClient

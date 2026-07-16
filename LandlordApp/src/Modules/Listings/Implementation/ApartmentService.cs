@@ -31,6 +31,7 @@ public partial class ApartmentService : IApartmentService
     private readonly IAnalyticsService _analyticsService;
     private readonly IOutputCacheStore _outputCacheStore;
     private readonly IConfiguration _configuration;
+    private readonly Lander.src.Infrastructure.FileStorage.IImageUrlBuilder _imageUrlBuilder;
 
     public ApartmentService(
         ListingsContext context,
@@ -47,7 +48,8 @@ public partial class ApartmentService : IApartmentService
         IAuditLogService auditLog,
         IAnalyticsService analyticsService,
         IOutputCacheStore outputCacheStore,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        Lander.src.Infrastructure.FileStorage.IImageUrlBuilder imageUrlBuilder)
     {
         _context = context;
         _reviewStats = reviewStats;
@@ -64,5 +66,6 @@ public partial class ApartmentService : IApartmentService
         _analyticsService = analyticsService;
         _outputCacheStore = outputCacheStore;
         _configuration = configuration;
+        _imageUrlBuilder = imageUrlBuilder;
     }
 }

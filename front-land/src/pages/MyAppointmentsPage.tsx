@@ -37,7 +37,8 @@ const MyAppointmentsPage: React.FC = () => {
     });
 
     const getStatusColor = (status: AppointmentStatus) => {
-        switch (status) {
+        const s = typeof status === 'string' ? AppointmentStatus[status as keyof typeof AppointmentStatus] : status;
+        switch (s) {
             case AppointmentStatus.Confirmed:
                 return 'success';
             case AppointmentStatus.Pending:
@@ -53,8 +54,8 @@ const MyAppointmentsPage: React.FC = () => {
     };
 
     const getStatusLabel = (status: AppointmentStatus) => {
-        const statusKey = AppointmentStatus[status].toLowerCase();
-        return t(`apartments:status.${statusKey}`, { defaultValue: AppointmentStatus[status] });
+        const statusName = typeof status === 'string' ? status : AppointmentStatus[status];
+        return t(`apartments:status.${statusName.toLowerCase()}`, { defaultValue: statusName });
     };
 
     if (isLoading) {

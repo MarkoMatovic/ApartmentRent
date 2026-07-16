@@ -19,7 +19,7 @@ const FooterLink: React.FC<{ to: string; children: React.ReactNode }> = ({ to, c
 );
 
 const Footer: React.FC = () => {
-  const { t } = useTranslation(['common', 'footer']);
+  const { t } = useTranslation(['common', 'footer', 'payments']);
 
   return (
     <Box
@@ -29,29 +29,28 @@ const Footer: React.FC = () => {
       <Container maxWidth="lg">
         {/* Main navigation links */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: { xs: 2, sm: 4 }, mb: 3 }}>
-          <FooterLink to="/support">{t('footer:support', 'Podrška')}</FooterLink>
-          <FooterLink to="/pricing">{t('footer:pricing', 'Cenovnik')}</FooterLink>
-          <FooterLink to="/moje-pretplate">Moje pretplate</FooterLink>
-          <FooterLink to="/istorija-placanja">Istorija plaćanja</FooterLink>
+          <FooterLink to="/support">{t('footer:support')}</FooterLink>
+          <FooterLink to="/pricing">{t('footer:pricing')}</FooterLink>
+          <FooterLink to="/moje-pretplate">{t('payments:btnSubscriptions')}</FooterLink>
+          <FooterLink to="/istorija-placanja">{t('payments:historyTitle')}</FooterLink>
         </Box>
 
         <Divider sx={{ mb: 3 }} />
 
         {/* Legal links — required by ZET and ZZPL */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: { xs: 1.5, sm: 3 }, mb: 2 }}>
-          <FooterLink to="/politika-privatnosti">Politika privatnosti</FooterLink>
-          <FooterLink to="/uslovi-koriscenja">Uslovi korišćenja</FooterLink>
-          <FooterLink to="/politika-kolacica">Politika kolačića</FooterLink>
-          <FooterLink to="/politika-povracaja">Politika povraćaja</FooterLink>
+          <FooterLink to="/politika-privatnosti">{t('footer:privacy')}</FooterLink>
+          <FooterLink to="/uslovi-koriscenja">{t('footer:terms')}</FooterLink>
+          <FooterLink to="/politika-kolacica">{t('footer:cookies')}</FooterLink>
+          <FooterLink to="/politika-povracaja">{t('footer:refund')}</FooterLink>
         </Box>
 
         {/* Copyright + legal disclaimer */}
         <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mb: 0.5 }}>
-          © {new Date().getFullYear()} TuRentaj. Sva prava zadržana.
+          © {new Date().getFullYear()} TuRentaj. {t('footer:copyright')}
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-          TuRentaj je oglasna platforma i <strong>ne vrši posredovanje</strong> u prometu i zakupu
-          nepokretnosti (Zakon o posredovanju, Sl. gl. RS 95/2013). Kontakt:{' '}
+          {t('footer:disclaimer')}{' '}
           <Link href="mailto:info@turentaj.com" sx={{ fontSize: 'inherit', color: 'inherit' }}>
             info@turentaj.com
           </Link>

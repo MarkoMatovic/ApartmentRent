@@ -46,39 +46,41 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task CreateAppointment_ArgumentException_ReturnsBadRequest()
+    public async Task CreateAppointment_ArgumentException_PropagatesToMiddleware()
     {
+        // Only UnauthorizedAccessException is handled in the controller —
+        // everything else goes to the global exception middleware.
         var dto = new CreateAppointmentDto { ApartmentId = 10 };
         _mockService.Setup(s => s.CreateAppointmentAsync(dto))
             .ThrowsAsync(new ArgumentException("Slot not available"));
 
-        var result = await _controller.CreateAppointment(dto);
+        var act = () => _controller.CreateAppointment(dto);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("Slot not available");
     }
 
     [Fact]
-    public async Task CreateAppointment_InvalidOperationException_ReturnsConflict()
+    public async Task CreateAppointment_InvalidOperationException_PropagatesToMiddleware()
     {
         var dto = new CreateAppointmentDto { ApartmentId = 10 };
         _mockService.Setup(s => s.CreateAppointmentAsync(dto))
             .ThrowsAsync(new InvalidOperationException("Already booked"));
 
-        var result = await _controller.CreateAppointment(dto);
+        var act = () => _controller.CreateAppointment(dto);
 
-        result.Result.Should().BeOfType<ConflictObjectResult>();
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Already booked");
     }
 
     [Fact]
-    public async Task CreateAppointment_UnexpectedException_Returns500()
+    public async Task CreateAppointment_UnexpectedException_PropagatesToMiddleware()
     {
         var dto = new CreateAppointmentDto { ApartmentId = 10 };
         _mockService.Setup(s => s.CreateAppointmentAsync(dto))
             .ThrowsAsync(new Exception("DB error"));
 
-        var result = await _controller.CreateAppointment(dto);
+        var act = () => _controller.CreateAppointment(dto);
 
-        result.Result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(500);
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
 
     // ─── GetMyAppointments ────────────────────────────────────────────────────
@@ -95,13 +97,13 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task GetMyAppointments_ServiceThrows_Returns500()
+    public async Task GetMyAppointments_ServiceThrows_PropagatesToMiddleware()
     {
         _mockService.Setup(s => s.GetMyAppointmentsAsync()).ThrowsAsync(new Exception("fail"));
 
-        var result = await _controller.GetMyAppointments();
+        var act = () => _controller.GetMyAppointments();
 
-        result.Result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(500);
+        await act.Should().ThrowAsync<Exception>().WithMessage("fail");
     }
 
     // ─── GetLandlordAppointments ──────────────────────────────────────────────
@@ -118,15 +120,14 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task GetLandlordAppointments_ServiceThrows_Returns500()
+    public async Task GetLandlordAppointments_ServiceThrows_PropagatesToMiddleware()
     {
         _mockService.Setup(s => s.GetLandlordAppointmentsAsync())
             .ThrowsAsync(new Exception("DB error"));
 
-        var result = await _controller.GetLandlordAppointments();
+        var act = () => _controller.GetLandlordAppointments();
 
-        result.Result.Should().BeOfType<ObjectResult>()
-            .Which.StatusCode.Should().Be(500);
+        await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
 
     // ─── GetAvailableSlots ────────────────────────────────────────────────────
@@ -143,14 +144,14 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task GetAvailableSlots_ArgumentException_ReturnsBadRequest()
+    public async Task GetAvailableSlots_ArgumentException_PropagatesToMiddleware()
     {
         _mockService.Setup(s => s.GetAvailableSlotsAsync(10, It.IsAny<DateTime>()))
             .ThrowsAsync(new ArgumentException("Apartment not available"));
 
-        var result = await _controller.GetAvailableSlots(10, new DateTime(2026, 6, 15));
+        var act = () => _controller.GetAvailableSlots(10, new DateTime(2026, 6, 15));
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("Apartment not available");
     }
 
     // ─── UpdateAppointmentStatus ──────────────────────────────────────────────
@@ -167,15 +168,15 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task UpdateAppointmentStatus_ArgumentException_ReturnsBadRequest()
+    public async Task UpdateAppointmentStatus_ArgumentException_PropagatesToMiddleware()
     {
         var dto = new UpdateAppointmentStatusDto { Status = AppointmentStatus.Pending };
         _mockService.Setup(s => s.UpdateAppointmentStatusAsync(1, dto))
             .ThrowsAsync(new ArgumentException("Invalid status"));
 
-        var result = await _controller.UpdateAppointmentStatus(1, dto);
+        var act = () => _controller.UpdateAppointmentStatus(1, dto);
 
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("Invalid status");
     }
 
     [Fact]
@@ -203,14 +204,14 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task CancelAppointment_ArgumentException_ReturnsBadRequest()
+    public async Task CancelAppointment_ArgumentException_PropagatesToMiddleware()
     {
         _mockService.Setup(s => s.CancelAppointmentAsync(1))
             .ThrowsAsync(new ArgumentException("Not found"));
 
-        var result = await _controller.CancelAppointment(1);
+        var act = () => _controller.CancelAppointment(1);
 
-        result.Should().BeOfType<BadRequestObjectResult>();
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("Not found");
     }
 
     [Fact]
@@ -260,14 +261,14 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task GetMyAvailability_UnauthorizedAccess_ReturnsUnauthorized()
+    public async Task GetMyAvailability_UnauthorizedAccess_PropagatesToMiddleware()
     {
         _mockService.Setup(s => s.GetMyAvailabilityAsync())
             .ThrowsAsync(new UnauthorizedAccessException("not a landlord"));
 
-        var result = await _controller.GetMyAvailability();
+        var act = () => _controller.GetMyAvailability();
 
-        result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]
@@ -283,15 +284,15 @@ public class AppointmentsControllerTests
     }
 
     [Fact]
-    public async Task SetMyAvailability_UnauthorizedAccess_ReturnsUnauthorized()
+    public async Task SetMyAvailability_UnauthorizedAccess_PropagatesToMiddleware()
     {
         var dto = new SetAvailabilityDto();
         _mockService.Setup(s => s.SetMyAvailabilityAsync(dto))
             .ThrowsAsync(new UnauthorizedAccessException("not a landlord"));
 
-        var result = await _controller.SetMyAvailability(dto);
+        var act = () => _controller.SetMyAvailability(dto);
 
-        result.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

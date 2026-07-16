@@ -23,5 +23,16 @@
         "petFriendly": "Можно с животными",
         "parking": "Парковка",
         "balcony": "Балкон"
-    }
+    },
+    "chips": {
+        "furnished": "Меблирована",
+        "parking": "Парковка",
+        "balcony": "Балкон",
+        "petFriendly": "Можно с животными"
+    },
+    "applySearch": "Применить поиск",
+    "rooms": "комнат",
+    "failedToLoad": "Не удалось загрузить сохраненные поиски",
+    "failedToCreate": "Не удалось создать поиск",
+    "failedToDelete": "Не удалось удалить поиск"
 }

@@ -23,5 +23,16 @@
         "petFriendly": "Pet Friendly",
         "parking": "Parking",
         "balcony": "Balcony"
-    }
+    },
+    "chips": {
+        "furnished": "Furnished",
+        "parking": "Parking",
+        "balcony": "Balcony",
+        "petFriendly": "Pet Friendly"
+    },
+    "applySearch": "Apply Search",
+    "rooms": "rooms",
+    "failedToLoad": "Failed to load saved searches",
+    "failedToCreate": "Failed to create search",
+    "failedToDelete": "Failed to delete search"
 }

@@ -6,5 +6,11 @@
     "errorLoadingMessages": "Fehler beim Laden von Nachrichten",
     "sendMessage": "Nachricht senden",
     "messageSent": "Nachricht gesendet",
-    "conversationWith": "Unterhaltung mit"
+    "conversationWith": "Unterhaltung mit",
+    "noMessagesYet": "Noch keine Nachrichten in dieser Unterhaltung",
+    "superLikePremiumRequired": "Super-Like ist eine Premium-Funktion",
+    "superLikeNoTokens": "Keine Token mehr übrig",
+    "superLikeTooltip": "Super-Like ({{count}} Token verbleibend)",
+    "superLikeActive": "Super-Like · {{count}} Token verbleibend",
+    "priorityMessage": "Prioritätsnachricht — verifizierter Absender"
 }

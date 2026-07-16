@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Link, Paper, Slide } from '@mui/material';
 import CookieIcon from '@mui/icons-material/Cookie';
+import { useTranslation } from 'react-i18next';
 
 const CONSENT_KEY = 'cookieConsent';
 
 const CookieConsentBanner: React.FC = () => {
+  const { t } = useTranslation('common');
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -51,14 +53,12 @@ const CookieConsentBanner: React.FC = () => {
 
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" fontWeight="bold" gutterBottom>
-            Koristimo kolačiće (cookies)
+            {t('cookieTitle')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            TuRentaj koristi isključivo <strong>funkcionalne kolačiće</strong> neophodne za sigurnu
-            autentifikaciju (httpOnly refresh token kolačić). Ne koristimo kolačiće za praćenje ni
-            ciljano oglašavanje.{' '}
+            <span dangerouslySetInnerHTML={{ __html: t('cookieDescription') }} />{' '}
             <Link href="/politika-kolacica" sx={{ whiteSpace: 'nowrap' }}>
-              Saznajte više
+              {t('cookieLearnMore')}
             </Link>
           </Typography>
         </Box>
@@ -70,7 +70,7 @@ const CookieConsentBanner: React.FC = () => {
             onClick={decline}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            Samo neophodni
+            {t('cookieNecessaryOnly')}
           </Button>
           <Button
             variant="contained"
@@ -78,7 +78,7 @@ const CookieConsentBanner: React.FC = () => {
             onClick={accept}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            Prihvatam
+            {t('cookieAccept')}
           </Button>
         </Box>
       </Paper>

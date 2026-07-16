@@ -28,6 +28,8 @@ public abstract class IntegrationTestBase
         {
             AllowAutoRedirect = false,
             HandleCookies = true,
+            // Auth cookies are Secure — the CookieContainer only sends them over https
+            BaseAddress = new Uri("https://localhost"),
         });
 
     protected HttpClient CreateAuthenticatedClient(int userId, Guid userGuid, string role = "Tenant")
@@ -36,6 +38,7 @@ public abstract class IntegrationTestBase
         {
             AllowAutoRedirect = false,
             HandleCookies = true,
+            BaseAddress = new Uri("https://localhost"),
         });
         var token = TestJwtGenerator.Generate(userId, userGuid, role);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -85,7 +88,7 @@ public abstract class IntegrationTestBase
     }
 
     /// <summary>Seed an apartment owned by the given landlord. Returns the saved entity.</summary>
-    protected async Task<Apartment> SeedApartmentAsync(int landlordId, string title = "Test Apartment")
+    protected async Task<Apartment> SeedApartmentAsync(int landlordId, string title = "Test Apartment", string city = "Sarajevo")
     {
         using var scope = CreateScope();
         var ctx = scope.ServiceProvider.GetRequiredService<ListingsContext>();
@@ -96,7 +99,7 @@ public abstract class IntegrationTestBase
             Title      = title,
             Rent       = 500,
             Address    = "Testna 1",
-            City       = "Sarajevo",
+            City       = city,
             IsActive   = true,
             IsDeleted  = false,
         };

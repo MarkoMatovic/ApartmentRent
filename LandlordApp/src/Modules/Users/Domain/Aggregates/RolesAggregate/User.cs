@@ -34,6 +34,8 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public int ListingCredits { get; set; } = 0;
         /// <summary>Until when the user's Priority Inbox feature is active (messages from verified users are flagged).</summary>
         public DateTime? PriorityInboxUntil { get; set; }
+        /// <summary>Until when the user's analytics subscription is active. Null = not subscribed or subscription cancelled manually.</summary>
+        public DateTime? AnalyticsUntil { get; set; }
 
         // Login lockout
         public int FailedLoginAttempts { get; set; } = 0;
@@ -41,6 +43,7 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
 
         // Email verification
         public string? EmailVerificationToken { get; set; }
+        public DateTime? EmailVerificationTokenExpiry { get; set; }
         public DateTime? EmailVerifiedAt { get; set; }
 
         // Password reset

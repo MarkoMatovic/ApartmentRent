@@ -1,4 +1,7 @@
 ﻿using Lander.Helpers;
+using Lander.src.Infrastructure.FileStorage;
+using Lander.src.Modules.Listings.Dtos.Dto;
+using Lander.src.Modules.Listings.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +19,8 @@ namespace Lander.src.Modules.Listings.Controllers;
 [Authorize]
 public class ImageUploadController : ControllerBase
 {
-    private readonly IWebHostEnvironment _environment;
+    private readonly IFileStorageService _fileStorage;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ImageUploadController> _logger;
 
     // Maximum 10 files per request, 5 MB each
@@ -43,14 +47,19 @@ public class ImageUploadController : ControllerBase
     private static readonly byte[] RiffHeader = [0x52, 0x49, 0x46, 0x46];
     private static readonly byte[] WebpMarker  = [0x57, 0x45, 0x42, 0x50];
 
-    public ImageUploadController(IWebHostEnvironment environment, ILogger<ImageUploadController> logger)
+    public ImageUploadController(
+        IFileStorageService fileStorage,
+        IServiceScopeFactory scopeFactory,
+        ILogger<ImageUploadController> logger)
     {
-        _environment = environment;
+        _fileStorage = fileStorage;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
     [HttpPost(ApiActionsV1.UploadImages, Name = nameof(ApiActionsV1.UploadImages))]
-    public async Task<ActionResult<List<string>>> UploadImages([FromForm] List<IFormFile> files)
+    [Microsoft.AspNetCore.Http.Timeouts.RequestTimeout(60_000)] // 60s — ImageSharp processing može biti sporo za 10 fajlova
+    public async Task<ActionResult<List<UploadedImageDto>>> UploadImages([FromForm] List<IFormFile> files)
     {
         if (files == null || files.Count == 0)
             return BadRequest("No files uploaded.");
@@ -58,11 +67,7 @@ public class ImageUploadController : ControllerBase
         if (files.Count > MaxFilesPerRequest)
             return BadRequest($"Maximum {MaxFilesPerRequest} files per request.");
 
-        var uploadedUrls = new List<string>();
-        var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "apartments");
-
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
+        var uploadedImages = new List<UploadedImageDto>();
 
         foreach (var file in files)
         {
@@ -133,18 +138,77 @@ public class ImageUploadController : ControllerBase
                 return BadRequest($"File '{Path.GetFileName(file.FileName)}' could not be processed as a valid image.");
             }
 
-            // ── Save ──────────────────────────────────────────────────────────
-            var uniqueFileName = $"{Guid.NewGuid()}{saveExtension}";
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-            await System.IO.File.WriteAllBytesAsync(filePath, processedBytes);
+            // ── Save via storage abstraction (Azure Blob in prod, local disk in dev) ──
+            // Folder scheme {yyyy}/{MM}/{guid}.ext. (apartmentId is not known at upload
+            // time — images are uploaded before the apartment is created — so it is not
+            // part of the path; can be added once the flow passes it.)
+            var now = DateTime.UtcNow;
+            var blobPath = $"{now:yyyy}/{now:MM}/{Guid.NewGuid()}{saveExtension}";
+            var contentType = saveExtension == ".png" ? "image/png" : "image/webp";
 
-            var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/apartments/{uniqueFileName}";
-            uploadedUrls.Add(fileUrl);
+            using var uploadStream = new MemoryStream(processedBytes);
+            var fileUrl = await _fileStorage.UploadAsync(
+                FileStorageContainers.ApartmentImages, blobPath, uploadStream, contentType);
+            fileUrl = ToAbsolute(fileUrl);
 
-            _logger.LogInformation("Image uploaded: {FileName}", uniqueFileName);
+            // ── Thumbnail (best-effort) ──────────────────────────────────────
+            // 400x300 WebP @ q50. Failure never aborts the original upload — the client
+            // simply falls back to the full-size image. Path follows the -thumb.webp convention
+            // so ApartmentService can derive ThumbnailPath without round-tripping it.
+            string? thumbnailUrl = null;
+            var thumbBytes = await ImageThumbnailFactory.TryBuildWebpThumbnailAsync(processedBytes);
+            if (thumbBytes is not null)
+            {
+                var thumbPath = ImageThumbnailFactory.DeriveThumbnailKey(blobPath);
+                using var thumbStream = new MemoryStream(thumbBytes);
+                var thumbUrl = await _fileStorage.UploadAsync(
+                    FileStorageContainers.ApartmentImages, thumbPath, thumbStream, "image/webp");
+                thumbnailUrl = ToAbsolute(thumbUrl);
+            }
+            else
+            {
+                _logger.LogWarning("Thumbnail generation failed for {BlobPath}; serving full image only.", blobPath);
+            }
+
+            uploadedImages.Add(new UploadedImageDto { Url = fileUrl, ThumbnailUrl = thumbnailUrl });
+
+            _logger.LogInformation("Image uploaded: {BlobPath}", blobPath);
         }
 
-        return Ok(uploadedUrls);
+        return Ok(uploadedImages);
+    }
+
+    // Local storage returns a site-relative URL; promote it to absolute for the client.
+    // Azure already returns an absolute blob/CDN URL.
+    private string ToAbsolute(string url)
+        => url.StartsWith('/') ? $"{Request.Scheme}://{Request.Host}{url}" : url;
+
+    /// <summary>
+    /// Admin-only, idempotent one-off migration: backfills BlobPath/ThumbnailPath for legacy
+    /// ApartmentImage rows and generates missing thumbnails. Runs in the background; progress
+    /// and the final summary are written to the logs. Safe to re-run.
+    /// </summary>
+    [HttpPost("admin/migrate-images-to-blob")]
+    [Authorize(Roles = "Admin")]
+    public IActionResult MigrateImagesToBlob()
+    {
+        _ = Task.Run(async () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var migrator = scope.ServiceProvider.GetRequiredService<ApartmentImageBlobMigrationService>();
+            try
+            {
+                await migrator.MigrateAsync(CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                scope.ServiceProvider
+                    .GetRequiredService<ILogger<ImageUploadController>>()
+                    .LogError(ex, "ApartmentImage blob migration failed.");
+            }
+        });
+
+        return Accepted(new { message = "Apartment image blob migration started. Check logs for progress." });
     }
 
     // ── Magic byte validation ────────────────────────────────────────────────

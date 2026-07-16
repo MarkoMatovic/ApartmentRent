@@ -78,7 +78,8 @@ public class UserServiceLockoutTests : IDisposable
             mockPasswordService.Object,
             cfg,
             new Mock<ILogger<Lander.src.Modules.Users.Implementation.UserImplementation.AuthService>>().Object,
-            TimeProvider.System);
+            TimeProvider.System,
+            new Mock<Lander.src.Infrastructure.Services.IJwtBlacklistService>().Object);
 
         _userService = new UserService(
             authService,
@@ -377,7 +378,8 @@ public class ApartmentServiceFeaturesTests : IDisposable
             new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
-            new Mock<IConfiguration>().Object);
+            new ConfigurationBuilder().Build(),
+            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object);
     }
 
     public void Dispose()

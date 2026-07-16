@@ -23,7 +23,7 @@ const CookiePolicyPage: React.FC = () => (
     <Section title="1. Šta su kolačići?">
       <P>
         Kolačić (cookie) je mala tekstualna datoteka koju vaš pretraživač čuva na vašem uređaju kada
-        posjetite web sajt. Kolačići pomažu sajtu da zapamti vaše preference i omogućavaju sigurnu
+        posetite web sajt. Kolačići pomažu sajtu da zapamti vaše preference i omogućavaju sigurnu
         autentifikaciju.
       </P>
     </Section>

@@ -1,3 +1,4 @@
+using Hangfire;
 using Lander.Helpers;
 using Lander.src.Infrastructure.Authorization;
 using Lander.src.Infrastructure.Services;
@@ -32,8 +33,27 @@ namespace Lander.src.Infrastructure.Extensions;
 
 public static class ApplicationServiceExtensions
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
     {
+        // ── Options validation (fail fast on startup with a clear message) ────────────
+        // In dev/E2eTesting we use DevEmailService and no blob storage, so we only
+        // enforce required-field validation in production to avoid blocking local startup.
+        var isProd = !env.IsDevelopment() && !env.IsEnvironment("E2eTesting");
+
+        var brevo = services.AddOptions<BrevoSettings>()
+            .BindConfiguration("Brevo")
+            .ValidateDataAnnotations();
+        if (isProd) brevo.ValidateOnStart();
+
+        var blob = services.AddOptions<Lander.src.Infrastructure.FileStorage.AzureBlobStorageOptions>()
+            .BindConfiguration("AzureBlobStorage")
+            .ValidateDataAnnotations();
+        if (isProd) blob.ValidateOnStart();
+
+        // TwilioSettings: optional feature — no ValidateOnStart, bind only.
+        services.AddOptions<TwilioSettings>()
+            .BindConfiguration("Twilio");
+
         // --- Password hashing ---
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
 
@@ -52,8 +72,11 @@ public static class ApplicationServiceExtensions
 
         // --- Email template renderer + email service ---
         services.AddScoped<IEmailTemplateRenderer, EmailTemplateRenderer>();
-        services.Configure<BrevoSettings>(configuration.GetSection("Brevo"));
-        services.AddScoped<IEmailService, EmailService>();
+        // #7: DevEmailService in dev/test — logs + writes HTML file; never sends real mail.
+        if (env.IsDevelopment() || env.IsEnvironment("E2eTesting"))
+            services.AddScoped<IEmailService, DevEmailService>();
+        else
+            services.AddScoped<IEmailService, EmailService>();
 
         // --- Apartment notification service ---
         services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();
@@ -74,15 +97,14 @@ public static class ApplicationServiceExtensions
         services.AddHostedService<Lander.src.Infrastructure.Services.DatabaseMigrationService>();
         services.AddHostedService<Lander.src.Modules.Listings.Services.ApartmentCacheWarmupService>();
         services.AddHostedService<Lander.src.Modules.Communication.Services.OutboxProcessorService>();
-        services.AddHostedService<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>();
-        // Nightly cleanup of EmailLog rows older than EmailLog:RetentionDays (default 90 days).
-        services.AddHostedService<Lander.src.Modules.Communication.Services.EmailLogCleanupService>();
-        services.AddHostedService<Lander.src.Modules.Listings.Services.ListingExpirationService>();
+        // Nightly jobs migrated to Hangfire recurring jobs (registered in Program.cs).
+        services.AddTransient<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>();
+        services.AddTransient<Lander.src.Modules.Communication.Services.EmailLogCleanupService>();
+        services.AddTransient<Lander.src.Modules.Listings.Services.ListingExpirationService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IRoommateService, RoommateService>();
         services.AddScoped<ISearchRequestService, SearchRequestService>();
         services.AddScoped<ISavedSearchService, SavedSearchService>();
-        services.Configure<TwilioSettings>(configuration.GetSection("Twilio"));
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IReportService, ReportService>();
@@ -110,13 +132,27 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApartmentApplicationService, Lander.src.Modules.ApartmentApplications.Implementation.ApartmentApplicationService>();
         services.AddScoped<Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService, Lander.src.Modules.ApartmentApplications.Implementation.ApplicationApprovalService>();
 
-        // --- Payment integration (Monri) ---
-        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriPaymentFormService,
-                           Lander.src.Modules.Payments.Implementation.MonriPaymentFormService>();
-        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriCallbackHandler,
-                           Lander.src.Modules.Payments.Implementation.MonriCallbackHandler>();
-        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IMonriService,
-                           Lander.src.Modules.Payments.Implementation.MonriService>();
+        // --- File storage (Azure Blob in prod, local disk fallback in dev) ---
+        var blobConnectionString = configuration["AzureBlobStorage:ConnectionString"];
+        if (!string.IsNullOrWhiteSpace(blobConnectionString))
+            services.AddSingleton<Lander.src.Infrastructure.FileStorage.IFileStorageService,
+                                  Lander.src.Infrastructure.FileStorage.AzureBlobStorageService>();
+        else
+            services.AddSingleton<Lander.src.Infrastructure.FileStorage.IFileStorageService,
+                                  Lander.src.Infrastructure.FileStorage.LocalFileStorageService>();
+        services.AddScoped<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder,
+                           Lander.src.Infrastructure.FileStorage.ImageUrlBuilder>();
+        services.AddScoped<Lander.src.Modules.Listings.Services.ApartmentImageBlobMigrationService>();
+
+        // --- Payments (provider-agnostic) ---
+        // The Monri provider was removed. PaymentService exposes plans/status/orders/cancel;
+        // PaymentFulfillmentService grants purchases. A future payment provider plugs in by
+        // confirming charges and calling IPaymentFulfillmentService.FulfillAsync(...).
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentService,
+                           Lander.src.Modules.Payments.Implementation.PaymentService>();
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentFulfillmentService,
+                           Lander.src.Modules.Payments.Implementation.PaymentFulfillmentService>();
+        services.AddTransient<Lander.src.Modules.Payments.Services.PremiumExpirationService>();
 
         // User deletion handlers (decoupled cleanup via IUserDeletedHandler)
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();
@@ -147,6 +183,7 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<TokenProvider>();
         services.AddScoped<RefreshTokenService>();
+        services.AddSingleton<IJwtBlacklistService, JwtBlacklistService>();
         services.AddHttpContextAccessor();
         services.AddSingleton<Lander.src.Infrastructure.Services.AuditSaveChangesInterceptor>();
 
@@ -160,6 +197,9 @@ public static class ApplicationServiceExtensions
 
         // HybridCache: stampede-safe L1 cache with Redis-ready L2 support
         services.AddHybridCache();
+
+        // Fire-and-forget background jobs backed by Hangfire
+        services.AddScoped<IBackgroundScheduler, HangfireBackgroundScheduler>();
 
         return services;
     }

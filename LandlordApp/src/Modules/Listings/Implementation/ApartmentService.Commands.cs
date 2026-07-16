@@ -3,6 +3,7 @@ using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Common.Exceptions;
 using Lander.src.Infrastructure.Authorization;
+using Lander.src.Infrastructure.FileStorage;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Helpers;
@@ -125,11 +126,13 @@ public partial class ApartmentService
             if (apartmentInputDto.ImageUrls != null && apartmentInputDto.ImageUrls.Any())
             {
                 var apartmentImages = apartmentInputDto.ImageUrls
-                    .Where(IsAllowedImageUrl)
-                    .Select((url, index) => new ApartmentImage
+                    .Select(ToImageStorageKey)
+                    .Where(key => key is not null)
+                    .Select((key, index) => new ApartmentImage
                     {
                         ApartmentId = apartment.ApartmentId,
-                        ImageUrl = url,
+                        BlobPath = key,
+                        ThumbnailPath = ImageThumbnailFactory.DeriveThumbnailKey(key!),
                         DisplayOrder = index,
                         IsPrimary = index == 0,
                         IsDeleted = false,
@@ -306,11 +309,13 @@ public partial class ApartmentService
                 img.ModifiedDate = now;
             }
             var newImages = updateDto.ImageUrls
-                .Where(IsAllowedImageUrl)
-                .Select((url, index) => new ApartmentImage
+                .Select(ToImageStorageKey)
+                .Where(key => key is not null)
+                .Select((key, index) => new ApartmentImage
                 {
                     ApartmentId = apartment.ApartmentId,
-                    ImageUrl = url,
+                    BlobPath = key,
+                    ThumbnailPath = ImageThumbnailFactory.DeriveThumbnailKey(key!),
                     DisplayOrder = index,
                     IsPrimary = index == 0,
                     CreatedByGuid = callerGuid,
@@ -372,13 +377,45 @@ public partial class ApartmentService
         return count;
     }
 
-    // Dopušta samo URL-ove koji pokazuju na naš lokalni upload direktorijum (S-7 fix)
-    private static bool IsAllowedImageUrl(string? url)
+    // Converts a submitted image reference (an absolute URL returned by our upload endpoint, or
+    // an already-relative storage key) into a safe container-relative blob key — or null if invalid.
+    //
+    // Security: every URL we serve is REBUILT from the configured media base (see IImageUrlBuilder),
+    // so the host in the submitted value is never used. We only extract/validate the path. This makes
+    // the old host-spoofing phishing vector (e.g. "https://evil.com/.../x.jpg") impossible: such a
+    // value either fails to match our container segment (rejected) or is reduced to a harmless key
+    // that we resolve against our own storage.
+    private static readonly string[] AllowedImageExtensions = [".webp", ".png", ".jpg", ".jpeg"];
+
+    private static string? ToImageStorageKey(string? reference)
     {
-        if (string.IsNullOrWhiteSpace(url)) return false;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
-        return uri.AbsolutePath.StartsWith("/uploads/apartments/", StringComparison.OrdinalIgnoreCase)
-            && !uri.AbsolutePath.Contains("..");
+        if (string.IsNullOrWhiteSpace(reference)) return null;
+        if (reference.Contains("..")) return null;
+
+        var value = reference.Trim();
+
+        // Drop query/fragment (e.g. SAS tokens) before extracting the key.
+        var cut = value.IndexOfAny(['?', '#']);
+        if (cut >= 0) value = value[..cut];
+
+        // Extract everything after the container segment "/apartments/".
+        const string marker = "/" + FileStorageContainers.ApartmentImages + "/";
+        var markerIdx = value.LastIndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        string key;
+        if (markerIdx >= 0)
+            key = value[(markerIdx + marker.Length)..];
+        else if (!Uri.TryCreate(value, UriKind.Absolute, out _))
+            key = value; // already a relative storage key
+        else
+            return null; // absolute URL that doesn't target our container
+
+        key = key.Trim('/');
+        if (key.Length == 0 || key.Contains("..")) return null;
+
+        var ext = Path.GetExtension(key).ToLowerInvariant();
+        if (!AllowedImageExtensions.Contains(ext)) return null;
+
+        return key;
     }
 
     /// <summary>Builds a <see cref="ListingAlertContext"/> from the in-memory apartment entity.</summary>
@@ -405,8 +442,9 @@ public partial class ApartmentService
         if (httpUser == null)
             throw new UnauthorizedAccessException("Authentication required.");
 
+        // Authenticated but not the owner → 403 (ForbiddenException), not 401
         var result = await _authorizationService.AuthorizeAsync(httpUser, apartment, new ApartmentOwnerRequirement());
         if (!result.Succeeded)
-            throw new UnauthorizedAccessException("You do not have permission to modify this apartment.");
+            throw new Lander.src.Common.Exceptions.ForbiddenException("You do not have permission to modify this apartment.");
     }
 }

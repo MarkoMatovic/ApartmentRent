@@ -6,5 +6,11 @@
     "errorLoadingMessages": "Greška pri učitavanju poruka",
     "sendMessage": "Pošalji poruku",
     "messageSent": "Poruka poslata",
-    "conversationWith": "Razgovor sa"
+    "conversationWith": "Razgovor sa",
+    "noMessagesYet": "Još nema poruka u ovoj konverzaciji",
+    "superLikePremiumRequired": "Super-Like je Premium funkcionalnost",
+    "superLikeNoTokens": "Nema preostalih tokena",
+    "superLikeTooltip": "Super-Like ({{count}} token{{count, plural, one{} other{a}}} preostalo)",
+    "superLikeActive": "Super-Like · {{count}} token{{count, plural, one{} other{a}}} preostalo",
+    "priorityMessage": "Prioritetna poruka — verifikovan pošiljalac"
 }

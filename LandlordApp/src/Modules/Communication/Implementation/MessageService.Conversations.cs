@@ -1,3 +1,4 @@
+using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Microsoft.EntityFrameworkCore;
 
@@ -155,19 +156,14 @@ public partial class MessageService
         var message = await _context.Messages.FindAsync(messageId);
         if (message != null && message.IsRead == false)
         {
-            var transaction = await _context.BeginTransactionAsync();
-            try
+            // RunInTransactionAsync wraps the work in the retrying execution strategy —
+            // a manually started transaction throws with EnableRetryOnFailure enabled.
+            await _context.RunInTransactionAsync(async () =>
             {
                 message.IsRead = true;
                 message.ModifiedDate = DateTime.UtcNow;
                 await _context.SaveEntitiesAsync();
-                await _context.CommitTransactionAsync(transaction);
-            }
-            catch
-            {
-                _context.RollBackTransaction();
-                throw;
-            }
+            });
         }
     }
 
@@ -219,8 +215,9 @@ public partial class MessageService
 
     public async Task DeleteConversationAsync(int userId, int otherUserId)
     {
-        var transaction = await _context.BeginTransactionAsync();
-        try
+        // RunInTransactionAsync wraps the work in the retrying execution strategy —
+        // a manually started transaction throws with EnableRetryOnFailure enabled.
+        await _context.RunInTransactionAsync(async () =>
         {
             // Delete all messages between these users
             var messages = await _context.Messages
@@ -239,13 +236,7 @@ public partial class MessageService
             }
 
             await _context.SaveEntitiesAsync();
-            await _context.CommitTransactionAsync(transaction);
-        }
-        catch
-        {
-            _context.RollBackTransaction();
-            throw;
-        }
+        });
     }
 
     public async Task<List<MessageDto>> SearchMessagesAsync(int userId, string query)

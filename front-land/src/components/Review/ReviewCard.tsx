@@ -20,7 +20,7 @@ interface ReviewCardProps {
 }
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, currentUserId, onDelete }) => {
-  const { t } = useTranslation(['common', 'reviews']);
+  const { t } = useTranslation(['common', 'reviews', 'messages']);
 
   const displayName = review.isAnonymous
     ? t('reviews:anonymous', { defaultValue: 'Anonymous User' })
@@ -111,7 +111,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, currentUserId, onDelete
                   size="small"
                   color="error"
                   onClick={() => onDelete(review.reviewId)}
-                  title="Delete review"
+                  title={t('common:deleteReview')}
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>

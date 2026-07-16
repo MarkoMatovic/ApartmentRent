@@ -56,7 +56,7 @@ public partial class ApartmentService
                     .Select(a =>
                     {
                         var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
-                        return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0);
+                        return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0, urlBuilder: _imageUrlBuilder);
                     })
                     .ToList();
 
@@ -105,7 +105,7 @@ public partial class ApartmentService
             .Select(a =>
             {
                 var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
-                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0);
+                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0, urlBuilder: _imageUrlBuilder);
             })
             .AsQueryable();
 
@@ -157,7 +157,7 @@ public partial class ApartmentService
             .Select(a =>
             {
                 var s = reviewStats.TryGetValue(a.ApartmentId, out var stats) ? stats : null;
-                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0, imageLimit: 0);
+                return a.ToDto(s?.AverageRating, s?.ReviewCount ?? 0, imageLimit: 0, urlBuilder: _imageUrlBuilder);
             })
             .ToList();
 
@@ -247,13 +247,8 @@ public partial class ApartmentService
             ReviewCount = reviewStats?.ReviewCount ?? 0,
             ApartmentImages = apartment.ApartmentImages?
                 .OrderBy(img => img.DisplayOrder)
-                .Select(img => new ApartmentImageDto
-                {
-                    ImageId = img.ImageId,
-                    ApartmentId = img.ApartmentId,
-                    ImageUrl = img.ImageUrl,
-                    IsPrimary = img.IsPrimary
-                }).ToList(),
+                .Select(img => img.ToImageDto(_imageUrlBuilder))
+                .ToList(),
             IsFeatured = apartment.IsFeatured,
             FeaturedUntil = apartment.FeaturedUntil
         };
@@ -271,7 +266,7 @@ public partial class ApartmentService
             .Take(500) // safety cap — covers even very prolific landlords
             .ToListAsync();
 
-        return apartments.Select(a => a.ToDto(imageLimit: 0)).ToList();
+        return apartments.Select(a => a.ToDto(imageLimit: 0, urlBuilder: _imageUrlBuilder)).ToList();
     }
 
     // .NET 10 Feature: Vector Search implementation

@@ -8,12 +8,15 @@ public class GetAllRoommatesEndpoint
     private readonly HttpClient _client;
     public GetAllRoommatesEndpoint(HttpClient client) => _client = client;
 
-    public Task<HttpResponseMessage> CallAsync(string? location = null, decimal? minBudget = null, decimal? maxBudget = null)
+    public Task<HttpResponseMessage> CallAsync(string? location = null, decimal? minBudget = null, decimal? maxBudget = null,
+        int? gender = null, int? workSchedule = null)
     {
         var url = "/api/v1/roommates/get-all-roommates?page=1&pageSize=20";
         if (location is not null) url += $"&location={Uri.EscapeDataString(location)}";
         if (minBudget.HasValue)  url += $"&minBudget={minBudget}";
         if (maxBudget.HasValue)  url += $"&maxBudget={maxBudget}";
+        if (gender.HasValue)       url += $"&gender={gender}";
+        if (workSchedule.HasValue) url += $"&workSchedule={workSchedule}";
         return _client.GetAsync(url);
     }
 }

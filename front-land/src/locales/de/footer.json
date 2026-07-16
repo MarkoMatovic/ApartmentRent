@@ -1,4 +1,12 @@
 {
   "support": "Support",
-  "pricing": "Preise"
+  "pricing": "Preise",
+  "mySubscriptions": "Meine Abonnements",
+  "paymentHistory": "Zahlungshistorie",
+  "privacy": "Datenschutzrichtlinie",
+  "terms": "Nutzungsbedingungen",
+  "cookies": "Cookie-Richtlinie",
+  "refund": "Rückerstattungsrichtlinie",
+  "copyright": "Alle Rechte vorbehalten.",
+  "disclaimer": "TuRentaj ist eine Werbeplattform und fungiert nicht als Vermittler bei Immobilientransaktionen oder -vermietungen. Kontakt:"
 }

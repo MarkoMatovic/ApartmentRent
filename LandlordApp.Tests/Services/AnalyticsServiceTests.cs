@@ -2,6 +2,7 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Lander;
 using Lander.src.Modules.Analytics.Implementation;
 using Lander.src.Modules.Analytics.Models;
@@ -40,11 +41,22 @@ public class AnalyticsServiceTests : IDisposable
         _roommatesContext = new RoommatesContext(roommatesOptions);
         _usersContext     = new UsersContext(usersOptions);
 
+        // TrackEventAsync resolves fresh contexts from its own DI scope (it is called
+        // fire-and-forget in production). Register factories that point at the same
+        // in-memory stores so the test contexts observe what the service writes.
+        var services = new ServiceCollection();
+        services.AddScoped(_ => new AnalyticsContext(analyticsOptions));
+        services.AddScoped(_ => new ListingsContext(listingsOptions));
+        services.AddScoped(_ => new RoommatesContext(roommatesOptions));
+        services.AddScoped(_ => new UsersContext(usersOptions));
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+
         _analyticsService = new AnalyticsService(
             _analyticsContext,
             _listingsContext,
             _roommatesContext,
             _usersContext,
+            scopeFactory,
             new Mock<Microsoft.Extensions.Logging.ILogger<AnalyticsService>>().Object);
     }
 

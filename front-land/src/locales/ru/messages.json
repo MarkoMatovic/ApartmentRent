@@ -6,5 +6,11 @@
     "errorLoadingMessages": "Ошибка при загрузке сообщений",
     "sendMessage": "Отправить сообщение",
     "messageSent": "Сообщение отправлено",
-    "conversationWith": "Разговор с"
+    "conversationWith": "Разговор с",
+    "noMessagesYet": "В этом разговоре пока нет сообщений",
+    "superLikePremiumRequired": "Super-Like — это функция Premium",
+    "superLikeNoTokens": "Токены закончились",
+    "superLikeTooltip": "Super-Like (осталось {{count}} токен)",
+    "superLikeActive": "Super-Like · осталось {{count}} токен",
+    "priorityMessage": "Приоритетное сообщение — проверенный отправитель"
 }

@@ -117,8 +117,10 @@ public class GlobalExceptionHandlerMiddlewareTests
     }
 
     [Fact]
-    public async Task InvokeAsync_InvalidOperationException_Returns400()
+    public async Task InvokeAsync_InvalidOperationException_Returns500()
     {
+        // InvalidOperationException can come from EF or the pipeline — treated as
+        // a server error so implementation details never leak to clients.
         RequestDelegate next = _ => throw new InvalidOperationException("Invalid op");
 
         var middleware = CreateMiddleware(next);
@@ -126,9 +128,9 @@ public class GlobalExceptionHandlerMiddlewareTests
 
         await middleware.InvokeAsync(context);
 
-        context.Response.StatusCode.Should().Be(400);
+        context.Response.StatusCode.Should().Be(500);
         var response = await ReadResponseAsync(context);
-        response.GetProperty("statusCode").GetInt32().Should().Be(400);
+        response.GetProperty("statusCode").GetInt32().Should().Be(500);
     }
 
     [Fact]

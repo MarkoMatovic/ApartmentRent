@@ -21,6 +21,12 @@ public class NotificationHubTests
         _mockContext     = new Mock<HubCallerContext>();
 
         _mockContext.Setup(c => c.ConnectionId).Returns("conn-notify-1");
+
+        // JoinNotificationGroup validates the "userId" claim against the argument
+        var claims = new List<System.Security.Claims.Claim> { new("userId", "7") };
+        var identity = new System.Security.Claims.ClaimsIdentity(claims, "Test");
+        _mockContext.Setup(c => c.User).Returns(new System.Security.Claims.ClaimsPrincipal(identity));
+
         _mockClients.Setup(c => c.All).Returns(_mockClientProxy.Object);
         _mockGroups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -36,8 +42,9 @@ public class NotificationHubTests
     // ─── JoinNotificationGroup ───────────────────────────────────────────────
 
     [Fact]
-    public async Task JoinNotificationGroup_AddsConnectionToGroupWithUserId()
+    public async Task JoinNotificationGroup_OwnUserId_AddsConnectionToGroup()
     {
+        // Caller's "userId" claim is 7 — joining own group succeeds
         await _hub.JoinNotificationGroup(7);
 
         _mockGroups.Verify(
@@ -46,23 +53,27 @@ public class NotificationHubTests
     }
 
     [Fact]
-    public async Task JoinNotificationGroup_DifferentUserId_UsesStringRepresentation()
+    public async Task JoinNotificationGroup_DifferentUserId_AbortsConnection()
     {
         await _hub.JoinNotificationGroup(123);
 
+        _mockContext.Verify(c => c.Abort(), Times.Once);
         _mockGroups.Verify(
-            g => g.AddToGroupAsync("conn-notify-1", "123", It.IsAny<CancellationToken>()),
-            Times.Once);
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
-    public async Task JoinNotificationGroup_ZeroUserId_UsesZeroAsGroupName()
+    public async Task JoinNotificationGroup_NoUserClaim_AbortsConnection()
     {
-        await _hub.JoinNotificationGroup(0);
+        _mockContext.Setup(c => c.User).Returns(new System.Security.Claims.ClaimsPrincipal());
 
+        await _hub.JoinNotificationGroup(7);
+
+        _mockContext.Verify(c => c.Abort(), Times.Once);
         _mockGroups.Verify(
-            g => g.AddToGroupAsync("conn-notify-1", "0", It.IsAny<CancellationToken>()),
-            Times.Once);
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ─── SendNotificationToAll ───────────────────────────────────────────────

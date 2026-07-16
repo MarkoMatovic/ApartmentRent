@@ -24,5 +24,18 @@
   "deleteConfirmMsg": "Вы уверены, что хотите навсегда удалить аккаунт? Это действие нельзя отменить.",
   "deleteForever": "УДАЛИТЬ НАВСЕГДА",
   "deactivate": "Деактивировать",
-  "imageSizeError": "Размер изображения должен быть менее 5 МБ"
+  "imageSizeError": "Размер изображения должен быть менее 5 МБ",
+  "updateSuccess": "Профиль успешно обновлен!",
+  "privacyUpdateSuccess": "Настройки конфиденциальности успешно обновлены",
+  "passwordMismatch": "Пароли не совпадают",
+  "loginRequired": "Войдите чтобы просмотреть профиль",
+  "accountDeleted": "Аккаунт удален. Вы будете выйдены из системы.",
+  "premiumBadge": "PREMIUM",
+  "incognitoTooltip": "Режим инкогнито — это премиум-функция",
+  "userGuidNotFound": "GUID пользователя не найден",
+  "security": "Безопасность",
+  "changePassword": "Изменить пароль",
+  "currentPassword": "Текущий пароль",
+  "newPassword": "Новый пароль",
+  "confirmNewPassword": "Подтвердить новый пароль"
 }

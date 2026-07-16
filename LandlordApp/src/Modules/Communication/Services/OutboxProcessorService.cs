@@ -55,12 +55,26 @@ public class OutboxProcessorService : BackgroundService
         // in a single UPDATE so that concurrent instances don't double-process.
         // Only rows where ProcessedAt IS NULL are eligible; UPDLOCK + READPAST hints
         // skip rows already locked by another instance.
-        var claimedIds = new List<int>();
-        var claimCount = await commContext.Database.ExecuteSqlRawAsync(
-            @"UPDATE TOP({0}) [communications].[OutboxMessages]
-              SET ProcessedAt = '0001-01-01 00:00:00'
-              WHERE ProcessedAt IS NULL AND RetryCount < {1}",
-            BatchSize, MaxRetries);
+        if (commContext.Database.IsRelational())
+        {
+            await commContext.Database.ExecuteSqlRawAsync(
+                @"UPDATE TOP({0}) [Communication].[OutboxMessages]
+                  SET ProcessedAt = '0001-01-01 00:00:00'
+                  WHERE ProcessedAt IS NULL AND RetryCount < {1}",
+                BatchSize, MaxRetries);
+        }
+        else
+        {
+            // Non-relational provider (InMemory in tests) — claim without raw SQL;
+            // single-instance semantics are fine there.
+            var toClaim = await commContext.OutboxMessages
+                .Where(e => e.ProcessedAt == null && e.RetryCount < MaxRetries)
+                .OrderBy(e => e.CreatedAt)
+                .Take(BatchSize)
+                .ToListAsync(ct);
+            foreach (var e in toClaim) e.ProcessedAt = DateTime.MinValue;
+            await commContext.SaveChangesAsync(ct);
+        }
 
         // Fetch only the rows we just claimed (sentinel = DateTime.MinValue)
         var pending = await commContext.OutboxMessages
@@ -80,10 +94,20 @@ public class OutboxProcessorService : BackgroundService
             catch (Exception ex)
             {
                 // Release the claim (set back to NULL) so retry logic can pick it up
-                await commContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE [communications].[OutboxMessages] SET ProcessedAt = NULL, RetryCount = RetryCount + 1, Error = {0} WHERE Id = {1}",
-                    ex.Message.Length > 500 ? ex.Message[..500] : ex.Message, evt.Id);
-                await commContext.Entry(evt).ReloadAsync(ct);
+                var error = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+                if (commContext.Database.IsRelational())
+                {
+                    await commContext.Database.ExecuteSqlRawAsync(
+                        "UPDATE [Communication].[OutboxMessages] SET ProcessedAt = NULL, RetryCount = RetryCount + 1, Error = {0} WHERE Id = {1}",
+                        error, evt.Id);
+                    await commContext.Entry(evt).ReloadAsync(ct);
+                }
+                else
+                {
+                    evt.ProcessedAt = null;
+                    evt.RetryCount += 1;
+                    evt.Error = error;
+                }
 
                 if (evt.RetryCount >= MaxRetries)
                     _logger.LogError(ex,
@@ -107,12 +131,24 @@ public class OutboxProcessorService : BackgroundService
                 var payload = JsonSerializer.Deserialize<SuperLikePayload>(evt.Payload)
                     ?? throw new InvalidOperationException("Invalid SuperLikeTokenDeduction payload.");
 
-                var affected = await usersContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE [users].[Users] SET TokenBalance = TokenBalance - 1 WHERE UserId = {0} AND TokenBalance >= 1",
-                    payload.UserId);
+                if (usersContext.Database.IsRelational())
+                {
+                    var affected = await usersContext.Database.ExecuteSqlRawAsync(
+                        "UPDATE [UsersRoles].[Users] SET TokenBalance = TokenBalance - 1 WHERE UserId = {0} AND TokenBalance >= 1",
+                        payload.UserId);
 
-                if (affected == 0)
-                    throw new InvalidOperationException($"User {payload.UserId} not found or has insufficient tokens.");
+                    if (affected == 0)
+                        throw new InvalidOperationException($"User {payload.UserId} not found or has insufficient tokens.");
+                }
+                else
+                {
+                    // Non-relational provider (InMemory in tests) — same semantics without raw SQL
+                    var user = await usersContext.Users.FirstOrDefaultAsync(u => u.UserId == payload.UserId, ct);
+                    if (user is null || user.TokenBalance < 1)
+                        throw new InvalidOperationException($"User {payload.UserId} not found or has insufficient tokens.");
+                    user.TokenBalance -= 1;
+                    await usersContext.SaveChangesAsync(ct);
+                }
                 break;
 
             default:

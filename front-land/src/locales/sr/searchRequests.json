@@ -31,5 +31,28 @@
         "city": "Grad",
         "minBudget": "Minimalni budžet",
         "maxBudget": "Maksimalni budžet"
+    },
+    "dialog": {
+        "newRequestTitle": "Novi zahtev za pretragu",
+        "type": "Tip",
+        "title": "Naslov",
+        "description": "Opis",
+        "city": "Grad",
+        "budget": "Budžet (€)",
+        "moveInDate": "Željeni datum useljenja",
+        "cancel": "Otkaži",
+        "saving": "Čuvanje...",
+        "createRequest": "Kreiraj zahtev",
+        "titleRequired": "Naslov je obavezan.",
+        "descriptionRequired": "Opis je obavezan."
+    },
+    "card": {
+        "upTo": "Do €{{amount}}",
+        "postedBy": "Objavio/la: {{name}}",
+        "yourRequest": "Vaš zahtev",
+        "contact": "Kontaktiraj",
+        "loginToContact": "Prijavite se da kontaktirate",
+        "failedToDelete": "Greška pri brisanju zahteva",
+        "failedToLoad": "Greška pri učitavanju zahteva"
     }
 }

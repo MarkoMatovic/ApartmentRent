@@ -40,7 +40,7 @@ public class AnalyticsControllerTests
     {
         var input = new TrackEventInputDto
         {
-            EventType = "view",
+            EventType = "ApartmentView",
             EventCategory = "apartment",
             EntityId = 5,
             EntityType = "Apartment"
@@ -50,7 +50,7 @@ public class AnalyticsControllerTests
 
         result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.TrackEventAsync(
-            "view", "apartment",
+            "ApartmentView", "apartment",
             It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(),
             It.IsAny<Dictionary<string, string>?>(), It.IsAny<int?>(),
             It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
@@ -61,7 +61,7 @@ public class AnalyticsControllerTests
     {
         var input = new TrackEventInputDto
         {
-            EventType = "view",
+            EventType = "ApartmentView",
             EventCategory = "apartment"
         };
 
@@ -81,7 +81,7 @@ public class AnalyticsControllerTests
     public async Task TrackEvent_NoUserIdClaim_ReturnsOkWithNullUserId()
     {
         _controller.ControllerContext = MakeAuthContext(0);
-        var input = new TrackEventInputDto { EventType = "search", EventCategory = "listings" };
+        var input = new TrackEventInputDto { EventType = "ApartmentSearch", EventCategory = "listings" };
 
         var result = await _controller.TrackEvent(input);
 
@@ -370,7 +370,7 @@ public class AnalyticsControllerTests
         var to = new DateTime(2025, 1, 31);
         var trends = new List<EventTrendDto>
         {
-            new() { Date = new DateTime(2025, 1, 10), EventType = "view", Count = 15 }
+            new() { Date = new DateTime(2025, 1, 10), EventType = "ApartmentView", Count = 15 }
         };
         _mockAnalyticsService.Setup(s => s.GetEventTrendsAsync(from, to, null))
             .ReturnsAsync(trends);
@@ -709,7 +709,7 @@ public class AnalyticsControllerTests
     [Fact]
     public async Task TrackEvent_ResponseBodyContainsSuccessTrue()
     {
-        var input = new TrackEventInputDto { EventType = "view", EventCategory = "apartment" };
+        var input = new TrackEventInputDto { EventType = "ApartmentView", EventCategory = "apartment" };
 
         var result = await _controller.TrackEvent(input);
 
@@ -723,7 +723,7 @@ public class AnalyticsControllerTests
         var metadata = new Dictionary<string, string> { { "source", "homepage" } };
         var input = new TrackEventInputDto
         {
-            EventType = "search",
+            EventType = "ApartmentSearch",
             EventCategory = "listings",
             SearchQuery = "garsonjera Beograd",
             EntityId = 42,
@@ -735,7 +735,7 @@ public class AnalyticsControllerTests
 
         result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.TrackEventAsync(
-            "search", "listings",
+            "ApartmentSearch", "listings",
             42, "Apartment", "garsonjera Beograd",
             metadata,
             It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);

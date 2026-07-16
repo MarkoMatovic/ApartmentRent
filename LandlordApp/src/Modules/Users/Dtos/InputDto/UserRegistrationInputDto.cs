@@ -43,7 +43,7 @@ namespace Lander.src.Modules.Users.Dtos.InputDto
     {
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
-        public string? Email { get; set; }
+        // Email is intentionally excluded — changes require a dedicated verify-email flow.
         public string? PhoneNumber { get; set; }
         public string? ProfilePicture { get; set; }
         public DateTime? DateOfBirth { get; set; }

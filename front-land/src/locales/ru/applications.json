@@ -1,0 +1,21 @@
+{
+  "applyTitle": "Подать заявку на {{title}}",
+  "applyConfirm": "Вы уверены, что хотите подать заявку на эту квартиру? Арендодатель будет немедленно уведомлён.",
+  "priorityApplication": "Приоритетная заявка",
+  "priorityDesc": "Ваша заявка отображается вверху списка арендодателя.",
+  "premium": "Premium",
+  "cancel": "Отмена",
+  "sending": "Отправка...",
+  "sendPriority": "Отправить приоритетную заявку",
+  "confirmApplication": "Подтвердить заявку",
+  "applicationSent": "Заявка отправлена",
+  "priorityApplicationSent": "Приоритетная заявка отправлена",
+  "applicationSuccess": "Заявка успешно подана на {{title}}{{priority}}",
+  "applicationError": "Не удалось подать заявку. Попробуйте снова.",
+  "rejectedTitle": "Заявка не одобрена",
+  "rejectedBody": "Ваша заявка на \"{{title}}\" отклонена арендодателем.",
+  "keepApartmentQuestion": "Хотите оставить эту квартиру в результатах поиска?",
+  "removeApartment": "Нет, удалить",
+  "keepApartment": "Да, оставить",
+  "prioritySuffix": " (приоритет)"
+}

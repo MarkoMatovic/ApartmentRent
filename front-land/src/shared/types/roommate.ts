@@ -56,23 +56,25 @@ export interface RoommateFilters {
 }
 
 // ── Display helpers ────────────────────────────────────────────────────────────
-export const GENDER_LABELS: Record<number, string> = {
-  0: 'Neodređeno', 1: 'Muško', 2: 'Žensko', 3: 'Nebinarno', 4: 'Ostalo',
+// i18n keys in the "roommates" namespace — render with t(GENDER_KEYS[g]) so the
+// labels follow the selected language instead of being hardcoded Serbian.
+export const GENDER_KEYS: Record<number, string> = {
+  0: 'genderNotSay', 1: 'genderMale', 2: 'genderFemale', 3: 'genderNonBinary', 4: 'genderOther',
 };
-export const SCHEDULE_LABELS: Record<number, string> = {
-  0: 'Fleksibilno', 1: 'Jutarnji tip', 2: 'Večernji tip', 3: 'Noćni tip',
+export const SCHEDULE_KEYS: Record<number, string> = {
+  0: 'scheduleFlexible', 1: 'scheduleMorning', 2: 'scheduleEvening', 3: 'scheduleNight',
 };
 export const SCHEDULE_ICONS: Record<number, string> = {
   0: '🔄', 1: '🌅', 2: '🌇', 3: '🌙',
 };
-export const LIFESTYLE_LABELS: Record<string, string> = {
-  quiet: 'Miran', social: 'Društven', mixed: 'Mešovit',
+export const LIFESTYLE_KEYS: Record<string, string> = {
+  quiet: 'lifestyleQuiet', social: 'lifestyleSocial', mixed: 'lifestyleMixed',
 };
 export const LIFESTYLE_ICONS: Record<string, string> = {
   quiet: '📚', social: '🎉', mixed: '☕',
 };
-export const CLEANLINESS_LABELS: Record<string, string> = {
-  veryClean: 'Veoma uredno', clean: 'Uredno', moderate: 'Umereno',
+export const CLEANLINESS_KEYS: Record<string, string> = {
+  veryClean: 'cleanlinessVeryClean', clean: 'cleanlinessClean', moderate: 'cleanlinessModerate',
 };
 
 export const getAge = (dateOfBirth?: string): number | null => {
@@ -82,6 +84,9 @@ export const getAge = (dateOfBirth?: string): number | null => {
   let age = today.getFullYear() - birth.getFullYear();
   if (today.getMonth() < birth.getMonth() ||
       (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
+  // Backend serializes an unset DateOfBirth as 0001-01-01 which would render
+  // as an absurd "age" (e.g. 2025) — treat implausible values as unknown.
+  if (age < 14 || age > 100) return null;
   return age;
 };
 

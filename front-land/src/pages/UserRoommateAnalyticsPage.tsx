@@ -54,7 +54,7 @@ const PersonalAnalyticsPage: React.FC = () => {
     });
 
     // Messages sent
-    const { data: messagesSent, isLoading: messagesLoading, error: messagesError } = useQuery({
+    const { data: messagesSent, isLoading: messagesLoading } = useQuery({
         queryKey: ['my-messages-sent'],
         queryFn: () => analyticsApi.getMyMessagesSent(),
         enabled: !!user?.userId,

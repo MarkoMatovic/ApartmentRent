@@ -24,5 +24,18 @@
   "deleteConfirmMsg": "Sind Sie sicher, dass Sie Ihr Konto dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
   "deleteForever": "FÜR IMMER LÖSCHEN",
   "deactivate": "Deaktivieren",
-  "imageSizeError": "Die Bildgröße muss kleiner als 5 MB sein"
+  "imageSizeError": "Die Bildgröße muss kleiner als 5 MB sein",
+  "updateSuccess": "Profil erfolgreich aktualisiert!",
+  "privacyUpdateSuccess": "Datenschutzeinstellungen erfolgreich aktualisiert",
+  "passwordMismatch": "Passwörter stimmen nicht überein",
+  "loginRequired": "Bitte melden Sie sich an um Ihr Profil anzusehen",
+  "accountDeleted": "Konto gelöscht. Sie werden abgemeldet.",
+  "premiumBadge": "PREMIUM",
+  "incognitoTooltip": "Inkognito-Modus ist eine Premium-Funktion",
+  "userGuidNotFound": "Benutzer-GUID nicht gefunden",
+  "security": "Sicherheit",
+  "changePassword": "Passwort ändern",
+  "currentPassword": "Aktuelles Passwort",
+  "newPassword": "Neues Passwort",
+  "confirmNewPassword": "Neues Passwort bestätigen"
 }

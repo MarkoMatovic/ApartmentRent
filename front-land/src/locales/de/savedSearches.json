@@ -23,5 +23,16 @@
         "petFriendly": "Haustierfreundlich",
         "parking": "Parkplatz",
         "balcony": "Balkon"
-    }
+    },
+    "chips": {
+        "furnished": "Möbliert",
+        "parking": "Parkplatz",
+        "balcony": "Balkon",
+        "petFriendly": "Haustierfreundlich"
+    },
+    "applySearch": "Suche anwenden",
+    "rooms": "Zimmer",
+    "failedToLoad": "Gespeicherte Suchen konnten nicht geladen werden",
+    "failedToCreate": "Suche konnte nicht erstellt werden",
+    "failedToDelete": "Suche konnte nicht gelöscht werden"
 }

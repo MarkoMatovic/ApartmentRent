@@ -68,12 +68,12 @@ public class RefreshTokenServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_SetsExpiryTo30Days()
+    public async Task CreateAsync_SetsExpiryTo7Days()
     {
         await _service.CreateAsync(1);
         var stored = await _context.RefreshTokens.FirstAsync(t => t.UserId == 1);
 
-        stored.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(30), precision: TimeSpan.FromSeconds(10));
+        stored.ExpiresAt.Should().BeCloseTo(DateTime.UtcNow.AddDays(7), precision: TimeSpan.FromSeconds(10));
     }
 
     [Fact]

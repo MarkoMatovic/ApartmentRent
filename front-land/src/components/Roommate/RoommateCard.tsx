@@ -11,16 +11,16 @@ import {
   SmokeFree as NoSmokingIcon,
   Pets as PetsIcon,
   MusicNote as MusicIcon,
-  Star as StarIcon,
   Favorite as HeartIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Roommate,
   getAge, formatAvailableFrom,
-  LIFESTYLE_ICONS, LIFESTYLE_LABELS,
-  SCHEDULE_ICONS, SCHEDULE_LABELS,
-  GENDER_LABELS,
+  LIFESTYLE_ICONS, LIFESTYLE_KEYS,
+  SCHEDULE_ICONS, SCHEDULE_KEYS,
+  GENDER_KEYS,
 } from '../../shared/types/roommate';
 
 interface Props {
@@ -44,6 +44,7 @@ const TagChips: React.FC<{ value?: string; max?: number }> = ({ value, max = 4 }
 
 const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation('roommates');
   const age = getAge(roommate.dateOfBirth);
   const availableFrom = formatAvailableFrom(roommate.availableFrom);
 
@@ -74,7 +75,7 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
       {/* Badges */}
       <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2, display: 'flex', gap: 0.5, flexDirection: 'column' }}>
         {isOwn && (
-          <Chip label="Moj profil" size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+          <Chip label={t('myProfileBadge')} size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
         )}
       </Box>
       {matchScore !== undefined && (
@@ -104,7 +105,7 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
               {roommate.firstName}{age ? `, ${age}` : ''}
               {roommate.gender !== undefined && roommate.gender !== 0 && (
                 <Typography component="span" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', ml: 0.5 }}>
-                  · {GENDER_LABELS[roommate.gender as number]}
+                  · {t(GENDER_KEYS[roommate.gender as number])}
                 </Typography>
               )}
             </Typography>
@@ -114,9 +115,9 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
               </Typography>
             )}
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }}>
-              {roommate.lifestyle && `${LIFESTYLE_ICONS[roommate.lifestyle]} ${LIFESTYLE_LABELS[roommate.lifestyle]}`}
+              {roommate.lifestyle && `${LIFESTYLE_ICONS[roommate.lifestyle]} ${t(LIFESTYLE_KEYS[roommate.lifestyle])}`}
               {roommate.lifestyle && roommate.workSchedule !== undefined && ' · '}
-              {roommate.workSchedule !== undefined && `${SCHEDULE_ICONS[roommate.workSchedule as number]} ${SCHEDULE_LABELS[roommate.workSchedule as number]}`}
+              {roommate.workSchedule !== undefined && `${SCHEDULE_ICONS[roommate.workSchedule as number]} ${t(SCHEDULE_KEYS[roommate.workSchedule as number])}`}
             </Typography>
           </Box>
         </Box>
@@ -127,7 +128,7 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
             <CalIcon sx={{ fontSize: 14 }} />
             <Typography variant="caption" fontWeight="bold">
               {availableFrom === 'Odmah'
-                ? <span style={{ color: '#a5d6a7' }}>✓ Odmah slobodan/na</span>
+                ? <span style={{ color: '#a5d6a7' }}>{t('availableNowFull')}</span>
                 : availableFrom}
             </Typography>
           </Box>
@@ -137,7 +138,7 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
               <Typography variant="caption" fontWeight="bold">
                 {roommate.budgetMin && roommate.budgetMax
                   ? `${roommate.budgetMin}–${roommate.budgetMax}`
-                  : roommate.budgetMin ? `od ${roommate.budgetMin}` : `do ${roommate.budgetMax}`}/mj
+                  : roommate.budgetMin ? `${t('budgetMinPrefix')} ${roommate.budgetMin}` : `${t('budgetMaxPrefix')} ${roommate.budgetMax}`}/{t('monthAbbr')}
               </Typography>
             </Box>
           )}
@@ -167,19 +168,19 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
           {/* Preference icons */}
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 'auto', pt: 0.5 }}>
             {roommate.smokingAllowed === true && (
-              <Tooltip title="Pušenje OK"><Chip icon={<SmokingIcon />} label="Pušač" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+              <Tooltip title={t('smokingOkTooltip')}><Chip icon={<SmokingIcon />} label={t('smokingOkLabel')} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
             {roommate.smokingAllowed === false && (
-              <Tooltip title="Nepušač"><Chip icon={<NoSmokingIcon />} label="Nepušač" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+              <Tooltip title={t('nonSmokerTooltip')}><Chip icon={<NoSmokingIcon />} label={t('nonSmokerLabel')} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
             {roommate.petFriendly && (
-              <Tooltip title="Ljubimci OK"><Chip icon={<PetsIcon />} label="Ljubimci" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+              <Tooltip title={t('petsOkTooltip')}><Chip icon={<PetsIcon />} label={t('petsOkLabel')} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
             {roommate.musicFriendly && (
-              <Tooltip title="Muzika OK"><Chip icon={<MusicIcon />} label="Muzika" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+              <Tooltip title={t('musicOkTooltip')}><Chip icon={<MusicIcon />} label={t('musicOkLabel')} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
             {roommate.guestsAllowed && (
-              <Tooltip title="Gosti OK"><Chip label="👥 Gosti" size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
+              <Tooltip title={t('guestsOkTooltip')}><Chip label={t('guestsOkLabel')} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 22 }} /></Tooltip>
             )}
           </Box>
         </Box>
@@ -188,7 +189,7 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
         {isOwn && (
           <Box sx={{ px: 2, pb: 1.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
-              <Typography variant="caption" color="text.secondary">Kompletnost profila</Typography>
+              <Typography variant="caption" color="text.secondary">{t('profileCompleteness')}</Typography>
               <Typography variant="caption" fontWeight="bold" color={completeness >= 80 ? 'success.main' : 'warning.main'}>
                 {completeness}%
               </Typography>

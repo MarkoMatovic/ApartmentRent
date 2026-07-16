@@ -47,6 +47,7 @@ public class ApartmentCrudTests : IntegrationTestBase, IClassFixture<LanderWebAp
         var response = await client.PostAsJsonAsync("/api/v1/rent/create-apartment", new
         {
             Title       = "Lijepi stan u centru",
+            Description = "Svetao dvosoban stan u strogom centru.",
             Rent        = 700,
             Address     = "Ferhadija 1",
             City        = "Sarajevo",
@@ -63,10 +64,13 @@ public class ApartmentCrudTests : IntegrationTestBase, IClassFixture<LanderWebAp
     public async Task GetAllApartments_AfterCreating_ContainsNewApartment()
     {
         var landlord = await SeedUserAsync("list-apt@test.com", role: "Landlord");
-        await SeedApartmentAsync(landlord.UserId, "Stan za popis");
+        // Unique city → unique HybridCache key, so a previously cached unfiltered
+        // (empty) list from another test can't shadow the freshly seeded apartment.
+        var uniqueCity = $"Grad{Guid.NewGuid():N}"[..12];
+        await SeedApartmentAsync(landlord.UserId, "Stan za popis", city: uniqueCity);
         var client = CreateAnonymousClient();
 
-        var response = await client.GetAsync("/api/v1/rent/get-all-apartments");
+        var response = await client.GetAsync($"/api/v1/rent/get-all-apartments?city={uniqueCity}");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body  = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -125,12 +129,15 @@ public class ApartmentCrudTests : IntegrationTestBase, IClassFixture<LanderWebAp
         var landlord = await SeedUserAsync("img-apt@test.com", role: "Landlord");
         var client   = CreateAuthenticatedClient(landlord.UserId, landlord.UserGuid, "Landlord");
 
-        // External URL should be stripped by the IsAllowedImageUrl validator
+        // External URL should be dropped by ToImageStorageKey (only our container paths survive)
         var response = await client.PostAsJsonAsync("/api/v1/rent/create-apartment", new
         {
-            Title     = "Image test",
-            Rent      = 500,
-            ImageUrls = new[] { "https://evil.com/malicious.jpg", "/uploads/apartments/ok.webp" }
+            Title       = "Image test",
+            Description = "Stan sa slikama za test.",
+            Rent        = 500,
+            Address     = "Testna 2",
+            City        = "Sarajevo",
+            ImageUrls   = new[] { "https://evil.com/malicious.jpg", "/uploads/apartments/ok.webp" }
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);

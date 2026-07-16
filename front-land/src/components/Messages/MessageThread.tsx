@@ -15,7 +15,7 @@ import {
     Star as StarIcon,
     MarkEmailRead as PriorityIcon,
 } from '@mui/icons-material';
-import { Tooltip, Chip } from '@mui/material';
+import { Tooltip } from '@mui/material';
 import { format, parseISO } from 'date-fns';
 import { Message } from '../../shared/types/message';
 import { useAuth } from '../../shared/context/AuthContext';

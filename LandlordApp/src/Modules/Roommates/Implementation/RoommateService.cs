@@ -23,6 +23,12 @@ public class RoommateService : IRoommateService
         _httpContextAccessor = httpContextAccessor;
         _cache = cache;
     }
+
+    // List cache keys include a version number; bumping it on any mutation
+    // invalidates all cached pages/filter combinations at once.
+    private const string CacheVersionKey = "Roommates_CacheVersion";
+    private long GetCacheVersion() => _cache.GetOrCreate(CacheVersionKey, _ => 0L);
+    private void InvalidateListCache() => _cache.Set(CacheVersionKey, GetCacheVersion() + 1);
     public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(
         string? location, 
         decimal? minBudget, 
@@ -34,6 +40,8 @@ public class RoommateService : IRoommateService
         DateOnly? availableFrom,
         int? stayDuration,
         int? apartmentId,
+        RoommateGender? gender = null,
+        WorkSchedule? workSchedule = null,
         int page = 1,
         int pageSize = 20)
     {
@@ -41,7 +49,7 @@ public class RoommateService : IRoommateService
         page = page < 1 ? 1 : page;
         pageSize = pageSize < 1 ? 20 : pageSize > 100 ? 100 : pageSize;
 
-        var cacheKey = $"Roommates_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{page}_{pageSize}";
+        var cacheKey = $"Roommates_v{GetCacheVersion()}_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{gender}_{workSchedule}_{page}_{pageSize}";
 
         if (_cache.TryGetValue(cacheKey, out PagedResult<RoommateDto>? cachedResult) && cachedResult != null)
         {
@@ -92,6 +100,14 @@ public class RoommateService : IRoommateService
         {
             query = query.Where(r => r.LookingForApartmentId == apartmentId.Value);
         }
+        if (gender.HasValue)
+        {
+            query = query.Where(r => r.Gender == gender.Value);
+        }
+        if (workSchedule.HasValue)
+        {
+            query = query.Where(r => r.WorkSchedule == workSchedule.Value);
+        }
         var totalCount = await query.CountAsync();
         var now = DateTime.UtcNow;
         var roommates = await query
@@ -138,7 +154,11 @@ public class RoommateService : IRoommateService
                 LookingForApartmentType = r.LookingForApartmentType,
                 PreferredLocation = r.PreferredLocation,
                 LookingForApartmentId = r.LookingForApartmentId,
-                IsActive = r.IsActive
+                IsActive = r.IsActive,
+                Gender = r.Gender,
+                Languages = r.Languages,
+                WorkSchedule = r.WorkSchedule,
+                MusicFriendly = r.MusicFriendly
             };
         }).ToList();
 
@@ -195,7 +215,11 @@ public class RoommateService : IRoommateService
             LookingForRoomType = roommate.LookingForRoomType,
             LookingForApartmentType = roommate.LookingForApartmentType,
             PreferredLocation = roommate.PreferredLocation,
-            IsActive = roommate.IsActive
+            IsActive = roommate.IsActive,
+            Gender = roommate.Gender,
+            Languages = roommate.Languages,
+            WorkSchedule = roommate.WorkSchedule,
+            MusicFriendly = roommate.MusicFriendly
         };
     }
     public async Task<RoommateDto?> GetRoommateByUserIdAsync(int userId)
@@ -239,7 +263,11 @@ public class RoommateService : IRoommateService
             LookingForRoomType   = roommate.LookingForRoomType,
             LookingForApartmentType = roommate.LookingForApartmentType,
             PreferredLocation    = roommate.PreferredLocation,
-            IsActive             = roommate.IsActive
+            IsActive             = roommate.IsActive,
+            Gender               = roommate.Gender,
+            Languages            = roommate.Languages,
+            WorkSchedule         = roommate.WorkSchedule,
+            MusicFriendly        = roommate.MusicFriendly
         };
     }
     public async Task<RoommateDto> CreateRoommateAsync(int userId, RoommateInputDto input)
@@ -274,6 +302,10 @@ public class RoommateService : IRoommateService
                 roommate.LookingForApartmentType = input.LookingForApartmentType;
                 roommate.PreferredLocation = input.PreferredLocation;
                 roommate.LookingForApartmentId = input.LookingForApartmentId;
+                roommate.Gender = input.Gender;
+                roommate.Languages = HtmlSanitizationHelper.SanitizePlainText(input.Languages);
+                roommate.WorkSchedule = input.WorkSchedule;
+                roommate.MusicFriendly = input.MusicFriendly;
                 roommate.IsActive = true;
                 roommate.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var rmGuid) ? rmGuid : null;
                 roommate.ModifiedDate = DateTime.UtcNow;
@@ -303,6 +335,10 @@ public class RoommateService : IRoommateService
                     LookingForApartmentType = input.LookingForApartmentType,
                     PreferredLocation = input.PreferredLocation,
                     LookingForApartmentId = input.LookingForApartmentId,
+                    Gender = input.Gender,
+                    Languages = HtmlSanitizationHelper.SanitizePlainText(input.Languages),
+                    WorkSchedule = input.WorkSchedule,
+                    MusicFriendly = input.MusicFriendly,
                     IsActive = true,
                     CreatedByGuid = Guid.TryParse(currentUserGuid, out var cGuid) ? cGuid : null,
                     CreatedDate = DateTime.UtcNow,
@@ -313,6 +349,7 @@ public class RoommateService : IRoommateService
             }
             await _context.SaveEntitiesAsync();
                     });
+        InvalidateListCache();
         return new RoommateDto
         {
             RoommateId = roommate.RoommateId,
@@ -341,7 +378,11 @@ public class RoommateService : IRoommateService
             LookingForApartmentType = roommate.LookingForApartmentType,
             PreferredLocation = roommate.PreferredLocation,
             LookingForApartmentId = roommate.LookingForApartmentId,
-            IsActive = roommate.IsActive
+            IsActive = roommate.IsActive,
+            Gender = roommate.Gender,
+            Languages = roommate.Languages,
+            WorkSchedule = roommate.WorkSchedule,
+            MusicFriendly = roommate.MusicFriendly
         };
     }
     public async Task<RoommateDto> UpdateRoommateAsync(int id, int userId, RoommateInputDto input)
@@ -371,12 +412,17 @@ public class RoommateService : IRoommateService
         roommate.LookingForRoomType = input.LookingForRoomType;
         roommate.LookingForApartmentType = input.LookingForApartmentType;
         roommate.PreferredLocation = input.PreferredLocation;
+        roommate.Gender = input.Gender;
+        roommate.Languages = HtmlSanitizationHelper.SanitizePlainText(input.Languages);
+        roommate.WorkSchedule = input.WorkSchedule;
+        roommate.MusicFriendly = input.MusicFriendly;
         roommate.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var rmGuid) ? rmGuid : null;
         roommate.ModifiedDate = DateTime.UtcNow;
         await _context.RunInTransactionAsync(async () =>
         {
             await _context.SaveEntitiesAsync();
                     });
+        InvalidateListCache();
 
         // Roommate is already up-to-date in memory — only load the user to build the DTO,
         // avoiding an unnecessary re-fetch of the same roommate entity.
@@ -412,7 +458,11 @@ public class RoommateService : IRoommateService
             LookingForRoomType   = roommate.LookingForRoomType,
             LookingForApartmentType = roommate.LookingForApartmentType,
             PreferredLocation    = roommate.PreferredLocation,
-            IsActive             = roommate.IsActive
+            IsActive             = roommate.IsActive,
+            Gender               = roommate.Gender,
+            Languages            = roommate.Languages,
+            WorkSchedule         = roommate.WorkSchedule,
+            MusicFriendly        = roommate.MusicFriendly
         };
     }
     public async Task<bool> DeleteRoommateAsync(int id, int userId)
@@ -425,6 +475,7 @@ public class RoommateService : IRoommateService
             roommate.IsActive = false;
             await _context.SaveEntitiesAsync();
                     });
+        InvalidateListCache();
         return true;
     }
     public async Task<bool> DeleteRoommateByUserIdAsync(int userId)
@@ -437,6 +488,7 @@ public class RoommateService : IRoommateService
             roommate.IsActive = false;
             await _context.SaveEntitiesAsync();
                     });
+        InvalidateListCache();
         return true;
     }
 }
