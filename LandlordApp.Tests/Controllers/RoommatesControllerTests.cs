@@ -53,8 +53,7 @@ public class RoommatesControllerTests
     [Fact]
     public async Task GetAllRoommates_NoParams_ReturnsOkList()
     {
-        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            null, null, null, null, null, null, null, null, null, null, null, null, 1, 20))
+        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(It.IsAny<RoommateFilterQuery>()))
             .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
             {
                 Items = new List<RoommateDto> { SampleRoommate },
@@ -69,18 +68,13 @@ public class RoommatesControllerTests
     [Fact]
     public async Task GetAllRoommates_WithFilters_TracksSearch()
     {
-        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            It.IsAny<string?>(), It.IsAny<decimal?>(), It.IsAny<decimal?>(),
-            It.IsAny<bool?>(), It.IsAny<bool?>(), It.IsAny<string?>(),
-            It.IsAny<string?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(),
-            It.IsAny<RoommateGender?>(), It.IsAny<WorkSchedule?>(),
-            It.IsAny<int>(), It.IsAny<int>()))
+        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(It.IsAny<RoommateFilterQuery>()))
             .ReturnsAsync(new Lander.src.Common.PagedResult<RoommateDto>
             {
                 Items = new List<RoommateDto>(), TotalCount = 0, Page = 1, PageSize = 20
             });
 
-        await _controller.GetAllRoommates(location: "Sarajevo", lifestyle: "active");
+        await _controller.GetAllRoommates(new RoommateFilterQuery { Location = "Sarajevo", Lifestyle = "active" });
 
         _mockAnalytics.Verify(a => a.TrackEventAsync(
             "RoommateSearch", It.IsAny<string>(),
@@ -96,11 +90,10 @@ public class RoommatesControllerTests
         {
             Items = new List<RoommateDto>(), TotalCount = 0
         };
-        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(
-            null, null, null, null, null, null, null, null, null, null, null, null, 1, 10))
+        _mockRoommateService.Setup(s => s.GetAllRoommatesAsync(It.IsAny<RoommateFilterQuery>()))
             .ReturnsAsync(paged);
 
-        var result = await _controller.GetAllRoommates(page: 1, pageSize: 10);
+        var result = await _controller.GetAllRoommates(new RoommateFilterQuery { Page = 1, PageSize = 10 });
 
         result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(paged);
     }

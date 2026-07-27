@@ -3,16 +3,11 @@ import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "Lander.src.Modules.Reviews.proto";
 
-service ReviewFavoriteGrpcService {
-  rpc CreateFavorite (CreateFavoriteRequest) returns (FavoriteResponse);
-  rpc CreateReview (CreateReviewRequest) returns (ReviewResponse);
-  rpc GetReviewById (GetReviewByIdRequest) returns (ReviewResponse);
-  rpc GetReviewsByApartmentId (GetReviewsByApartmentIdRequest) returns (GetReviewsResponse);
-  rpc GetFavorites (GetFavoritesRequest) returns (GetFavoritesResponse);
-  rpc DeleteReview (DeleteReviewRequest) returns (DeleteResponse);
-  rpc DeleteFavorite (DeleteFavoriteRequest) returns (DeleteResponse);
-  rpc GetUserFavorites (GetUserFavoritesRequest) returns (GetFavoritesResponse);
-}
+// Message-only schema (csproj builds it with GrpcServices="None"). The generated
+// C# types are the request/response DTOs of the Reviews REST controller — they are
+// part of the published OpenAPI contract the frontend is generated from, which is
+// why they stay protobuf-defined. Reviews used to be reachable over gRPC as well;
+// that transport was a loopback call into this same process and has been removed.
 
 message CreateFavoriteRequest {
   int32 user_id = 1;

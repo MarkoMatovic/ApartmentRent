@@ -1,14 +1,12 @@
 using Xunit;
-using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Lander;
+using Lander.src.Common.Exceptions;
 using Lander.src.Modules.Reviews.Implementation;
 using Lander.src.Modules.Reviews.Modules;
 using Lander.src.Modules.Reviews.proto;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
-using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
 
 namespace LandlordApp.Tests.Services;
 
@@ -51,7 +49,7 @@ public class ReviewFavoriteServiceTests : IDisposable
     public async Task CreateFavorite_ValidRequest_ShouldSaveToDb()
     {
         var request = new CreateFavoriteRequest { UserId = 1, ApartmentId = 101, CreatedByGuid = Guid.NewGuid().ToString() };
-        var response = await _service.CreateFavorite(request, null!);
+        var response = await _service.CreateFavoriteAsync(request);
         response.UserId.Should().Be(1);
         (await _context.Favorites.CountAsync()).Should().Be(1);
     }
@@ -60,29 +58,92 @@ public class ReviewFavoriteServiceTests : IDisposable
     public async Task CreateReview_ValidRequest_ShouldSaveToDb()
     {
         var request = new CreateReviewRequest { UserId = 1, ApartmentId = 101, Rating = 5, Comment = "Great", CreatedByGuid = Guid.NewGuid().ToString() };
-        var response = await _service.CreateReview(request, null!);
+        var response = await _service.CreateReviewAsync(request);
         response.Rating.Should().Be(5);
         (await _context.Reviews.CountAsync()).Should().Be(1);
     }
 
+    // ArgumentException is what GlobalExceptionHandlerMiddleware turns into a 400.
     [Fact]
-    public async Task CreateReview_InvalidRating_ShouldThrowRpcException()
+    public async Task CreateReview_InvalidRating_ShouldThrowArgumentException()
     {
         var request = new CreateReviewRequest { UserId = 1, Rating = 6, CreatedByGuid = Guid.NewGuid().ToString() };
-        var act = async () => await _service.CreateReview(request, null!);
-        await act.Should().ThrowAsync<RpcException>().Where(e => e.Status.StatusCode == StatusCode.InvalidArgument);
+        var act = async () => await _service.CreateReviewAsync(request);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
-    public async Task DeleteReview_Unauthorized_ShouldReturnFailure()
+    public async Task CreateFavorite_MalformedGuid_ShouldThrowArgumentException()
+    {
+        var request = new CreateFavoriteRequest { UserId = 1, ApartmentId = 101, CreatedByGuid = "not-a-guid" };
+        var act = async () => await _service.CreateFavoriteAsync(request);
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task DeleteReview_CallerIsNotOwner_ShouldReturnFailure()
     {
         var ownerGuid = Guid.NewGuid();
         _context.Reviews.Add(new Review { ReviewId = 1, CreatedByGuid = ownerGuid });
         await _context.SaveChangesAsync();
 
-        var response = await _service.DeleteReview(new DeleteReviewRequest { ReviewId = 1, RequestUserGuid = Guid.NewGuid().ToString() }, null!);
+        var response = await _service.DeleteReviewAsync(1, Guid.NewGuid().ToString());
+
         response.Success.Should().BeFalse();
         response.Message.Should().Contain("Unauthorized");
+        (await _context.Reviews.CountAsync()).Should().Be(1, "a non-owner must not delete the review");
+    }
+
+    [Fact]
+    public async Task DeleteReview_CallerIsOwner_ShouldDelete()
+    {
+        var ownerGuid = Guid.NewGuid();
+        _context.Reviews.Add(new Review { ReviewId = 1, CreatedByGuid = ownerGuid });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.DeleteReviewAsync(1, ownerGuid.ToString());
+
+        response.Success.Should().BeTrue();
+        (await _context.Reviews.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DeleteReview_EmptyCallerGuid_ShouldReturnFailure()
+    {
+        _context.Reviews.Add(new Review { ReviewId = 1, CreatedByGuid = Guid.NewGuid() });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.DeleteReviewAsync(1, string.Empty);
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Contain("Unauthorized");
+    }
+
+    [Fact]
+    public async Task DeleteFavorite_CallerIsNotOwner_ShouldReturnFailure()
+    {
+        var ownerGuid = Guid.NewGuid();
+        _context.Favorites.Add(new Favorite { FavoriteId = 1, UserId = 1, CreatedByGuid = ownerGuid });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.DeleteFavoriteAsync(1, Guid.NewGuid().ToString());
+
+        response.Success.Should().BeFalse();
+        response.Message.Should().Contain("Unauthorized");
+        (await _context.Favorites.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DeleteFavorite_CallerIsOwner_ShouldDelete()
+    {
+        var ownerGuid = Guid.NewGuid();
+        _context.Favorites.Add(new Favorite { FavoriteId = 1, UserId = 1, CreatedByGuid = ownerGuid });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.DeleteFavoriteAsync(1, ownerGuid.ToString());
+
+        response.Success.Should().BeTrue();
+        (await _context.Favorites.CountAsync()).Should().Be(0);
     }
 
     #endregion
@@ -98,23 +159,9 @@ public class ReviewFavoriteServiceTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        var response = await _service.GetReviewsByApartmentId(new GetReviewsByApartmentIdRequest { ApartmentId = 1 }, null!);
+        var response = await _service.GetReviewsByApartmentIdAsync(1);
         response.Reviews.Should().HaveCount(1);
         response.Reviews[0].Comment.Should().Be("Public");
-    }
-
-    [Fact]
-    public async Task GetFavorites_Limit_ShouldRespectMaxLimit()
-    {
-        for (int i = 0; i < 15; i++)
-            _context.Favorites.Add(new Favorite { FavoriteId = i + 1, UserId = 1, ApartmentId = i + 100, CreatedByGuid = Guid.NewGuid() });
-        await _context.SaveChangesAsync();
-
-        var response = await _service.GetFavorites(new GetFavoritesRequest { Limit = 5 }, null!);
-        response.Favorites.Should().HaveCount(5);
-
-        var largeResponse = await _service.GetFavorites(new GetFavoritesRequest { Limit = 100 }, null!);
-        largeResponse.Favorites.Should().HaveCount(10); // Service caps at 10
     }
 
     [Fact]
@@ -127,15 +174,33 @@ public class ReviewFavoriteServiceTests : IDisposable
         );
         await _context.SaveChangesAsync();
 
-        var response = await _service.GetUserFavorites(new GetUserFavoritesRequest { UserId = 1 }, null!);
+        var response = await _service.GetUserFavoritesAsync(1);
         response.Favorites.Should().HaveCount(2);
     }
 
+    // NotFoundException is what GlobalExceptionHandlerMiddleware turns into a 404.
     [Fact]
-    public async Task GetReviewById_NotFound_ShouldThrowRpcException()
+    public async Task GetReviewById_NotFound_ShouldThrowNotFoundException()
     {
-        var act = async () => await _service.GetReviewById(new GetReviewByIdRequest { ReviewId = 999 }, null!);
-        await act.Should().ThrowAsync<RpcException>().Where(e => e.Status.StatusCode == StatusCode.NotFound);
+        var act = async () => await _service.GetReviewByIdAsync(999);
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetReviewById_Found_ShouldReturnReview()
+    {
+        _context.Reviews.Add(new Review
+        {
+            ReviewId = 5, ApartmentId = 1, TenantId = 1, Rating = 4,
+            ReviewText = "Solid", IsPublic = true, CreatedByGuid = Guid.NewGuid()
+        });
+        await _context.SaveChangesAsync();
+
+        var response = await _service.GetReviewByIdAsync(5);
+
+        response.ReviewId.Should().Be(5);
+        response.Rating.Should().Be(4);
+        response.Comment.Should().Be("Solid");
     }
 
     #endregion

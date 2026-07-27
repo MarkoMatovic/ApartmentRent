@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './shared/context/AuthContext';
 import { ThemeProvider } from './shared/context/ThemeContext';
@@ -6,51 +6,63 @@ import { NotificationProvider } from './shared/context/NotificationContext';
 import Layout from './components/Layout/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import ScrollToTop from './components/ScrollToTop';
-import HomePage from './pages/HomePage';
-import ApartmentListPage from './pages/ApartmentListPage';
-import ApartmentDetailPage from './pages/ApartmentDetailPage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import ChatPage from './pages/ChatPage';
-import RoommateListPage from './pages/RoommateListPage';
-import RoommateDetailPage from './pages/RoommateDetailPage';
-import CreateRoommatePage from './pages/CreateRoommatePage';
-import ProfilePage from './pages/ProfilePage';
-import MyApartmentsPage from './pages/MyApartmentsPage';
-import CreateApartmentPage from './pages/CreateApartmentPage';
-import EditApartmentPage from './pages/EditApartmentPage';
-import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
-import SupportPage from './pages/SupportPage';
-import PricingPage from './pages/PricingPage';
-import SubscriptionPage from './pages/SubscriptionPage';
-import UserRoommateAnalyticsPage from './pages/UserRoommateAnalyticsPage';
-import TenantApplicationsPage from './pages/TenantApplicationsPage';
-import LandlordApplicationsPage from './pages/LandlordApplicationsPage';
-import PaymentSuccessPage from './pages/PaymentSuccessPage';
-import PaymentFailurePage from './pages/PaymentFailurePage';
-import MyAppointmentsPage from './pages/MyAppointmentsPage';
-import LandlordAppointmentsPage from './pages/LandlordAppointmentsPage';
-import LandlordAvailabilityPage from './pages/LandlordAvailabilityPage';
-import MessagesPage from './pages/MessagesPage';
-import ReportsPage from './pages/ReportsPage';
-import { SavedSearchesPage } from './pages/SavedSearches';
-import { SearchRequestsPage } from './pages/SearchRequests';
-import { PricePredictorPage } from './pages/PricePredictor';
-import RoommateMatchesPage from './pages/RoommateMatchesPage';
+import PageLoader from './components/PageLoader';
 import { AdminRoute } from './shared/components/AdminRoute';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
-// Legal pages
-import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
-import TermsOfServicePage from './pages/legal/TermsOfServicePage';
-import CookiePolicyPage from './pages/legal/CookiePolicyPage';
-import RefundPolicyPage from './pages/legal/RefundPolicyPage';
-// Payment management pages
-import MySubscriptionsPage from './pages/MySubscriptionsPage';
-import PaymentHistoryPage from './pages/PaymentHistoryPage';
-// Cookie consent
 import CookieConsentBanner from './components/CookieConsent/CookieConsentBanner';
+
+// HomePage stays eager — it is the landing route, so lazy-loading it would only
+// add a round trip before first paint. Every other page is split into its own
+// chunk and fetched on navigation.
+import HomePage from './pages/HomePage';
+
+const ApartmentListPage = lazy(() => import('./pages/ApartmentListPage'));
+const ApartmentDetailPage = lazy(() => import('./pages/ApartmentDetailPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const RoommateListPage = lazy(() => import('./pages/RoommateListPage'));
+const RoommateDetailPage = lazy(() => import('./pages/RoommateDetailPage'));
+const CreateRoommatePage = lazy(() => import('./pages/CreateRoommatePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const MyApartmentsPage = lazy(() => import('./pages/MyApartmentsPage'));
+const CreateApartmentPage = lazy(() => import('./pages/CreateApartmentPage'));
+const EditApartmentPage = lazy(() => import('./pages/EditApartmentPage'));
+const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const UserRoommateAnalyticsPage = lazy(() => import('./pages/UserRoommateAnalyticsPage'));
+const TenantApplicationsPage = lazy(() => import('./pages/TenantApplicationsPage'));
+const LandlordApplicationsPage = lazy(() => import('./pages/LandlordApplicationsPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const PaymentFailurePage = lazy(() => import('./pages/PaymentFailurePage'));
+const MyAppointmentsPage = lazy(() => import('./pages/MyAppointmentsPage'));
+const LandlordAppointmentsPage = lazy(() => import('./pages/LandlordAppointmentsPage'));
+const LandlordAvailabilityPage = lazy(() => import('./pages/LandlordAvailabilityPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const RoommateMatchesPage = lazy(() => import('./pages/RoommateMatchesPage'));
+
+// These modules expose named exports only, so map them onto `default` for lazy().
+const SavedSearchesPage = lazy(() =>
+  import('./pages/SavedSearches').then(m => ({ default: m.SavedSearchesPage })));
+const SearchRequestsPage = lazy(() =>
+  import('./pages/SearchRequests').then(m => ({ default: m.SearchRequestsPage })));
+const PricePredictorPage = lazy(() =>
+  import('./pages/PricePredictor').then(m => ({ default: m.PricePredictorPage })));
+
+// Legal pages
+const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage'));
+const CookiePolicyPage = lazy(() => import('./pages/legal/CookiePolicyPage'));
+const RefundPolicyPage = lazy(() => import('./pages/legal/RefundPolicyPage'));
+
+// Payment management pages
+const MySubscriptionsPage = lazy(() => import('./pages/MySubscriptionsPage'));
+const PaymentHistoryPage = lazy(() => import('./pages/PaymentHistoryPage'));
 
 /**
  * Wraps the route tree in an ErrorBoundary that automatically resets whenever
@@ -73,6 +85,7 @@ function App() {
               <ScrollToTop />
               <Layout>
               <PageErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/apartments" element={<ApartmentListPage />} />
@@ -124,6 +137,7 @@ function App() {
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
               </PageErrorBoundary>
               </Layout>
               <CookieConsentBanner />
@@ -136,4 +150,3 @@ function App() {
 }
 
 export default App;
-

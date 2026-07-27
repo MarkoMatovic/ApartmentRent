@@ -8,7 +8,7 @@ using Lander.Helpers;
 
 namespace Lander.src.Modules.ApartmentApplications.Controllers;
 
-[Route("api/applications")]
+[Route(ApiActionsV1.Applications)]
 [ApiController]
 public class ApartmentApplicationsController : ApiControllerBase
 {
@@ -39,7 +39,7 @@ public class ApartmentApplicationsController : ApiControllerBase
         return Ok(result);
     }
 
-    [HttpGet("landlord")]
+    [HttpGet(ApiActionsV1.GetLandlordApplications, Name = nameof(ApiActionsV1.GetLandlordApplications))]
     [Authorize(Policy = "LandlordPolicy")]
     public async Task<IActionResult> GetLandlordApplications()
     {
@@ -50,7 +50,7 @@ public class ApartmentApplicationsController : ApiControllerBase
         return Ok(applications);
     }
 
-    [HttpGet("tenant")]
+    [HttpGet(ApiActionsV1.GetTenantApplications, Name = nameof(ApiActionsV1.GetTenantApplications))]
     [Authorize]
     public async Task<IActionResult> GetTenantApplications()
     {
@@ -61,7 +61,7 @@ public class ApartmentApplicationsController : ApiControllerBase
         return Ok(applications);
     }
 
-    [HttpPut("{id}/status")]
+    [HttpPut(ApiActionsV1.UpdateApplicationStatus, Name = nameof(ApiActionsV1.UpdateApplicationStatus))]
     [Authorize(Policy = "LandlordPolicy")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateApplicationStatusInputDto input)
     {
@@ -73,7 +73,7 @@ public class ApartmentApplicationsController : ApiControllerBase
         return Ok(result);
     }
 
-    [HttpGet("check-approval/{apartmentId}")]
+    [HttpGet(ApiActionsV1.CheckApprovalStatus, Name = nameof(ApiActionsV1.CheckApprovalStatus))]
     [Authorize]
     public async Task<IActionResult> CheckApprovalStatus(int apartmentId)
     {

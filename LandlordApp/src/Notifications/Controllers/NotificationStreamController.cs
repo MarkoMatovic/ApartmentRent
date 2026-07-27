@@ -1,3 +1,4 @@
+using Lander.Helpers;
 using Lander.src.Notifications.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -8,7 +9,7 @@ using System.Text.Json;
 namespace Lander.src.Notifications.Controllers;
 
 [ApiController]
-[Route("api/notifications")]
+[Route(ApiActionsV1.NotificationsStream)]
 [Authorize]
 public class NotificationStreamController : ControllerBase
 {
@@ -21,7 +22,7 @@ public class NotificationStreamController : ControllerBase
 
     // SSE connections are long-lived; the global UseRequestTimeouts (default 30s) would
     // otherwise kill and churn every stream every 30 seconds. Opt this endpoint out.
-    [HttpGet("stream")]
+    [HttpGet(ApiActionsV1.StreamNotifications, Name = nameof(ApiActionsV1.StreamNotifications))]
     [DisableRequestTimeout]
     public async Task StreamNotifications(CancellationToken cancellationToken)
     {
@@ -50,7 +51,7 @@ public class NotificationStreamController : ControllerBase
         }
     }
 
-    [HttpPost("test")]
+    [HttpPost(ApiActionsV1.SendTestNotification, Name = nameof(ApiActionsV1.SendTestNotification))]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendTestNotification([FromBody] string message)
     {
@@ -68,7 +69,7 @@ public class NotificationStreamController : ControllerBase
         return Ok(new { success = true, message = "Notification sent" });
     }
 
-    [HttpGet("connections")]
+    [HttpGet(ApiActionsV1.GetConnectionCount, Name = nameof(ApiActionsV1.GetConnectionCount))]
     public IActionResult GetConnectionCount()
     {
         var count = _streamService.GetActiveConnectionCount();

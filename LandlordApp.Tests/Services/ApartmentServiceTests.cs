@@ -147,7 +147,6 @@ public class ApartmentServiceTests : IDisposable
             _mockLogger.Object,
             _mockAuthService.Object,
             TimeProvider.System,
-            new Lander.src.Modules.Listings.Services.ApartmentCacheVersionService(),
             new Mock<Lander.src.Infrastructure.Services.IAuditLogService>().Object,
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,

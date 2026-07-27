@@ -1,3 +1,4 @@
+using Lander.Helpers;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.MachineLearning.Services;
@@ -13,7 +14,7 @@ public partial class ApartmentsController
     // Fields and Constructor moved to ApartmentsController.cs
 
     
-    [HttpGet("semantic-search")]
+    [HttpGet(ApiActionsV1.SemanticSearch, Name = nameof(ApiActionsV1.SemanticSearch))]
     [AllowAnonymous]
     [EnableRateLimiting("semantic-search")]
     public async Task<ActionResult<List<ApartmentDto>>> SemanticSearch(
@@ -48,7 +49,7 @@ public partial class ApartmentsController
         return Ok(results);
     }
     
-    [HttpPost("generate-embeddings")]
+    [HttpPost(ApiActionsV1.GenerateEmbeddings, Name = nameof(ApiActionsV1.GenerateEmbeddings))]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateEmbeddings()
     {

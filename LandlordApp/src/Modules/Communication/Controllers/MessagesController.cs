@@ -63,7 +63,7 @@ public class MessagesController : ControllerBase
         return Ok(await _messageService.GetUserConversationsAsync(userId));
     }
 
-    [HttpPost("upload")]
+    [HttpPost(ApiActionsV1.UploadMessageFile, Name = nameof(ApiActionsV1.UploadMessageFile))]
     [Consumes("multipart/form-data")]
     [EnableRateLimiting("auth")]
     [Microsoft.AspNetCore.Http.Timeouts.RequestTimeout(60_000)]
@@ -135,7 +135,7 @@ public class MessagesController : ControllerBase
         return Ok(await _messageService.GetUnreadCountAsync(userId));
     }
 
-    [HttpGet("files/{filename}")]
+    [HttpGet(ApiActionsV1.DownloadMessageFile, Name = nameof(ApiActionsV1.DownloadMessageFile))]
     public async Task<IActionResult> DownloadFile([FromRoute] string filename)
     {
         var userId = GetCurrentUserId();
@@ -165,7 +165,7 @@ public class MessagesController : ControllerBase
         return PhysicalFile(filePath, contentType, enableRangeProcessing: false);
     }
 
-    [HttpPost("archive")]
+    [HttpPost(ApiActionsV1.ArchiveConversation, Name = nameof(ApiActionsV1.ArchiveConversation))]
     public async Task<IActionResult> ArchiveConversation([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -174,7 +174,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("unarchive")]
+    [HttpPost(ApiActionsV1.UnarchiveConversation, Name = nameof(ApiActionsV1.UnarchiveConversation))]
     public async Task<IActionResult> UnarchiveConversation([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -183,7 +183,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("mute")]
+    [HttpPost(ApiActionsV1.MuteConversation, Name = nameof(ApiActionsV1.MuteConversation))]
     public async Task<IActionResult> MuteConversation([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -192,7 +192,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("unmute")]
+    [HttpPost(ApiActionsV1.UnmuteConversation, Name = nameof(ApiActionsV1.UnmuteConversation))]
     public async Task<IActionResult> UnmuteConversation([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -201,7 +201,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("block")]
+    [HttpPost(ApiActionsV1.BlockUser, Name = nameof(ApiActionsV1.BlockUser))]
     public async Task<IActionResult> BlockUser([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -210,7 +210,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("unblock")]
+    [HttpPost(ApiActionsV1.UnblockUser, Name = nameof(ApiActionsV1.UnblockUser))]
     public async Task<IActionResult> UnblockUser([FromBody] ChatActionDto dto)
     {
         var guard = ForbiddenIfNotOwner(dto.UserId);
@@ -219,7 +219,7 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpDelete("delete-conversation")]
+    [HttpDelete(ApiActionsV1.DeleteConversation, Name = nameof(ApiActionsV1.DeleteConversation))]
     public async Task<IActionResult> DeleteConversation([FromQuery] int otherUserId)
     {
         var userId = GetCurrentUserId();
@@ -227,14 +227,14 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
-    [HttpGet("search")]
+    [HttpGet(ApiActionsV1.SearchMessages, Name = nameof(ApiActionsV1.SearchMessages))]
     public async Task<ActionResult<List<MessageDto>>> SearchMessages([FromQuery] string query)
     {
         var userId = GetCurrentUserId();
         return Ok(await _messageService.SearchMessagesAsync(userId, query));
     }
 
-    [HttpPost("report")]
+    [HttpPost(ApiActionsV1.ReportAbuse, Name = nameof(ApiActionsV1.ReportAbuse))]
     public async Task<IActionResult> ReportAbuse([FromBody] ReportAbuseRequestDto dto)
     {
         var currentId = GetCurrentUserId();

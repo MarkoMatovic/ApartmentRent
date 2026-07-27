@@ -1,11 +1,18 @@
 using Lander.src.Modules.Reviews.proto;
 
-namespace Lander.src.Modules.Reviews.Client;
+namespace Lander.src.Modules.Reviews.Interfaces;
 
 /// <summary>
-/// Interfejs za GrpcServiceClient — omogućava mockovanje u testovima.
+/// Reviews/Favorites module boundary. Implemented in-process by
+/// <see cref="Implementation.ReviewFavoriteService"/>; the interface exists so callers
+/// depend on the contract rather than the implementation (and so tests can substitute it).
 /// </summary>
-public interface IGrpcServiceClient
+/// <remarks>
+/// Every <c>callerGuid</c> argument must come from the authenticated principal
+/// (the JWT "sub" claim), never from the request body — ownership checks are enforced
+/// against it.
+/// </remarks>
+public interface IReviewFavoriteService
 {
     Task<FavoriteResponse> CreateFavoriteAsync(CreateFavoriteRequest request);
     Task<ReviewResponse> CreateReviewAsync(CreateReviewRequest request);

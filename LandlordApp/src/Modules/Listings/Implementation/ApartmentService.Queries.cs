@@ -31,6 +31,9 @@ public partial class ApartmentService
                        $"_lt{(int?)filters.ListingType}_ia{filters.IsImmediatelyAvailable}";
 
         // HybridCache: built-in stampede protection + Redis-ready L2 cache.
+        // Tagged "apartments" so every mutation path can drop the whole list cache via
+        // RemoveByTagAsync — without the tag these entries survived their full 5-minute
+        // window and a freshly created or deleted listing stayed invisible until expiry.
         return await _hybridCache.GetOrCreateAsync(
             cacheKey,
             async ct =>
@@ -72,7 +75,8 @@ public partial class ApartmentService
             {
                 Expiration = TimeSpan.FromMinutes(5),
                 LocalCacheExpiration = TimeSpan.FromMinutes(2)
-            });
+            },
+            tags: ApartmentCacheTags);
     }
 
     public async Task<KeysetPagedResult<ApartmentDto>> GetAllApartmentsKeysetAsync(

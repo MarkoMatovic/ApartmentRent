@@ -153,7 +153,7 @@ namespace Lander.src.Modules.Users.Controllers
             var profile = await _userInterface.UpdateUserProfileAsync(userId, updateDto);
             return Ok(profile);
         }
-        [HttpPut("update-privacy-settings/{userId}")]
+        [HttpPut(ApiActionsV1.UpdatePrivacySettings, Name = nameof(ApiActionsV1.UpdatePrivacySettings))]
         [Authorize]
         public async Task<ActionResult<UserProfileDto>> UpdatePrivacySettings([FromRoute] int userId, [FromBody] PrivacySettingsDto privacySettingsDto)
         {
@@ -162,7 +162,7 @@ namespace Lander.src.Modules.Users.Controllers
             var profile = await _userInterface.UpdatePrivacySettingsAsync(userId, privacySettingsDto);
             return Ok(profile);
         }
-        [HttpGet("export-data/{userId}")]
+        [HttpGet(ApiActionsV1.ExportUserData, Name = nameof(ApiActionsV1.ExportUserData))]
         [Authorize]
         public async Task<ActionResult<UserExportDto>> ExportUserData([FromRoute] int userId)
         {
@@ -173,7 +173,7 @@ namespace Lander.src.Modules.Users.Controllers
         }
 
         
-        [HttpPost("token/refresh")]
+        [HttpPost(ApiActionsV1.RefreshToken, Name = nameof(ApiActionsV1.RefreshToken))]
         [EnableRateLimiting("auth")]
         public async Task<ActionResult<AuthTokenDto>> RotateRefreshToken([FromBody] LogoutInputDto? dto = null)
         {
@@ -198,7 +198,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new AuthTokenDto { AccessToken = newAccess, RefreshToken = string.Empty });
         }
 
-        [HttpPost("send-verification-email/{userId}")]
+        [HttpPost(ApiActionsV1.SendVerificationEmail, Name = nameof(ApiActionsV1.SendVerificationEmail))]
         [Authorize]
         [EnableRateLimiting("auth")]
         public async Task<IActionResult> SendVerificationEmail([FromRoute] int userId)
@@ -209,7 +209,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { message = "Email verifikacije je poslan." });
         }
 
-        [HttpGet("verify-email")]
+        [HttpGet(ApiActionsV1.VerifyEmail, Name = nameof(ApiActionsV1.VerifyEmail))]
         [AllowAnonymous]
         public async Task<IActionResult> VerifyEmail([FromQuery] string token)
         {
@@ -219,7 +219,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { message = "Email je uspješno verifikovan." });
         }
 
-        [HttpPost("forgot-password")]
+        [HttpPost(ApiActionsV1.ForgotPassword, Name = nameof(ApiActionsV1.ForgotPassword))]
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordInputDto dto)
@@ -228,7 +228,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { message = "Ako email postoji, poslan je link za reset lozinke." });
         }
 
-        [HttpPost("reset-password")]
+        [HttpPost(ApiActionsV1.ResetPassword, Name = nameof(ApiActionsV1.ResetPassword))]
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordInputDto dto)

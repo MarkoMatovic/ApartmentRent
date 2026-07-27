@@ -29,25 +29,24 @@ public class RoommateService : IRoommateService
     private const string CacheVersionKey = "Roommates_CacheVersion";
     private long GetCacheVersion() => _cache.GetOrCreate(CacheVersionKey, _ => 0L);
     private void InvalidateListCache() => _cache.Set(CacheVersionKey, GetCacheVersion() + 1);
-    public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(
-        string? location, 
-        decimal? minBudget, 
-        decimal? maxBudget,
-        bool? smokingAllowed, 
-        bool? petFriendly, 
-        string? lifestyle,
-        string? profession,
-        DateOnly? availableFrom,
-        int? stayDuration,
-        int? apartmentId,
-        RoommateGender? gender = null,
-        WorkSchedule? workSchedule = null,
-        int page = 1,
-        int pageSize = 20)
+    public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(RoommateFilterQuery filter)
     {
+        var location       = filter.Location;
+        var minBudget      = filter.MinBudget;
+        var maxBudget      = filter.MaxBudget;
+        var smokingAllowed = filter.SmokingAllowed;
+        var petFriendly    = filter.PetFriendly;
+        var lifestyle      = filter.Lifestyle;
+        var profession     = filter.Profession;
+        var availableFrom  = filter.AvailableFrom;
+        var stayDuration   = filter.StayDuration;
+        var apartmentId    = filter.ApartmentId;
+        var gender         = filter.Gender;
+        var workSchedule   = filter.WorkSchedule;
+
         // Clamp to prevent DoS via oversized page requests
-        page = page < 1 ? 1 : page;
-        pageSize = pageSize < 1 ? 20 : pageSize > 100 ? 100 : pageSize;
+        var page = filter.Page < 1 ? 1 : filter.Page;
+        var pageSize = filter.PageSize < 1 ? 20 : filter.PageSize > 100 ? 100 : filter.PageSize;
 
         var cacheKey = $"Roommates_v{GetCacheVersion()}_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{gender}_{workSchedule}_{page}_{pageSize}";
 

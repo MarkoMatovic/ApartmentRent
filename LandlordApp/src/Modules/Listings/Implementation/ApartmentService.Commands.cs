@@ -35,8 +35,7 @@ public partial class ApartmentService
         {
             await _context.SaveEntitiesAsync();
                     });
-        _cacheVersion.Invalidate();
-        await _outputCacheStore.EvictByTagAsync("apartments", default);
+        await InvalidateApartmentCachesAsync();
         return true;
     }
 
@@ -145,8 +144,7 @@ public partial class ApartmentService
                 await _context.SaveEntitiesAsync(); // Save images
             }
                     });
-        _cacheVersion.Invalidate();
-        await _outputCacheStore.EvictByTagAsync("apartments", default);
+        await InvalidateApartmentCachesAsync();
         _auditLog.Log("CreateApartment", "Apartment", apartment.ApartmentId, currentUserGuid);
 
         if (apartment.IsActive)
@@ -200,8 +198,7 @@ public partial class ApartmentService
         {
             await _context.SaveEntitiesAsync();
                     });
-        _cacheVersion.Invalidate();
-        await _outputCacheStore.EvictByTagAsync("apartments", default);
+        await InvalidateApartmentCachesAsync();
         _auditLog.Log("DeleteApartment", "Apartment", apartmentId, currentUserGuid);
         return true;
     }
@@ -329,8 +326,7 @@ public partial class ApartmentService
         {
             await _context.SaveEntitiesAsync();
                     });
-        _cacheVersion.Invalidate();
-        await _outputCacheStore.EvictByTagAsync("apartments", default);
+        await InvalidateApartmentCachesAsync();
         _auditLog.Log("UpdateApartment", "Apartment", apartmentId, currentUserGuid);
 
         // Alert saved-search users when the rent was lowered.

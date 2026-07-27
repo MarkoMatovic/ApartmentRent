@@ -5,9 +5,7 @@ using Lander.src.Modules.Roommates.Models;
 namespace Lander.src.Modules.Roommates.Interfaces;
 public interface IRoommateService
 {
-    Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(string? location, decimal? minBudget, decimal? maxBudget,
-        bool? smokingAllowed, bool? petFriendly, string? lifestyle, string? profession, DateOnly? availableFrom, int? stayDuration,
-        int? apartmentId, RoommateGender? gender, WorkSchedule? workSchedule, int page, int pageSize);
+    Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(RoommateFilterQuery filter);
     Task<RoommateDto?> GetRoommateByIdAsync(int id);
     Task<RoommateDto?> GetRoommateByUserIdAsync(int userId);
     Task<RoommateDto> CreateRoommateAsync(int userId, RoommateInputDto input);

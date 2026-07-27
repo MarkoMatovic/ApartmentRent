@@ -1,3 +1,4 @@
+using Lander.Helpers;
 using Lander.src.Modules.Appointments.Dtos;
 using Lander.src.Modules.Appointments.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ namespace Lander.src.Modules.Appointments.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route(ApiActionsV1.Appointments)]
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _appointmentService;
@@ -31,21 +32,21 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    [HttpGet("my-appointments")]
+    [HttpGet(ApiActionsV1.GetMyAppointments, Name = nameof(ApiActionsV1.GetMyAppointments))]
     public async Task<ActionResult<List<AppointmentDto>>> GetMyAppointments()
     {
         var appointments = await _appointmentService.GetMyAppointmentsAsync();
         return Ok(appointments);
     }
 
-    [HttpGet("landlord-appointments")]
+    [HttpGet(ApiActionsV1.GetLandlordAppointments, Name = nameof(ApiActionsV1.GetLandlordAppointments))]
     public async Task<ActionResult<List<AppointmentDto>>> GetLandlordAppointments()
     {
         var appointments = await _appointmentService.GetLandlordAppointmentsAsync();
         return Ok(appointments);
     }
 
-    [HttpGet("available-slots/{apartmentId}")]
+    [HttpGet(ApiActionsV1.GetAvailableSlots, Name = nameof(ApiActionsV1.GetAvailableSlots))]
     [AllowAnonymous]
     public async Task<ActionResult<List<AvailableSlotDto>>> GetAvailableSlots(
         int apartmentId,
@@ -55,7 +56,7 @@ public class AppointmentsController : ControllerBase
         return Ok(slots);
     }
 
-    [HttpPut("{id}/status")]
+    [HttpPut(ApiActionsV1.UpdateAppointmentStatus, Name = nameof(ApiActionsV1.UpdateAppointmentStatus))]
     public async Task<ActionResult<AppointmentDto>> UpdateAppointmentStatus(
         int id,
         [FromBody] UpdateAppointmentStatusDto dto)
@@ -71,7 +72,7 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete(ApiActionsV1.CancelAppointment, Name = nameof(ApiActionsV1.CancelAppointment))]
     public async Task<ActionResult> CancelAppointment(int id)
     {
         try
@@ -85,7 +86,7 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    [HttpGet("{id}")]
+    [HttpGet(ApiActionsV1.GetAppointmentById, Name = nameof(ApiActionsV1.GetAppointmentById))]
     public async Task<ActionResult<AppointmentDto>> GetAppointmentById(int id)
     {
         try
@@ -101,14 +102,14 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    [HttpGet("availability")]
+    [HttpGet(ApiActionsV1.GetMyAvailability, Name = nameof(ApiActionsV1.GetMyAvailability))]
     public async Task<ActionResult<List<LandlordAvailabilityDto>>> GetMyAvailability()
     {
         var availability = await _appointmentService.GetMyAvailabilityAsync();
         return Ok(availability);
     }
 
-    [HttpPut("availability")]
+    [HttpPut(ApiActionsV1.SetMyAvailability, Name = nameof(ApiActionsV1.SetMyAvailability))]
     public async Task<ActionResult<List<LandlordAvailabilityDto>>> SetMyAvailability([FromBody] SetAvailabilityDto dto)
     {
         var availability = await _appointmentService.SetMyAvailabilityAsync(dto);

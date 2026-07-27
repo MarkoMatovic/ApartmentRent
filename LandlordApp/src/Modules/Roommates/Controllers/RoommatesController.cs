@@ -27,26 +27,14 @@ public class RoommatesController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetAllRoommates, Name = nameof(ApiActionsV1.GetAllRoommates))]
-    public async Task<ActionResult> GetAllRoommates(
-        [FromQuery] string? location = null,
-        [FromQuery] decimal? minBudget = null,
-        [FromQuery] decimal? maxBudget = null,
-        [FromQuery] bool? smokingAllowed = null,
-        [FromQuery] bool? petFriendly = null,
-        [FromQuery] string? lifestyle = null,
-        [FromQuery] string? profession = null,
-        [FromQuery] DateOnly? availableFrom = null,
-        [FromQuery] int? stayDuration = null,
-        [FromQuery] int? apartmentId = null,
-        [FromQuery] RoommateGender? gender = null,
-        [FromQuery] WorkSchedule? workSchedule = null,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<ActionResult> GetAllRoommates([FromQuery] RoommateFilterQuery? filter = null)
     {
-        if (location != null || minBudget.HasValue || maxBudget.HasValue || smokingAllowed.HasValue
-            || petFriendly.HasValue || lifestyle != null || profession != null)
+        filter ??= new RoommateFilterQuery();
+
+        if (filter.Location != null || filter.MinBudget.HasValue || filter.MaxBudget.HasValue || filter.SmokingAllowed.HasValue
+            || filter.PetFriendly.HasValue || filter.Lifestyle != null || filter.Profession != null)
         {
-            var searchQuery = $"Location:{location},Budget:{minBudget}-{maxBudget},Smoking:{smokingAllowed},Pets:{petFriendly},Lifestyle:{lifestyle},Profession:{profession}";
+            var searchQuery = $"Location:{filter.Location},Budget:{filter.MinBudget}-{filter.MaxBudget},Smoking:{filter.SmokingAllowed},Pets:{filter.PetFriendly},Lifestyle:{filter.Lifestyle},Profession:{filter.Profession}";
             _ = _analyticsService.TrackEventAsync(
                 "RoommateSearch", "Roommates",
                 searchQuery: searchQuery,
@@ -54,9 +42,7 @@ public class RoommatesController : ApiControllerBase
                 userAgent: HttpContext.Request.Headers["User-Agent"].ToString());
         }
 
-        var pagedResult = await _roommateService.GetAllRoommatesAsync(
-            location, minBudget, maxBudget, smokingAllowed, petFriendly,
-            lifestyle, profession, availableFrom, stayDuration, apartmentId, gender, workSchedule, page, pageSize);
+        var pagedResult = await _roommateService.GetAllRoommatesAsync(filter);
 
         var viewerId = TryGetCurrentUserId();
         foreach (var item in pagedResult.Items)
