@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Models;
@@ -9,7 +10,7 @@ using Lander.src.Modules.Communication.Interfaces;
 
 namespace Lander.src.Modules.Communication.Controllers;
 
-[Route("api/v1/reports")]
+[Route(ApiActionsV1.Reports)]
 [ApiController]
 [Authorize(Roles = "Admin")]
 public class ReportsController : ControllerBase
@@ -34,7 +35,7 @@ public class ReportsController : ControllerBase
         return Ok(reports);
     }
 
-    [HttpPut("{reportId}/review")]
+    [HttpPut(ApiActionsV1.ReviewReport, Name = nameof(ApiActionsV1.ReviewReport))]
     public async Task<IActionResult> ReviewReport(int reportId, [FromBody] UpdateReportStatusDto dto)
     {
         var adminId = GetAdminId();
@@ -44,7 +45,7 @@ public class ReportsController : ControllerBase
         return Ok();
     }
 
-    [HttpPut("{reportId}/resolve")]
+    [HttpPut(ApiActionsV1.ResolveReport, Name = nameof(ApiActionsV1.ResolveReport))]
     public async Task<IActionResult> ResolveReport(int reportId, [FromBody] UpdateReportStatusDto dto)
     {
         var adminId = GetAdminId();
@@ -54,7 +55,7 @@ public class ReportsController : ControllerBase
         return Ok();
     }
 
-    [HttpDelete("{reportId}")]
+    [HttpDelete(ApiActionsV1.DeleteReport, Name = nameof(ApiActionsV1.DeleteReport))]
     public async Task<IActionResult> DeleteReport(int reportId)
     {
         var success = await _reportService.DeleteReportAsync(reportId);

@@ -21,7 +21,6 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Common;
-using Lander.src.Infrastructure.Services;
 
 namespace LandlordApp.Tests.Services;
 

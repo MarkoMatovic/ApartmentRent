@@ -97,7 +97,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetSummaryAsync(null, null))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetSummary();
+        var result = await _controller.GetSummary(new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(summary);
@@ -112,7 +112,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetSummaryAsync(from, to))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetSummary(from, to);
+        var result = await _controller.GetSummary(new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(summary);
@@ -124,7 +124,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetSummaryAsync(It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("DB error"));
 
-        Func<Task> act = async () => await _controller.GetSummary();
+        Func<Task> act = async () => await _controller.GetSummary(new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>().WithMessage("DB error");
     }
@@ -142,7 +142,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(10, null, null))
             .ReturnsAsync(apartments);
 
-        var result = await _controller.GetTopViewedApartments();
+        var result = await _controller.GetTopViewedApartments(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(apartments);
@@ -158,7 +158,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(5, null, null))
             .ReturnsAsync(apartments);
 
-        var result = await _controller.GetTopViewedApartments(5);
+        var result = await _controller.GetTopViewedApartments(new TopEntityQuery { Count = 5 });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -169,7 +169,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetTopViewedApartments();
+        var result = await _controller.GetTopViewedApartments(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
@@ -182,7 +182,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Service error"));
 
-        Func<Task> act = async () => await _controller.GetTopViewedApartments();
+        Func<Task> act = async () => await _controller.GetTopViewedApartments(new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -200,7 +200,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopSearchTermsAsync(10, null, null))
             .ReturnsAsync(terms);
 
-        var result = await _controller.GetTopSearchTerms();
+        var result = await _controller.GetTopSearchTerms(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(terms);
@@ -212,7 +212,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopSearchTermsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<SearchTermDto>());
 
-        var result = await _controller.GetTopSearchTerms();
+        var result = await _controller.GetTopSearchTerms(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<SearchTermDto>>()
@@ -227,7 +227,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopSearchTermsAsync(10, from, to))
             .ReturnsAsync(new List<SearchTermDto>());
 
-        var result = await _controller.GetTopSearchTerms(10, from, to);
+        var result = await _controller.GetTopSearchTerms(new TopEntityQuery { Count = 10, From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -238,7 +238,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopSearchTermsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Search error"));
 
-        Func<Task> act = async () => await _controller.GetTopSearchTerms();
+        Func<Task> act = async () => await _controller.GetTopSearchTerms(new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -255,7 +255,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetLandlordApartmentViewsAsync(CurrentUserId, null, null))
             .ReturnsAsync(viewStats);
 
-        var result = await _controller.GetMyApartmentViews();
+        var result = await _controller.GetMyApartmentViews(new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(viewStats);
@@ -272,7 +272,7 @@ public class AnalyticsControllerTests
             }
         };
 
-        var result = await _controller.GetMyApartmentViews();
+        var result = await _controller.GetMyApartmentViews(new DateRangeQuery());
 
         result.Result.Should().BeOfType<UnauthorizedObjectResult>();
     }
@@ -285,7 +285,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserMessageCountAsync(CurrentUserId, null, null))
             .ReturnsAsync(7);
 
-        var result = await _controller.GetMyMessagesSent();
+        var result = await _controller.GetMyMessagesSent(new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(7);
@@ -302,7 +302,7 @@ public class AnalyticsControllerTests
             }
         };
 
-        var result = await _controller.GetMyMessagesSent();
+        var result = await _controller.GetMyMessagesSent(new DateRangeQuery());
 
         result.Result.Should().BeOfType<UnauthorizedObjectResult>();
     }
@@ -320,7 +320,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(10, null, null))
             .ReturnsAsync(roommates);
 
-        var result = await _controller.GetTopViewedRoommates();
+        var result = await _controller.GetTopViewedRoommates(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(roommates);
@@ -332,7 +332,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(5, null, null))
             .ReturnsAsync(new List<TopEntityDto> { new() { EntityId = 3, EntityType = "Roommate", ViewCount = 2 } });
 
-        var result = await _controller.GetTopViewedRoommates(5);
+        var result = await _controller.GetTopViewedRoommates(new TopEntityQuery { Count = 5 });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -343,7 +343,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetTopViewedRoommates();
+        var result = await _controller.GetTopViewedRoommates(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
@@ -356,7 +356,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Service error"));
 
-        Func<Task> act = async () => await _controller.GetTopViewedRoommates();
+        Func<Task> act = async () => await _controller.GetTopViewedRoommates(new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -418,7 +418,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(CurrentUserId, null, null))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetUserRoommateSummary(CurrentUserId);
+        var result = await _controller.GetUserRoommateSummary(CurrentUserId, new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(summary);
@@ -433,7 +433,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(CurrentUserId, from, to))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetUserRoommateSummary(CurrentUserId, from, to);
+        var result = await _controller.GetUserRoommateSummary(CurrentUserId, new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(summary);
@@ -445,7 +445,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateSummaryAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Summary error"));
 
-        Func<Task> act = async () => await _controller.GetUserRoommateSummary(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserRoommateSummary(CurrentUserId, new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -462,7 +462,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(CurrentUserId, 10, null, null))
             .ReturnsAsync(roommates);
 
-        var result = await _controller.GetUserTopRoommates(CurrentUserId);
+        var result = await _controller.GetUserTopRoommates(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(roommates);
@@ -474,7 +474,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetUserTopRoommates(CurrentUserId);
+        var result = await _controller.GetUserTopRoommates(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
@@ -487,7 +487,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Roommate error"));
 
-        Func<Task> act = async () => await _controller.GetUserTopRoommates(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserTopRoommates(CurrentUserId, new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -504,7 +504,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(CurrentUserId, 10, null, null))
             .ReturnsAsync(searches);
 
-        var result = await _controller.GetUserSearches(CurrentUserId);
+        var result = await _controller.GetUserSearches(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(searches);
@@ -516,7 +516,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<SearchTermDto>());
 
-        var result = await _controller.GetUserSearches(CurrentUserId);
+        var result = await _controller.GetUserSearches(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<SearchTermDto>>()
@@ -529,7 +529,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Search error"));
 
-        Func<Task> act = async () => await _controller.GetUserSearches(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserSearches(CurrentUserId, new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -547,7 +547,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(CurrentUserId, null, null))
             .ReturnsAsync(trends);
 
-        var result = await _controller.GetUserRoommateTrends(CurrentUserId);
+        var result = await _controller.GetUserRoommateTrends(CurrentUserId, new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(trends);
@@ -561,7 +561,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(CurrentUserId, from, to))
             .ReturnsAsync(new UserRoommateTrendsDto());
 
-        var result = await _controller.GetUserRoommateTrends(CurrentUserId, from, to);
+        var result = await _controller.GetUserRoommateTrends(CurrentUserId, new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -572,7 +572,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserRoommateTrendsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Trends error"));
 
-        Func<Task> act = async () => await _controller.GetUserRoommateTrends(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserRoommateTrends(CurrentUserId, new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -589,7 +589,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 10, null, null))
             .ReturnsAsync(apartments);
 
-        var result = await _controller.GetUserTopApartments(CurrentUserId);
+        var result = await _controller.GetUserTopApartments(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(apartments);
@@ -601,7 +601,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetUserTopApartments(CurrentUserId);
+        var result = await _controller.GetUserTopApartments(CurrentUserId, new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeAssignableTo<IEnumerable<TopEntityDto>>()
@@ -614,7 +614,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Apartment error"));
 
-        Func<Task> act = async () => await _controller.GetUserTopApartments(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserTopApartments(CurrentUserId, new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -628,7 +628,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(CurrentUserId, null, null))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId);
+        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId, new DateRangeQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(summary);
@@ -642,7 +642,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(CurrentUserId, from, to))
             .ReturnsAsync(new AnalyticsSummaryDto { TotalEvents = 15 });
 
-        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId, from, to);
+        var result = await _controller.GetUserCompleteAnalytics(CurrentUserId, new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -653,7 +653,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserCompleteAnalyticsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Analytics error"));
 
-        Func<Task> act = async () => await _controller.GetUserCompleteAnalytics(CurrentUserId);
+        Func<Task> act = async () => await _controller.GetUserCompleteAnalytics(CurrentUserId, new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>();
     }
@@ -670,7 +670,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 10, null, null))
             .ReturnsAsync(apartments);
 
-        var result = await _controller.GetMyViewedApartments();
+        var result = await _controller.GetMyViewedApartments(new TopEntityQuery());
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(apartments);
@@ -687,7 +687,7 @@ public class AnalyticsControllerTests
             }
         };
 
-        var result = await _controller.GetMyViewedApartments();
+        var result = await _controller.GetMyViewedApartments(new TopEntityQuery());
 
         result.Result.Should().BeOfType<UnauthorizedObjectResult>();
     }
@@ -698,7 +698,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetMyViewedApartments(5);
+        var result = await _controller.GetMyViewedApartments(new TopEntityQuery { Count = 5 });
 
         result.Result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null), Times.Once);
@@ -755,7 +755,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetLandlordApartmentViewsAsync(CurrentUserId, from, to))
             .ReturnsAsync(stats);
 
-        var result = await _controller.GetMyApartmentViews(from, to);
+        var result = await _controller.GetMyApartmentViews(new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(stats);
@@ -767,7 +767,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetLandlordApartmentViewsAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("DB unavailable"));
 
-        Func<Task> act = async () => await _controller.GetMyApartmentViews();
+        Func<Task> act = async () => await _controller.GetMyApartmentViews(new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>().WithMessage("DB unavailable");
     }
@@ -782,7 +782,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserMessageCountAsync(CurrentUserId, from, to))
             .ReturnsAsync(12);
 
-        var result = await _controller.GetMyMessagesSent(from, to);
+        var result = await _controller.GetMyMessagesSent(new DateRangeQuery { From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(12);
@@ -794,7 +794,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserMessageCountAsync(It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("Count failed"));
 
-        Func<Task> act = async () => await _controller.GetMyMessagesSent();
+        Func<Task> act = async () => await _controller.GetMyMessagesSent(new DateRangeQuery());
 
         await act.Should().ThrowAsync<Exception>().WithMessage("Count failed");
     }
@@ -807,7 +807,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ThrowsAsync(new Exception("View fetch failed"));
 
-        Func<Task> act = async () => await _controller.GetMyViewedApartments();
+        Func<Task> act = async () => await _controller.GetMyViewedApartments(new TopEntityQuery());
 
         await act.Should().ThrowAsync<Exception>().WithMessage("View fetch failed");
     }
@@ -826,7 +826,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedApartmentsAsync(10, from, to))
             .ReturnsAsync(apartments);
 
-        var result = await _controller.GetTopViewedApartments(10, from, to);
+        var result = await _controller.GetTopViewedApartments(new TopEntityQuery { Count = 10, From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().Be(apartments);
@@ -842,7 +842,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetTopViewedRoommatesAsync(10, from, to))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetTopViewedRoommates(10, from, to);
+        var result = await _controller.GetTopViewedRoommates(new TopEntityQuery { Count = 10, From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -855,7 +855,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetUserTopApartments(CurrentUserId, 5);
+        var result = await _controller.GetUserTopApartments(CurrentUserId, new TopEntityQuery { Count = 5 });
 
         result.Result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.GetUserTopApartmentsAsync(CurrentUserId, 5, null, null), Times.Once);
@@ -869,7 +869,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserSearchesAsync(CurrentUserId, 3, null, null))
             .ReturnsAsync(new List<SearchTermDto>());
 
-        var result = await _controller.GetUserSearches(CurrentUserId, 3);
+        var result = await _controller.GetUserSearches(CurrentUserId, new TopEntityQuery { Count = 3 });
 
         result.Result.Should().BeOfType<OkObjectResult>();
         _mockAnalyticsService.Verify(s => s.GetUserSearchesAsync(CurrentUserId, 3, null, null), Times.Once);
@@ -885,7 +885,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetUserTopRoommatesAsync(CurrentUserId, 10, from, to))
             .ReturnsAsync(new List<TopEntityDto>());
 
-        var result = await _controller.GetUserTopRoommates(CurrentUserId, 10, from, to);
+        var result = await _controller.GetUserTopRoommates(CurrentUserId, new TopEntityQuery { Count = 10, From = from, To = to });
 
         result.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -907,7 +907,7 @@ public class AnalyticsControllerTests
         _mockAnalyticsService.Setup(s => s.GetSummaryAsync(null, null))
             .ReturnsAsync(summary);
 
-        var result = await _controller.GetSummary();
+        var result = await _controller.GetSummary(new DateRangeQuery());
 
         var value = result.Result.Should().BeOfType<OkObjectResult>()
             .Which.Value.Should().BeOfType<AnalyticsSummaryDto>().Subject;

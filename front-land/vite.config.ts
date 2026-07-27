@@ -34,6 +34,24 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Route chunks are produced automatically by the React.lazy() imports in
+        // App.tsx. These vendor groups exist because the libraries below are shared
+        // by most routes — without an explicit split they collapse back into the
+        // entry chunk. Splitting them also keeps their hashes stable across app
+        // deploys, so returning users re-download only what actually changed.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          'vendor-map': ['leaflet', 'react-leaflet'],
+          'vendor-signalr': ['@microsoft/signalr'],
+          'vendor-i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

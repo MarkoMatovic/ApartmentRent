@@ -52,32 +52,28 @@ public class AnalyticsController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetAnalyticsSummary, Name = nameof(ApiActionsV1.GetAnalyticsSummary))]
-    public async Task<ActionResult<AnalyticsSummaryDto>> GetSummary(
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    public async Task<ActionResult<AnalyticsSummaryDto>> GetSummary([FromQuery] DateRangeQuery range)
     {
-        var summary = await _analyticsService.GetSummaryAsync(from, to);
+        var summary = await _analyticsService.GetSummaryAsync(range.From, range.To);
         return Ok(summary);
     }
 
     [HttpGet(ApiActionsV1.GetTopViewedApartments, Name = nameof(ApiActionsV1.GetTopViewedApartments))]
-    public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedApartments(
-        [FromQuery] int count = 10, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedApartments([FromQuery] TopEntityQuery query)
     {
-        return Ok(await _analyticsService.GetTopViewedApartmentsAsync(count, from, to));
+        return Ok(await _analyticsService.GetTopViewedApartmentsAsync(query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetTopViewedRoommates, Name = nameof(ApiActionsV1.GetTopViewedRoommates))]
-    public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedRoommates(
-        [FromQuery] int count = 10, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedRoommates([FromQuery] TopEntityQuery query)
     {
-        return Ok(await _analyticsService.GetTopViewedRoommatesAsync(count, from, to));
+        return Ok(await _analyticsService.GetTopViewedRoommatesAsync(query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetTopSearchTerms, Name = nameof(ApiActionsV1.GetTopSearchTerms))]
-    public async Task<ActionResult<List<SearchTermDto>>> GetTopSearchTerms(
-        [FromQuery] int count = 10, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    public async Task<ActionResult<List<SearchTermDto>>> GetTopSearchTerms([FromQuery] TopEntityQuery query)
     {
-        return Ok(await _analyticsService.GetTopSearchTermsAsync(count, from, to));
+        return Ok(await _analyticsService.GetTopSearchTermsAsync(query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetEventTrends, Name = nameof(ApiActionsV1.GetEventTrends))]
@@ -92,94 +88,88 @@ public class AnalyticsController : ApiControllerBase
 
     [HttpGet(ApiActionsV1.GetUserRoommateSummary, Name = nameof(ApiActionsV1.GetUserRoommateSummary))]
     public async Task<ActionResult<UserRoommateAnalyticsSummaryDto>> GetUserRoommateSummary(
-        [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] DateRangeQuery range)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserRoommateSummaryAsync(userId, from, to));
+        return Ok(await _analyticsService.GetUserRoommateSummaryAsync(userId, range.From, range.To));
     }
 
     [HttpGet(ApiActionsV1.GetUserTopRoommates, Name = nameof(ApiActionsV1.GetUserTopRoommates))]
     public async Task<ActionResult<List<TopEntityDto>>> GetUserTopRoommates(
-        [FromQuery] int userId, [FromQuery] int count = 10,
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] TopEntityQuery query)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserTopRoommatesAsync(userId, count, from, to));
+        return Ok(await _analyticsService.GetUserTopRoommatesAsync(userId, query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetUserSearches, Name = nameof(ApiActionsV1.GetUserSearches))]
     public async Task<ActionResult<List<SearchTermDto>>> GetUserSearches(
-        [FromQuery] int userId, [FromQuery] int count = 10,
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] TopEntityQuery query)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserSearchesAsync(userId, count, from, to));
+        return Ok(await _analyticsService.GetUserSearchesAsync(userId, query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetUserRoommateTrends, Name = nameof(ApiActionsV1.GetUserRoommateTrends))]
     public async Task<ActionResult<UserRoommateTrendsDto>> GetUserRoommateTrends(
-        [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] DateRangeQuery range)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserRoommateTrendsAsync(userId, from, to));
+        return Ok(await _analyticsService.GetUserRoommateTrendsAsync(userId, range.From, range.To));
     }
 
     [HttpGet(ApiActionsV1.GetUserTopApartments, Name = nameof(ApiActionsV1.GetUserTopApartments))]
     public async Task<ActionResult<List<TopEntityDto>>> GetUserTopApartments(
-        [FromQuery] int userId, [FromQuery] int count = 10,
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] TopEntityQuery query)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserTopApartmentsAsync(userId, count, from, to));
+        return Ok(await _analyticsService.GetUserTopApartmentsAsync(userId, query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetUserCompleteAnalytics, Name = nameof(ApiActionsV1.GetUserCompleteAnalytics))]
     public async Task<ActionResult<AnalyticsSummaryDto>> GetUserCompleteAnalytics(
-        [FromQuery] int userId, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        [FromQuery] int userId, [FromQuery] DateRangeQuery range)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
-        return Ok(await _analyticsService.GetUserCompleteAnalyticsAsync(userId, from, to));
+        return Ok(await _analyticsService.GetUserCompleteAnalyticsAsync(userId, range.From, range.To));
     }
 
-    [HttpGet("my-viewed-apartments", Name = "GetMyViewedApartments")]
-    public async Task<ActionResult<List<TopEntityDto>>> GetMyViewedApartments(
-        [FromQuery] int count = 10, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    [HttpGet(ApiActionsV1.GetMyViewedApartments, Name = nameof(ApiActionsV1.GetMyViewedApartments))]
+    public async Task<ActionResult<List<TopEntityDto>>> GetMyViewedApartments([FromQuery] TopEntityQuery query)
     {
         var userId = TryGetCurrentUserId();
         if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-        return Ok(await _analyticsService.GetUserTopApartmentsAsync(userId.Value, count, from, to));
+        return Ok(await _analyticsService.GetUserTopApartmentsAsync(userId.Value, query.Count, query.From, query.To));
     }
 
-    [HttpGet("my-apartment-views", Name = "GetMyApartmentViews")]
-    public async Task<ActionResult<List<ApartmentViewStatsDto>>> GetMyApartmentViews(
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    [HttpGet(ApiActionsV1.GetMyApartmentViews, Name = nameof(ApiActionsV1.GetMyApartmentViews))]
+    public async Task<ActionResult<List<ApartmentViewStatsDto>>> GetMyApartmentViews([FromQuery] DateRangeQuery range)
     {
         var userId = TryGetCurrentUserId();
         if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-        return Ok(await _analyticsService.GetLandlordApartmentViewsAsync(userId.Value, from, to));
+        return Ok(await _analyticsService.GetLandlordApartmentViewsAsync(userId.Value, range.From, range.To));
     }
 
-    [HttpGet("my-messages-sent", Name = "GetMyMessagesSent")]
-    public async Task<ActionResult<int>> GetMyMessagesSent(
-        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    [HttpGet(ApiActionsV1.GetMyMessagesSent, Name = nameof(ApiActionsV1.GetMyMessagesSent))]
+    public async Task<ActionResult<int>> GetMyMessagesSent([FromQuery] DateRangeQuery range)
     {
         var userId = TryGetCurrentUserId();
         if (userId is null) return Unauthorized(new { message = "User ID not found in token" });
 
-        return Ok(await _analyticsService.GetUserMessageCountAsync(userId.Value, from, to));
+        return Ok(await _analyticsService.GetUserMessageCountAsync(userId.Value, range.From, range.To));
     }
 }

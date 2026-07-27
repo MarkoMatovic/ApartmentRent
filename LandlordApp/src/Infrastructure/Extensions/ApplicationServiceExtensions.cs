@@ -9,8 +9,8 @@ using Lander.src.Modules.Communication.Services;
 using Lander.src.Modules.Listings.Implementation;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Services;
-using Lander.src.Modules.Reviews.Client;
 using Lander.src.Modules.Reviews.Implementation;
+using Lander.src.Modules.Reviews.Interfaces;
 using Lander.src.Modules.Roommates.Implementation;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.SavedSearches.Implementation;
@@ -36,7 +36,7 @@ public static class ApplicationServiceExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment env)
     {
         // ── Options validation (fail fast on startup with a clear message) ────────────
-        // In dev/E2eTesting we use DevEmailService and no blob storage, so we only
+        // In dev/E2eTesting we don't configure Brevo or blob storage, so we only
         // enforce required-field validation in production to avoid blocking local startup.
         var isProd = !env.IsDevelopment() && !env.IsEnvironment("E2eTesting");
 
@@ -49,10 +49,6 @@ public static class ApplicationServiceExtensions
             .BindConfiguration("AzureBlobStorage")
             .ValidateDataAnnotations();
         if (isProd) blob.ValidateOnStart();
-
-        // TwilioSettings: optional feature — no ValidateOnStart, bind only.
-        services.AddOptions<TwilioSettings>()
-            .BindConfiguration("Twilio");
 
         // --- Password hashing ---
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
@@ -72,11 +68,7 @@ public static class ApplicationServiceExtensions
 
         // --- Email template renderer + email service ---
         services.AddScoped<IEmailTemplateRenderer, EmailTemplateRenderer>();
-        // #7: DevEmailService in dev/test — logs + writes HTML file; never sends real mail.
-        if (env.IsDevelopment() || env.IsEnvironment("E2eTesting"))
-            services.AddScoped<IEmailService, DevEmailService>();
-        else
-            services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         // --- Apartment notification service ---
         services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();
@@ -85,7 +77,6 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IReviewStatsProvider, ReviewStatsProvider>();
         services.AddScoped<IListingsUserLookup, ListingsUserLookup>();
 
-        services.AddSingleton<Lander.src.Modules.Listings.Services.ApartmentCacheVersionService>();
         services.AddScoped<Lander.src.Infrastructure.Services.IAuditLogService, Lander.src.Infrastructure.Services.AuditLogService>();
         // Register ApartmentService under all three interfaces so consumers can inject
         // the narrower IApartmentQueryService / IApartmentCommandService directly.
@@ -105,7 +96,6 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IRoommateService, RoommateService>();
         services.AddScoped<ISearchRequestService, SearchRequestService>();
         services.AddScoped<ISavedSearchService, SavedSearchService>();
-        services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
@@ -162,18 +152,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Analytics.AnalyticsUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.ApartmentApplications.ApplicationUserDeletedHandler>();
 
-        // gRPC client for Reviews/Favorites microservice.
-        // Registered as SINGLETON so that GrpcChannel (which owns the HTTP/2 connection
-        // pool) is created once and reused — creating a new channel per-request leaks
-        // sockets.  IHttpContextAccessor is injected so each call can forward the
-        // caller's Authorization header at invoke time.
-        services.AddSingleton<IGrpcServiceClient>(sp =>
-        {
-            var config = sp.GetRequiredService<IConfiguration>();
-            var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-            var grpcUrl = config["GrpcServerUrl"] ?? "http://localhost:5001";
-            return new GrpcServiceClient(grpcUrl, accessor);
-        });
+        // Reviews/Favorites module. Scoped because it owns a ReviewsContext — this used
+        // to be a singleton gRPC client dialling GrpcServerUrl, which pointed back at
+        // this same process (a loopback network hop for an in-process call).
+        services.AddScoped<IReviewFavoriteService, ReviewFavoriteService>();
 
         // .NET 10 Feature: Vector Search for semantic apartment search
         services.AddSingleton<Lander.src.Modules.MachineLearning.Services.SimpleEmbeddingService>();

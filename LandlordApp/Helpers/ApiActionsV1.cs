@@ -1,4 +1,4 @@
-﻿namespace Lander.Helpers;
+namespace Lander.Helpers;
 
 public static class ApiActionsV1
 {
@@ -16,6 +16,13 @@ public static class ApiActionsV1
     public const string UpdateRoommateStatus = "update-roommate-status";
     public const string GetUserProfile = "profile/{userId}";
     public const string UpdateUserProfile = "update-profile/{userId}";
+    public const string UpdatePrivacySettings = "update-privacy-settings/{userId}";
+    public const string ExportUserData = "export-data/{userId}";
+    public const string RefreshToken = "token/refresh";
+    public const string SendVerificationEmail = "send-verification-email/{userId}";
+    public const string VerifyEmail = "verify-email";
+    public const string ForgotPassword = "forgot-password";
+    public const string ResetPassword = "reset-password";
     #endregion
 
     #region ApartmentActions
@@ -30,6 +37,9 @@ public static class ApiActionsV1
     public const string ActivateApartment = "activate-apartment/{id}";
     public const string UploadImages = "upload-images";
     public const string GetNeighbourhood = "neighbourhood/{apartmentId:int}";
+    public const string SemanticSearch = "semantic-search";
+    public const string GenerateEmbeddings = "generate-embeddings";
+    public const string MigrateImagesToBlob = "admin/migrate-images-to-blob";
     #endregion
 
     #region NotificationActions
@@ -41,19 +51,22 @@ public static class ApiActionsV1
     public const string DeleteNotification = "delete/{id}";
     #endregion
 
+    #region NotificationStream
+    public const string NotificationsStream = "api/notifications";
+    public const string StreamNotifications = "stream";
+    public const string SendTestNotification = "test";
+    public const string GetConnectionCount = "connections";
+    #endregion
+
     #region Reviews
     public const string Reviews = $"{V1}/reviews";
     public const string CreateReview = "create-review";
     public const string CreateFavorite = "create-favorite";
     public const string GetReviewById = "get-review-by-id";
+    public const string GetReviewsByApartmentId = "apartment/{apartmentId}";
     public const string DeleteReview = "delete-review/{id}";
     public const string DeleteFavorite = "delete-favorite/{id}";
     public const string GetUserFavorites = "favorites/{userId}";
-    #endregion
-
-    #region Sms
-    public const string Sms = $"{V1}/sms";
-    public const string SendSms = "send";
     #endregion
 
     #region Roommates
@@ -92,6 +105,54 @@ public static class ApiActionsV1
     public const string SendMessage = "send";
     public const string MarkMessageAsRead = "mark-read/{messageId}";
     public const string GetUnreadCount = "unread-count/{userId}";
+    public const string UploadMessageFile = "upload";
+    public const string DownloadMessageFile = "files/{filename}";
+    public const string ArchiveConversation = "archive";
+    public const string UnarchiveConversation = "unarchive";
+    public const string MuteConversation = "mute";
+    public const string UnmuteConversation = "unmute";
+    public const string BlockUser = "block";
+    public const string UnblockUser = "unblock";
+    public const string DeleteConversation = "delete-conversation";
+    public const string SearchMessages = "search";
+    public const string ReportAbuse = "report";
+    #endregion
+
+    #region Appointments
+    public const string Appointments = "api/appointments";
+    public const string GetMyAppointments = "my-appointments";
+    public const string GetLandlordAppointments = "landlord-appointments";
+    public const string GetAvailableSlots = "available-slots/{apartmentId}";
+    public const string UpdateAppointmentStatus = "{id}/status";
+    public const string CancelAppointment = "{id}";
+    public const string GetAppointmentById = "{id}";
+    public const string GetMyAvailability = "availability";
+    public const string SetMyAvailability = "availability";
+    #endregion
+
+    #region ApartmentApplications
+    public const string Applications = "api/applications";
+    public const string GetLandlordApplications = "landlord";
+    public const string GetTenantApplications = "tenant";
+    public const string UpdateApplicationStatus = "{id}/status";
+    public const string CheckApprovalStatus = "check-approval/{apartmentId}";
+    #endregion
+
+    #region Payments
+    public const string Payments = "api/payments";
+    public const string GetSubscriptionPlans = "plans";
+    public const string CreatePayment = "create-payment";
+    public const string GetMyPaymentStatus = "my-status";
+    public const string GetMyOrders = "my-orders";
+    public const string CancelAnalytics = "cancel-analytics";
+    public const string PaymentCallback = "callback";
+    #endregion
+
+    #region Reports
+    public const string Reports = $"{V1}/reports";
+    public const string ReviewReport = "{reportId}/review";
+    public const string ResolveReport = "{reportId}/resolve";
+    public const string DeleteReport = "{reportId}";
     #endregion
 
     #region MachineLearning
@@ -112,7 +173,7 @@ public static class ApiActionsV1
     public const string GetTopViewedRoommates = "top-roommates";
     public const string GetTopSearchTerms = "top-searches";
     public const string GetEventTrends = "trends";
-    
+
     // User-specific analytics
     public const string GetUserRoommateSummary = "user-roommate-summary";
     public const string GetUserTopRoommates = "user-top-roommates";
@@ -120,5 +181,8 @@ public static class ApiActionsV1
     public const string GetUserRoommateTrends = "user-roommate-trends";
     public const string GetUserTopApartments = "user-top-apartments";
     public const string GetUserCompleteAnalytics = "user-complete-analytics";
+    public const string GetMyViewedApartments = "my-viewed-apartments";
+    public const string GetMyApartmentViews = "my-apartment-views";
+    public const string GetMyMessagesSent = "my-messages-sent";
     #endregion
 }

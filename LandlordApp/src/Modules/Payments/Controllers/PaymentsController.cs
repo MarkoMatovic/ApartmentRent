@@ -1,3 +1,4 @@
+using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Modules.Payments.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Lander.src.Modules.Payments.Controllers;
 
-[Route("api/payments")]
+[Route(ApiActionsV1.Payments)]
 [ApiController]
 public class PaymentsController : ApiControllerBase
 {
@@ -22,7 +23,7 @@ public class PaymentsController : ApiControllerBase
         _logger = logger;
     }
 
-    [HttpGet("plans")]
+    [HttpGet(ApiActionsV1.GetSubscriptionPlans, Name = nameof(ApiActionsV1.GetSubscriptionPlans))]
     public IActionResult GetSubscriptionPlans()
         => Ok(_paymentService.GetPlans());
 
@@ -36,7 +37,7 @@ public class PaymentsController : ApiControllerBase
     // "payments temporarily unavailable" state instead of failing opaquely.
     // ─────────────────────────────────────────────────────────────────────────
 
-    [HttpPost("create-payment")]
+    [HttpPost(ApiActionsV1.CreatePayment, Name = nameof(ApiActionsV1.CreatePayment))]
     [Authorize]
     public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentRequest request)
     {
@@ -52,7 +53,7 @@ public class PaymentsController : ApiControllerBase
     }
 
     /// <summary>Returns the current active premium feature state for the authenticated user.</summary>
-    [HttpGet("my-status")]
+    [HttpGet(ApiActionsV1.GetMyPaymentStatus, Name = nameof(ApiActionsV1.GetMyPaymentStatus))]
     [Authorize]
     public async Task<IActionResult> GetMyStatus()
     {
@@ -62,7 +63,7 @@ public class PaymentsController : ApiControllerBase
     }
 
     /// <summary>Returns the authenticated user's processed payment order history, newest first.</summary>
-    [HttpGet("my-orders")]
+    [HttpGet(ApiActionsV1.GetMyOrders, Name = nameof(ApiActionsV1.GetMyOrders))]
     [Authorize]
     public async Task<IActionResult> GetMyOrders()
     {
@@ -75,7 +76,7 @@ public class PaymentsController : ApiControllerBase
     /// Deactivates analytics subscription and downgrades premium role.
     /// Since all payments are one-time (no auto-renewal), this is a manual feature deactivation.
     /// </summary>
-    [HttpPost("cancel-analytics")]
+    [HttpPost(ApiActionsV1.CancelAnalytics, Name = nameof(ApiActionsV1.CancelAnalytics))]
     [Authorize]
     public async Task<IActionResult> CancelAnalytics()
     {
@@ -85,7 +86,7 @@ public class PaymentsController : ApiControllerBase
         return Ok(new { message = "Analitika je deaktivirana. Vaš nalog je vraćen na osnovni plan." });
     }
 
-    [HttpPost("callback")]
+    [HttpPost(ApiActionsV1.PaymentCallback, Name = nameof(ApiActionsV1.PaymentCallback))]
     [AllowAnonymous]
     public IActionResult Callback()
     {

@@ -1,5 +1,5 @@
 ﻿using Lander.Helpers;
-using Lander.src.Modules.Reviews.Client;
+using Lander.src.Modules.Reviews.Interfaces;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,11 +12,11 @@ namespace Lander.src.Modules.Reviews.Controllers
     [Authorize]
     public class ReviewsFavoritesController : ControllerBase
     {
-        private readonly IGrpcServiceClient _grpcClient;
+        private readonly IReviewFavoriteService _reviews;
 
-        public ReviewsFavoritesController(IGrpcServiceClient grpcClient)
+        public ReviewsFavoritesController(IReviewFavoriteService reviews)
         {
-            _grpcClient = grpcClient;
+            _reviews = reviews;
         }
 
         private int? TryGetCurrentUserId()
@@ -39,7 +39,7 @@ namespace Lander.src.Modules.Reviews.Controllers
             request.UserId = callerId.Value;
             request.CreatedByGuid = callerGuid;
 
-            var response = await _grpcClient.CreateFavoriteAsync(request);
+            var response = await _reviews.CreateFavoriteAsync(request);
             return Ok(response);
         }
 
@@ -56,7 +56,7 @@ namespace Lander.src.Modules.Reviews.Controllers
             request.UserId = callerId.Value;
             request.CreatedByGuid = callerGuid;
 
-            var response = await _grpcClient.CreateReviewAsync(request);
+            var response = await _reviews.CreateReviewAsync(request);
             return Ok(response);
         }
 
@@ -64,15 +64,15 @@ namespace Lander.src.Modules.Reviews.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetReviewById([FromQuery] int reviewId)
         {
-            var response = await _grpcClient.GetReviewByIdAsync(reviewId);
+            var response = await _reviews.GetReviewByIdAsync(reviewId);
             return Ok(response);
         }
 
-        [HttpGet("apartment/{apartmentId}")]
+        [HttpGet(ApiActionsV1.GetReviewsByApartmentId, Name = nameof(ApiActionsV1.GetReviewsByApartmentId))]
         [AllowAnonymous]
         public async Task<IActionResult> GetReviewsByApartmentId(int apartmentId)
         {
-            var response = await _grpcClient.GetReviewsByApartmentIdAsync(apartmentId);
+            var response = await _reviews.GetReviewsByApartmentIdAsync(apartmentId);
             return Ok(response.Reviews);
         }
 
@@ -82,7 +82,7 @@ namespace Lander.src.Modules.Reviews.Controllers
             var callerGuid = GetCurrentUserGuid();
             if (string.IsNullOrEmpty(callerGuid)) return Unauthorized();
 
-            var response = await _grpcClient.DeleteReviewAsync(id, callerGuid);
+            var response = await _reviews.DeleteReviewAsync(id, callerGuid);
             if (!response.Success && response.Message.Contains("Unauthorized"))
                 return Forbid();
             return Ok(response);
@@ -94,7 +94,7 @@ namespace Lander.src.Modules.Reviews.Controllers
             var callerGuid = GetCurrentUserGuid();
             if (string.IsNullOrEmpty(callerGuid)) return Unauthorized();
 
-            var response = await _grpcClient.DeleteFavoriteAsync(id, callerGuid);
+            var response = await _reviews.DeleteFavoriteAsync(id, callerGuid);
             if (!response.Success && response.Message.Contains("Unauthorized"))
                 return Forbid();
             return Ok(response);
@@ -107,7 +107,7 @@ namespace Lander.src.Modules.Reviews.Controllers
             if (callerId is null) return Unauthorized();
             if (callerId.Value != userId && !User.IsInRole("Admin")) return Forbid();
 
-            var response = await _grpcClient.GetUserFavoritesAsync(userId);
+            var response = await _reviews.GetUserFavoritesAsync(userId);
             return Ok(response.Favorites);
         }
     }

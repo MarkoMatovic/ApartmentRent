@@ -188,7 +188,7 @@ public class ImageUploadController : ControllerBase
     /// ApartmentImage rows and generates missing thumbnails. Runs in the background; progress
     /// and the final summary are written to the logs. Safe to re-run.
     /// </summary>
-    [HttpPost("admin/migrate-images-to-blob")]
+    [HttpPost(ApiActionsV1.MigrateImagesToBlob, Name = nameof(ApiActionsV1.MigrateImagesToBlob))]
     [Authorize(Roles = "Admin")]
     public IActionResult MigrateImagesToBlob()
     {

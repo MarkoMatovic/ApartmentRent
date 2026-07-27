@@ -10,7 +10,6 @@ using Lander.src.Infrastructure.Extensions;
 using Lander.src.Infrastructure.Hangfire;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
-using Lander.src.Modules.Reviews.Implementation;
 using Microsoft.AspNetCore.HttpOverrides;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
@@ -169,7 +168,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithAuth();
-builder.Services.AddGrpc();
 
 builder.Services.AddResponseCompression(options =>
 {
@@ -237,13 +235,10 @@ builder.Services.AddOutputCache(options =>
     // for 60s across the whole API, so deletes/creates looked like they "didn't happen"
     // (stale lists after logout/refresh). Only explicitly tagged endpoints are cached,
     // and their tags are evicted on mutation.
-    options.AddPolicy("ApartmentsList", builder =>
-        builder.Expire(TimeSpan.FromMinutes(5))
-               .SetVaryByQuery(new[] { "listingType", "city", "minRent", "maxRent", "page", "pageSize",
-                                       "numberOfRooms", "apartmentType", "isFurnished",
-                                       "isPetFriendly", "isSmokingAllowed", "hasParking",
-                                       "hasBalcony", "isImmediatelyAvailable" })
-               .Tag("apartments"));
+    // The apartment LIST is cached inside ApartmentService via HybridCache (tagged
+    // "apartments", evicted on every mutation) rather than by OutputCache. Caching the
+    // list at the HTTP layer would skip the controller action on a hit, and with it the
+    // per-request "ApartmentSearch" analytics event that the search dashboard is built on.
     options.AddPolicy("ApartmentDetail", builder =>
         builder.Expire(TimeSpan.FromMinutes(10))
                .SetVaryByRouteValue(new[] { "id" })
@@ -476,8 +471,6 @@ RecurringJob.AddOrUpdate<Lander.src.Modules.MachineLearning.Services.PriceModelT
     j => j.RunAsync(),
     "0 4 * * 0",
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
-
-app.MapGrpcService<ReviewFavoriteService>();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub").RequireRateLimiting("signalr");

@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Lander.src.Modules.Reviews.Client;
+using Lander.src.Modules.Reviews.Interfaces;
 using Lander.src.Modules.Reviews.Controllers;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Http;
@@ -11,13 +11,13 @@ namespace LandlordApp.Tests.Controllers;
 
 public class ReviewsFavoritesControllerTests
 {
-    private readonly Mock<IGrpcServiceClient> _mockGrpc;
+    private readonly Mock<IReviewFavoriteService> _mockReviews;
     private readonly ReviewsFavoritesController _controller;
 
     public ReviewsFavoritesControllerTests()
     {
-        _mockGrpc = new Mock<IGrpcServiceClient>();
-        _controller = new ReviewsFavoritesController(_mockGrpc.Object);
+        _mockReviews = new Mock<IReviewFavoriteService>();
+        _controller = new ReviewsFavoritesController(_mockReviews.Object);
         _controller.ControllerContext = MakeAuthContext();
     }
 
@@ -28,7 +28,7 @@ public class ReviewsFavoritesControllerTests
     {
         var request = new CreateFavoriteRequest { UserId = 1, ApartmentId = 10 };
         var response = new FavoriteResponse();
-        _mockGrpc.Setup(g => g.CreateFavoriteAsync(request)).ReturnsAsync(response);
+        _mockReviews.Setup(g => g.CreateFavoriteAsync(request)).ReturnsAsync(response);
 
         var result = await _controller.CreateFavorite(request);
 
@@ -38,7 +38,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task CreateFavorite_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.CreateFavoriteAsync(It.IsAny<CreateFavoriteRequest>()))
+        _mockReviews.Setup(g => g.CreateFavoriteAsync(It.IsAny<CreateFavoriteRequest>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.CreateFavorite(new CreateFavoriteRequest());
@@ -53,7 +53,7 @@ public class ReviewsFavoritesControllerTests
     {
         var request = new CreateReviewRequest { UserId = 1, ApartmentId = 5, Rating = 5 };
         var response = new ReviewResponse();
-        _mockGrpc.Setup(g => g.CreateReviewAsync(request)).ReturnsAsync(response);
+        _mockReviews.Setup(g => g.CreateReviewAsync(request)).ReturnsAsync(response);
 
         var result = await _controller.CreateReview(request);
 
@@ -63,7 +63,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task CreateReview_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.CreateReviewAsync(It.IsAny<CreateReviewRequest>()))
+        _mockReviews.Setup(g => g.CreateReviewAsync(It.IsAny<CreateReviewRequest>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.CreateReview(new CreateReviewRequest());
@@ -77,7 +77,7 @@ public class ReviewsFavoritesControllerTests
     public async Task GetReviewById_ReturnsOk()
     {
         var response = new ReviewResponse { ReviewId = 3 };
-        _mockGrpc.Setup(g => g.GetReviewByIdAsync(3)).ReturnsAsync(response);
+        _mockReviews.Setup(g => g.GetReviewByIdAsync(3)).ReturnsAsync(response);
 
         var result = await _controller.GetReviewById(3);
 
@@ -87,7 +87,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task GetReviewById_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.GetReviewByIdAsync(It.IsAny<int>()))
+        _mockReviews.Setup(g => g.GetReviewByIdAsync(It.IsAny<int>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.GetReviewById(99);
@@ -101,7 +101,7 @@ public class ReviewsFavoritesControllerTests
     public async Task GetReviewsByApartmentId_ReturnsOkWithReviews()
     {
         var reviewsResponse = new GetReviewsResponse();
-        _mockGrpc.Setup(g => g.GetReviewsByApartmentIdAsync(7)).ReturnsAsync(reviewsResponse);
+        _mockReviews.Setup(g => g.GetReviewsByApartmentIdAsync(7)).ReturnsAsync(reviewsResponse);
 
         var result = await _controller.GetReviewsByApartmentId(7);
 
@@ -111,7 +111,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task GetReviewsByApartmentId_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.GetReviewsByApartmentIdAsync(It.IsAny<int>()))
+        _mockReviews.Setup(g => g.GetReviewsByApartmentIdAsync(It.IsAny<int>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.GetReviewsByApartmentId(7);
@@ -125,7 +125,7 @@ public class ReviewsFavoritesControllerTests
     public async Task DeleteReview_ReturnsOk()
     {
         var response = new DeleteResponse { Success = true };
-        _mockGrpc.Setup(g => g.DeleteReviewAsync(4, It.IsAny<string>())).ReturnsAsync(response);
+        _mockReviews.Setup(g => g.DeleteReviewAsync(4, It.IsAny<string>())).ReturnsAsync(response);
 
         var result = await _controller.DeleteReview(4);
 
@@ -135,7 +135,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task DeleteReview_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.DeleteReviewAsync(It.IsAny<int>(), It.IsAny<string>()))
+        _mockReviews.Setup(g => g.DeleteReviewAsync(It.IsAny<int>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.DeleteReview(4);
@@ -149,7 +149,7 @@ public class ReviewsFavoritesControllerTests
     public async Task DeleteFavorite_ReturnsOk()
     {
         var response = new DeleteResponse { Success = true };
-        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(9, It.IsAny<string>())).ReturnsAsync(response);
+        _mockReviews.Setup(g => g.DeleteFavoriteAsync(9, It.IsAny<string>())).ReturnsAsync(response);
 
         var result = await _controller.DeleteFavorite(9);
 
@@ -159,7 +159,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task DeleteFavorite_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.DeleteFavoriteAsync(It.IsAny<int>(), It.IsAny<string>()))
+        _mockReviews.Setup(g => g.DeleteFavoriteAsync(It.IsAny<int>(), It.IsAny<string>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.DeleteFavorite(9);
@@ -174,7 +174,7 @@ public class ReviewsFavoritesControllerTests
     {
         // Caller may only read their own favorites (userId claim = 1)
         var favResponse = new GetFavoritesResponse();
-        _mockGrpc.Setup(g => g.GetUserFavoritesAsync(1)).ReturnsAsync(favResponse);
+        _mockReviews.Setup(g => g.GetUserFavoritesAsync(1)).ReturnsAsync(favResponse);
 
         var result = await _controller.GetUserFavorites(1);
 
@@ -184,7 +184,7 @@ public class ReviewsFavoritesControllerTests
     [Fact]
     public async Task GetUserFavorites_GrpcThrows_Propagates()
     {
-        _mockGrpc.Setup(g => g.GetUserFavoritesAsync(It.IsAny<int>()))
+        _mockReviews.Setup(g => g.GetUserFavoritesAsync(It.IsAny<int>()))
             .ThrowsAsync(new Exception("gRPC unavailable"));
 
         Func<Task> act = () => _controller.GetUserFavorites(1);

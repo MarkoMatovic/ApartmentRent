@@ -1,7 +1,7 @@
 using Lander;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.Extensions.Configuration;
-using Lander.src.Modules.Reviews.Client;
+using Lander.src.Modules.Reviews.Interfaces;
 using Lander.src.Modules.Reviews.proto;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -103,8 +103,8 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
         services.RemoveAll<IEmailService>();
         services.AddScoped<IEmailService, NoopEmailService>();
 
-        services.RemoveAll<IGrpcServiceClient>();
-        services.AddScoped<IGrpcServiceClient, NoopGrpcServiceClient>();
+        services.RemoveAll<IReviewFavoriteService>();
+        services.AddScoped<IReviewFavoriteService, NoopReviewFavoriteService>();
     }
 
     // ── Noop implementations ─────────────────────────────────────────────────
@@ -126,7 +126,7 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
         public Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur) => Task.FromResult(true);
     }
 
-    private sealed class NoopGrpcServiceClient : IGrpcServiceClient
+    private sealed class NoopReviewFavoriteService : IReviewFavoriteService
     {
         public Task<FavoriteResponse>   CreateFavoriteAsync(CreateFavoriteRequest request)              => Task.FromResult(new FavoriteResponse());
         public Task<ReviewResponse>     CreateReviewAsync(CreateReviewRequest request)                  => Task.FromResult(new ReviewResponse());
