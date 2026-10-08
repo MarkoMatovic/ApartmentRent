@@ -2,10 +2,10 @@ namespace Lander.src.Notifications.Models;
 public class ReadNotification
 {
     public int Id { get; set; }
-    public string Title { get; set; }
-    public string Message { get; set; }
-    public string ActionType { get; set; }
-    public string ActionTarget { get; set; }
+    public string Title { get; set; } = null!;
+    public string Message { get; set; } = null!;
+    public string ActionType { get; set; } = null!;
+    public string ActionTarget { get; set; } = null!;
     public bool IsRead { get; set; }
     public DateTime CreatedDate { get; set; }
     public Guid CreatedByGuid { get; set; }

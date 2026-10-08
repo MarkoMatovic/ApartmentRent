@@ -37,17 +37,28 @@ public class AnalyticsE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    // ── Summary (Authorize) ───────────────────────────────────────────────────
+    // ── Summary (Admin only) ───────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetSummary_AsAuthenticatedUser_Returns200()
+    public async Task GetSummary_AsAdmin_Returns200()
     {
-        var user   = await Data.CreateUserAsync("anl-sum@e2e.com");
-        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+        var admin  = await Data.CreateUserAsync("anl-sum@e2e.com", role: "Admin");
+        var client = CreateAuthenticatedClient(admin.UserId, admin.UserGuid, role: "Admin");
 
         var response = await new GetAnalyticsSummaryEndpoint(client).CallAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetSummary_AsRegularUser_Returns403()
+    {
+        var user   = await Data.CreateUserAsync("anl-sum-user@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new GetAnalyticsSummaryEndpoint(client).CallAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -58,17 +69,28 @@ public class AnalyticsE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ── TopViewedApartments (Authorize) ──────────────────────────────────────
+    // ── TopViewedApartments (Admin only) ──────────────────────────────────────
 
     [Fact]
-    public async Task GetTopViewedApartments_AsAuthenticated_Returns200()
+    public async Task GetTopViewedApartments_AsAdmin_Returns200()
     {
-        var user   = await Data.CreateUserAsync("anl-topapt@e2e.com");
-        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+        var admin  = await Data.CreateUserAsync("anl-topapt@e2e.com", role: "Admin");
+        var client = CreateAuthenticatedClient(admin.UserId, admin.UserGuid, role: "Admin");
 
         var response = await new GetTopViewedApartmentsEndpoint(client).CallAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetTopViewedApartments_AsRegularUser_Returns403()
+    {
+        var user   = await Data.CreateUserAsync("anl-topapt-user@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new GetTopViewedApartmentsEndpoint(client).CallAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -79,17 +101,28 @@ public class AnalyticsE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ── TopViewedRoommates (Authorize) ────────────────────────────────────────
+    // ── TopViewedRoommates (Admin only) ────────────────────────────────────────
 
     [Fact]
-    public async Task GetTopViewedRoommates_AsAuthenticated_Returns200()
+    public async Task GetTopViewedRoommates_AsAdmin_Returns200()
     {
-        var user   = await Data.CreateUserAsync("anl-toproom@e2e.com");
-        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+        var admin  = await Data.CreateUserAsync("anl-toproom@e2e.com", role: "Admin");
+        var client = CreateAuthenticatedClient(admin.UserId, admin.UserGuid, role: "Admin");
 
         var response = await new GetTopViewedRoommatesEndpoint(client).CallAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetTopViewedRoommates_AsRegularUser_Returns403()
+    {
+        var user   = await Data.CreateUserAsync("anl-toproom-user@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new GetTopViewedRoommatesEndpoint(client).CallAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -100,17 +133,28 @@ public class AnalyticsE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    // ── TopSearchTerms (Authorize) ────────────────────────────────────────────
+    // ── TopSearchTerms (Admin only) ────────────────────────────────────────────
 
     [Fact]
-    public async Task GetTopSearchTerms_AsAuthenticated_Returns200()
+    public async Task GetTopSearchTerms_AsAdmin_Returns200()
     {
-        var user   = await Data.CreateUserAsync("anl-srch@e2e.com");
-        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+        var admin  = await Data.CreateUserAsync("anl-srch@e2e.com", role: "Admin");
+        var client = CreateAuthenticatedClient(admin.UserId, admin.UserGuid, role: "Admin");
 
         var response = await new GetTopSearchTermsEndpoint(client).CallAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetTopSearchTerms_AsRegularUser_Returns403()
+    {
+        var user   = await Data.CreateUserAsync("anl-srch-user@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new GetTopSearchTermsEndpoint(client).CallAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

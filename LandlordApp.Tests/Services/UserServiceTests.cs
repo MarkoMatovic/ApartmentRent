@@ -432,7 +432,7 @@ public class UserServiceTests : IDisposable
     public async Task VerifyEmailAsync_ValidToken_ActivatesUser()
     {
         var user = MakeUser(email: "verify@test.com", isActive: false);
-        user.EmailVerificationToken = "valid-token-123";
+        user.EmailVerificationToken = RefreshTokenService.HashToken("valid-token-123");
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
@@ -453,10 +453,52 @@ public class UserServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SendPasswordResetEmailAsync_StoresOnlyTheHash_NotTheEmailedToken()
+    {
+        var user = MakeUser(email: "hashed@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        string? emailedLink = null;
+        _mockEmailService
+            .Setup(e => e.SendPasswordResetEmailAsync(user.Email, It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((_, _, link) => emailedLink = link)
+            .ReturnsAsync(true);
+
+        await _userService.SendPasswordResetEmailAsync("hashed@test.com");
+
+        emailedLink.Should().NotBeNull();
+        var rawToken = Uri.UnescapeDataString(emailedLink!.Split("token=")[1]);
+
+        var stored = (await _context.Users.AsNoTracking().FirstAsync(u => u.Email == "hashed@test.com")).PasswordResetToken;
+        stored.Should().NotBe(rawToken, "a database dump must not contain a usable reset token");
+        stored.Should().Be(RefreshTokenService.HashToken(rawToken));
+
+        // ...and the emailed (raw) token still resets the password end to end.
+        (await _userService.ResetPasswordAsync(rawToken, "BrandNewPass1")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_PresentingTheStoredHashItself_IsRejected()
+    {
+        var raw = "reset-token-xyz";
+        var user = MakeUser(email: "replayhash@test.com");
+        user.PasswordResetToken = RefreshTokenService.HashToken(raw);
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // An attacker who read the hash from the database cannot use it as the token.
+        var result = await _userService.ResetPasswordAsync(user.PasswordResetToken!, "BrandNewPass1");
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ResetPasswordAsync_ValidToken_UpdatesPassword()
     {
         var user = MakeUser(email: "resetpw@test.com");
-        user.PasswordResetToken = "reset-token-abc";
+        user.PasswordResetToken = RefreshTokenService.HashToken("reset-token-abc");
         user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -473,7 +515,7 @@ public class UserServiceTests : IDisposable
     public async Task ResetPasswordAsync_ExpiredToken_ReturnsFalse()
     {
         var user = MakeUser(email: "expiredtoken@test.com");
-        user.PasswordResetToken = "expired-token";
+        user.PasswordResetToken = RefreshTokenService.HashToken("expired-token");
         user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(-1); // expired
         _context.Users.Add(user);
         await _context.SaveChangesAsync();

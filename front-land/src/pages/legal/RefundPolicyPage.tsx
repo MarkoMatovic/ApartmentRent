@@ -46,7 +46,7 @@ const RefundPolicyPage: React.FC = () => (
       <Box component="ul" sx={{ pl: 3 }}>
         <Li><strong>Tehnička greška naše platforme</strong> — usluga je naplaćena ali nije aktivirana (nije isporučena).</Li>
         <Li><strong>Duplo naplaćivanje</strong> — ista kupovina naplaćena više puta usled sistemske greške.</Li>
-        <Li><strong>Platna greška procesora</strong> — plaćanje neuspešno ali iznos skinut s kartice (kontaktirajte Monri i nas istovremeno).</Li>
+        <Li><strong>Platna greška procesora</strong> — plaćanje neuspešno ali iznos skinut s kartice (kontaktirajte Paddle, koji je prodavac u transakciji, i nas istovremeno).</Li>
       </Box>
       <P>
         Zahtev za povraćaj usled gore navedenih razloga podnesite na{' '}

@@ -179,7 +179,7 @@ public partial class ApartmentService
         };
     }
 
-    public async Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId)
+    public async Task<GetApartmentDto?> GetApartmentByIdAsync(int apartmentId)
     {
         var ctx = _httpContextAccessor.HttpContext;
         var userIdClaim = ctx?.User?.FindFirstValue("userId");
@@ -290,7 +290,7 @@ public partial class ApartmentService
                 Rent = a.Rent,
                 Price = a.Price,
                 Address = a.Address,
-                City = a.City,
+                City = a.City ?? string.Empty,
                 Latitude = a.Latitude,
                 Longitude = a.Longitude,
                 SizeSquareMeters = a.SizeSquareMeters,

@@ -22,7 +22,8 @@ public sealed class TokenProvider
 
     public async Task<string> CreateAsync(User user)
     {
-        string secretKey = _configuration["Jwt:Secret"];
+        var secretKey = _configuration["Jwt:Secret"]
+            ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

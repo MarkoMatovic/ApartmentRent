@@ -82,12 +82,14 @@ public class PaymentService : IPaymentService
 
     public async Task<List<PaymentOrderDto>> GetUserOrdersAsync(int userId)
     {
-        // Order numbers are encoded as "{userId}_{planId}_{...}" so we filter by prefix.
+        // Paddle-era rows record UserId/PlanId directly. Legacy Monri-era rows have neither and
+        // encode them in the order number as "{userId}_{planId}_{...}", so match those by prefix.
+        // (Filtering only by prefix hid every Paddle purchase — "txn_…" never starts with "{userId}_".)
         var prefix = $"{userId}_";
 
         var orders = await _paymentsContext.ProcessedOrders
             .AsNoTracking()
-            .Where(o => o.OrderNumber.StartsWith(prefix))
+            .Where(o => o.UserId == userId || (o.UserId == null && o.OrderNumber.StartsWith(prefix)))
             .OrderByDescending(o => o.ProcessedAt)
             .ToListAsync();
 
@@ -100,7 +102,7 @@ public class PaymentService : IPaymentService
         return orders.Select(o =>
         {
             var parts = o.OrderNumber.Split('_', 3);
-            var planId = parts.Length >= 2 ? parts[1] : o.OrderNumber;
+            var planId = o.PlanId ?? (parts.Length >= 2 ? parts[1] : o.OrderNumber);
             planNames.TryGetValue(planId, out var planName);
             planAmounts.TryGetValue(planId, out var amount);
 

@@ -23,7 +23,7 @@
   "btnRefundPolicy": "Refund Policy",
   "orderRef": "Order No.",
   "activating": "Activating your service...",
-  "sessionRefreshFailed": "Service activated but we couldn't automatically refresh your session. Please sign out and sign in again to see the changes.",
+  "sessionRefreshFailed": "Payment received! Your purchase is being processed and will appear in your account shortly. If you don't see it yet, refresh the page or sign in again.",
   "btnPaymentHistory": "Payment History",
   "successDefault_title": "Payment Successful!",
   "successDefault_body": "Your service has been activated.",

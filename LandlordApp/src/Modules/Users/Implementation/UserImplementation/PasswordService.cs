@@ -76,7 +76,9 @@ public class PasswordService : IPasswordService
 
         var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
                            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
-        user.EmailVerificationToken = token;
+        // Only the SHA-256 hash is stored (like refresh tokens): a leaked database dump must not
+        // contain a usable link. The raw token exists only in the e-mail we send.
+        user.EmailVerificationToken = RefreshTokenService.HashToken(token);
         user.EmailVerificationTokenExpiry = _timeProvider.GetUtcNow().UtcDateTime.AddHours(24);
         user.ModifiedDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _context.SaveEntitiesAsync();
@@ -89,7 +91,8 @@ public class PasswordService : IPasswordService
 
     public async Task<bool> VerifyEmailAsync(string token)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
+        var tokenHash = RefreshTokenService.HashToken(token);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == tokenHash);
         if (user == null) return false;
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -115,7 +118,8 @@ public class PasswordService : IPasswordService
         var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
                            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        user.PasswordResetToken = token;
+        // Hash at rest — see SendVerificationEmailAsync.
+        user.PasswordResetToken = RefreshTokenService.HashToken(token);
         user.PasswordResetTokenExpiry = now.AddHours(2);
         user.ModifiedDate = now;
         await _context.SaveEntitiesAsync();
@@ -129,8 +133,9 @@ public class PasswordService : IPasswordService
     public async Task<bool> ResetPasswordAsync(string token, string newPassword)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var tokenHash = RefreshTokenService.HashToken(token);
         var user = await _context.Users.FirstOrDefaultAsync(u =>
-            u.PasswordResetToken == token &&
+            u.PasswordResetToken == tokenHash &&
             u.PasswordResetTokenExpiry > now);
         if (user == null) return false;
 

@@ -274,6 +274,7 @@ const ChatPage: React.FC = () => {
         // Ignoriši greške
       }
     } catch (error) {
+      // Opening the conversation failed; the list stays as it was.
     }
   };
 
@@ -283,9 +284,12 @@ const ChatPage: React.FC = () => {
     const messageToSend = messageText.trim();
 
     try {
-      if (connected) {
-        await sendMessage(selectedConversation.otherUserId, messageToSend);
-      } else {
+      // Prefer the live hub; if it is down or rejects the message, fall back to REST so the
+      // message is not silently lost (the hook used to swallow the failure and report success).
+      const sentViaHub = connected
+        ? await sendMessage(selectedConversation.otherUserId, messageToSend)
+        : false;
+      if (!sentViaHub) {
         const newMsg = await messagesApi.sendMessage({
           receiverId: selectedConversation.otherUserId,
           messageText: messageToSend
@@ -315,6 +319,7 @@ const ChatPage: React.FC = () => {
           : conv
       ));
     } catch (error) {
+      // Send failed: leave the typed text in the input so the user can retry instead of losing it.
     }
   };
 

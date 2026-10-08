@@ -17,8 +17,12 @@ public class LocalFileStorageService : IFileStorageService
         _logger = logger;
     }
 
+    // Public containers live under wwwroot (UseStaticFiles). Private ones stay
+    // outside wwwroot so they are only reachable via an authorized download action.
     private string RootFor(string containerName)
-        => Path.Combine(_env.WebRootPath, "uploads", containerName);
+        => FileStorageContainers.IsPublic(containerName)
+            ? Path.Combine(_env.WebRootPath, "uploads", containerName)
+            : Path.Combine(_env.ContentRootPath, "private-storage", containerName);
 
     public async Task<string> UploadAsync(string containerName, string filePath, Stream content, string contentType, CancellationToken ct = default)
     {

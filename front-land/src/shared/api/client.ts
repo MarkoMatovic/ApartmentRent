@@ -2,13 +2,16 @@ import axios from 'axios';
 import { getAccessToken, setAccessToken } from './tokenStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-if (!API_BASE_URL) {
-  if (import.meta.env.PROD) {
-    throw new Error('VITE_API_URL is not set. This environment variable is required in production.');
-  }
-  console.warn('[client] VITE_API_URL is not set — falling back to https://localhost:7092 (dev only)');
+if (!API_BASE_URL && import.meta.env.PROD) {
+  throw new Error('VITE_API_URL is not set. This environment variable is required in production.');
 }
-const _baseUrl = API_BASE_URL ?? 'https://localhost:7092';
+// In dev (no VITE_API_URL) use a RELATIVE base URL so every request flows through the Vite
+// proxy (see vite.config.ts: /api, /uploads, /notificationHub, /chatHub → https://localhost:7092).
+// This keeps the browser same-origin with the API (http://localhost:5173), so the SameSite=Strict
+// httpOnly refresh cookie is actually sent to /token/refresh. Talking to https://localhost:7092
+// directly is cross-scheme (http→https), which browsers treat as cross-site and drop the cookie —
+// that made a page reload fail the silent refresh and log the user out.
+const _baseUrl = API_BASE_URL ?? '';
 
 export const apiBaseUrl = _baseUrl;
 

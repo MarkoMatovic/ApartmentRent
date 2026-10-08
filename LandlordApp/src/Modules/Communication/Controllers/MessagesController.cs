@@ -3,7 +3,6 @@ using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
@@ -140,18 +139,10 @@ public class MessagesController : ControllerBase
     {
         var userId = GetCurrentUserId();
 
-        if (!await _messageService.IsFileAccessibleAsync(filename, userId))
+        var stream = await _messageService.OpenChatFileAsync(filename, userId);
+        if (stream is null)
             return Forbid();
 
-        var filePath = Path.Combine(
-            HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().ContentRootPath,
-            "chat-files",
-            filename);
-
-        if (!System.IO.File.Exists(filePath))
-            return NotFound();
-
-        // Derive content type from extension; default to octet-stream
         var ext = Path.GetExtension(filename).ToLowerInvariant();
         var contentType = ext switch
         {
@@ -162,7 +153,7 @@ public class MessagesController : ControllerBase
             _                 => "application/octet-stream"
         };
 
-        return PhysicalFile(filePath, contentType, enableRangeProcessing: false);
+        return File(stream, contentType);
     }
 
     [HttpPost(ApiActionsV1.ArchiveConversation, Name = nameof(ApiActionsV1.ArchiveConversation))]

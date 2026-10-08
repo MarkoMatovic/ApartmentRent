@@ -14,6 +14,13 @@ public class RefreshTokenService
         _context = context;
     }
 
+    /// <summary>
+    /// How long a refresh token (and the cookie that carries it) stays valid. One constant for
+    /// both: the cookie used to say 30 days while the server-side row expired after 7, so the
+    /// browser kept sending a token the server had already stopped accepting.
+    /// </summary>
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(7);
+
     public string GenerateRawToken() =>
         Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 
@@ -36,7 +43,7 @@ public class RefreshTokenService
         {
             UserId = userId,
             TokenHash = HashToken(raw),
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            ExpiresAt = DateTime.UtcNow.Add(Lifetime),
         });
 
         await _context.SaveEntitiesAsync();

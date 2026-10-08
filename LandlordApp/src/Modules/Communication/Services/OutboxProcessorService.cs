@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,16 +15,29 @@ namespace Lander.src.Modules.Communication.Services;
 /// </summary>
 public class OutboxProcessorService : BackgroundService
 {
+    private const string WorkerName = "outbox-processor";
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OutboxProcessorService> _logger;
+    private readonly BackgroundWorkerHealth _health;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(10);
     private const int MaxRetries = 3;
     private const int BatchSize = 50;
 
-    public OutboxProcessorService(IServiceScopeFactory scopeFactory, ILogger<OutboxProcessorService> logger)
+    // "Claimed, in progress" marker stored in ProcessedAt. The column is SQL Server `datetime`,
+    // whose minimum is 1753-01-01 — DateTime.MinValue (0001-01-01) is out of range and made
+    // the claim UPDATE throw error 242 on every poll, so no outbox event was ever processed.
+    // Single source of truth: the SQL claim, the in-memory claim and the pending query all use this.
+    private static readonly DateTime ClaimSentinel = new(1753, 1, 1, 0, 0, 0, DateTimeKind.Unspecified);
+
+    public OutboxProcessorService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<OutboxProcessorService> logger,
+        BackgroundWorkerHealth health)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _health = health;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,13 +49,36 @@ public class OutboxProcessorService : BackgroundService
             try
             {
                 await ProcessPendingEventsAsync(stoppingToken);
+                _health.RecordSuccess(WorkerName);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break; // shutting down — not a failure
             }
             catch (Exception ex)
             {
+                var failures = _health.RecordFailure(WorkerName, ex);
                 _logger.LogError(ex, "Unhandled error in OutboxProcessorService.");
+
+                // Critical (once at the threshold, then every 30th run ≈ 5 min) so a log alert can
+                // fire. Without this a worker failing on every poll was invisible for months.
+                if (failures == BackgroundWorkerHealth.FailureThreshold ||
+                    (failures > BackgroundWorkerHealth.FailureThreshold && failures % 30 == 0))
+                {
+                    _logger.LogCritical(ex,
+                        "OutboxProcessorService has failed {Failures} consecutive runs — queued events are NOT being processed.",
+                        failures);
+                }
             }
 
-            await Task.Delay(PollInterval, stoppingToken);
+            try
+            {
+                await Task.Delay(PollInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 
@@ -51,7 +88,7 @@ public class OutboxProcessorService : BackgroundService
         var commContext = scope.ServiceProvider.GetRequiredService<CommunicationsContext>();
         var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
 
-        // ── Atomic claim: set ProcessedAt to a sentinel value (DateTime.MinValue)
+        // ── Atomic claim: set ProcessedAt to the sentinel value (ClaimSentinel)
         // in a single UPDATE so that concurrent instances don't double-process.
         // Only rows where ProcessedAt IS NULL are eligible; UPDLOCK + READPAST hints
         // skip rows already locked by another instance.
@@ -59,9 +96,9 @@ public class OutboxProcessorService : BackgroundService
         {
             await commContext.Database.ExecuteSqlRawAsync(
                 @"UPDATE TOP({0}) [Communication].[OutboxMessages]
-                  SET ProcessedAt = '0001-01-01 00:00:00'
-                  WHERE ProcessedAt IS NULL AND RetryCount < {1}",
-                BatchSize, MaxRetries);
+                  SET ProcessedAt = {1}
+                  WHERE ProcessedAt IS NULL AND RetryCount < {2}",
+                BatchSize, ClaimSentinel, MaxRetries);
         }
         else
         {
@@ -72,13 +109,13 @@ public class OutboxProcessorService : BackgroundService
                 .OrderBy(e => e.CreatedAt)
                 .Take(BatchSize)
                 .ToListAsync(ct);
-            foreach (var e in toClaim) e.ProcessedAt = DateTime.MinValue;
+            foreach (var e in toClaim) e.ProcessedAt = ClaimSentinel;
             await commContext.SaveChangesAsync(ct);
         }
 
-        // Fetch only the rows we just claimed (sentinel = DateTime.MinValue)
+        // Fetch only the rows we just claimed (sentinel = ClaimSentinel)
         var pending = await commContext.OutboxMessages
-            .Where(e => e.ProcessedAt == DateTime.MinValue)
+            .Where(e => e.ProcessedAt == ClaimSentinel)
             .OrderBy(e => e.CreatedAt)
             .Take(BatchSize)
             .ToListAsync(ct);

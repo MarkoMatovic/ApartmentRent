@@ -33,7 +33,7 @@ public class SavedSearchesContext : DbContext, IUnitOfWork
         try
         {
             await SaveChangesAsync();
-            await transaction?.CommitAsync();
+            await transaction.CommitAsync();
         }
         catch
         {

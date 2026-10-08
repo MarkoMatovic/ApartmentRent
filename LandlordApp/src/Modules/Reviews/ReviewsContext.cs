@@ -36,7 +36,7 @@ public class ReviewsContext : DbContext, IUnitOfWork
         try
         {
             await SaveChangesAsync();
-            await transaction?.CommitAsync();
+            await transaction.CommitAsync();
         }
         catch
         {
@@ -129,5 +129,14 @@ public class ReviewsContext : DbContext, IUnitOfWork
             entity.HasKey(e => e.UserId);
             entity.Metadata.SetIsTableExcludedFromMigrations(true);
         });
+
+        // User drags Role -> RolePermission -> Permission into this model through navigation
+        // properties. They belong to UsersContext (which owns and migrates those tables); this
+        // context only reads Users. Without excluding them EF believed the model had pending
+        // changes (create ReviewsFavorites.Permission / RolePermission), and on a database being
+        // built from scratch Migrate() aborts on PendingModelChangesWarning.
+        modelBuilder.Entity<Role>().Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<Permission>().Metadata.SetIsTableExcludedFromMigrations(true);
+        modelBuilder.Entity<RolePermission>().Metadata.SetIsTableExcludedFromMigrations(true);
     }
 }

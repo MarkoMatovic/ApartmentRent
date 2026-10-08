@@ -22,6 +22,9 @@ namespace Lander.src.Modules.Payments
                 entity.ToTable("ProcessedMonriOrders", "payments");
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.OrderNumber).IsUnique();
+                entity.Property(e => e.PlanId).HasMaxLength(100);
+                entity.Property(e => e.ReversalReference).HasMaxLength(100);
+                entity.HasIndex(e => e.UserId); // payment-history lookup by buyer
             });
         }
 

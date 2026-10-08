@@ -245,7 +245,7 @@ namespace Lander.src.Modules.Users.Controllers
                 HttpOnly  = true,     
                 Secure    = true,  
                 SameSite  = SameSiteMode.Strict,
-                Expires   = DateTimeOffset.UtcNow.AddDays(30),
+                Expires   = DateTimeOffset.UtcNow.Add(RefreshTokenService.Lifetime),
                 Path      = "/api/v1/auth" 
             };
             Response.Cookies.Append("refreshToken", rawRefreshToken, cookieOptions);

@@ -284,7 +284,7 @@ const Header: React.FC = () => {
                     {t('premium:upgradeToPremium')}
                   </MenuItem>
                 )}
-                {user?.userRoleId === 1 && (
+                {user?.roleName === 'Admin' && (
                   <>
                     <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
                       <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -465,7 +465,7 @@ const Header: React.FC = () => {
                     </ListItemButton>
                   </ListItem>
                 )}
-                {user?.userRoleId === 1 && (
+                {user?.roleName === 'Admin' && (
                   <>
                     <ListItem disablePadding>
                       <ListItemButton onClick={() => { navigate('/admin/analytics'); setMobileOpen(false); }}>

@@ -89,6 +89,7 @@ public class ApartmentApplicationServiceTests : IDisposable
             usersContext,
             _mockApartmentService.Object,
             _mockNotificationHub.Object,
+            new Mock<Lander.src.Notifications.Interfaces.INotificationService>().Object,
             _mockUserService.Object,
             mockHttp.Object);
     }

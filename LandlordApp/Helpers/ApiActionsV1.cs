@@ -145,7 +145,8 @@ public static class ApiActionsV1
     public const string GetMyPaymentStatus = "my-status";
     public const string GetMyOrders = "my-orders";
     public const string CancelAnalytics = "cancel-analytics";
-    public const string PaymentCallback = "callback";
+    public const string PaddleConfig = "paddle-config";
+    public const string PaddleWebhook = "paddle/webhook";
     #endregion
 
     #region Reports

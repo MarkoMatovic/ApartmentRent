@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Lander.Helpers;
+using Lander.src.Common;
+using Lander.src.Infrastructure.FileStorage;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
@@ -21,6 +23,7 @@ public partial class MessageService : IMessageService
     private readonly IHubContext<ChatHub> _chatHubContext;
     private readonly IHubContext<NotificationHub> _notificationHubContext;
     private readonly IWebHostEnvironment _webHostEnvironment;
+    private readonly IFileStorageService _fileStorage;
     private readonly IdempotencyService _idempotencyService;
     private readonly ILogger<MessageService> _logger;
 
@@ -32,6 +35,7 @@ public partial class MessageService : IMessageService
         IHubContext<ChatHub> chatHubContext,
         IHubContext<NotificationHub> notificationHubContext,
         IWebHostEnvironment webHostEnvironment,
+        IFileStorageService fileStorage,
         IdempotencyService idempotencyService,
         ILogger<MessageService> logger)
     {
@@ -42,6 +46,7 @@ public partial class MessageService : IMessageService
         _chatHubContext = chatHubContext;
         _notificationHubContext = notificationHubContext;
         _webHostEnvironment = webHostEnvironment;
+        _fileStorage = fileStorage;
         _idempotencyService = idempotencyService;
         _logger = logger;
     }
@@ -80,11 +85,12 @@ public partial class MessageService : IMessageService
         }
 
         var callerGuid = Guid.TryParse(currentUserGuid, out var cg) ? cg : (Guid?)null;
+        var safeText = HtmlSanitizationHelper.SanitizePlainText(messageText) ?? string.Empty;
         var message = new Message
         {
             SenderId = senderId,
             ReceiverId = receiverId,
-            MessageText = messageText,
+            MessageText = safeText,
             IsSuperLike = isSuperLike,
             FileUrl = fileUrl,
             FileName = fileName,
@@ -124,7 +130,7 @@ public partial class MessageService : IMessageService
         if (receiver != null && !string.IsNullOrEmpty(receiver.Email))
         {
             var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
-            var preview = messageText.Length > 100 ? messageText.Substring(0, 100) + "..." : messageText;
+            var preview = safeText.Length > 100 ? safeText.Substring(0, 100) + "..." : safeText;
             try
             {
                 await _emailService.SendNewMessageEmailAsync(receiver.Email, senderName, preview);
@@ -139,7 +145,7 @@ public partial class MessageService : IMessageService
             MessageId = message.MessageId,
             SenderId = senderId,
             ReceiverId = receiverId,
-            MessageText = messageText,
+            MessageText = safeText,
             IsSuperLike = isSuperLike,
             FileUrl = fileUrl,
             FileName = fileName,

@@ -81,6 +81,7 @@ public class MessageServiceTests : IDisposable
             _mockChatHub.Object,
             _mockNotificationHub.Object,
             _mockWebHostEnv.Object,
+            new Mock<Lander.src.Infrastructure.FileStorage.IFileStorageService>().Object,
             new IdempotencyService(new Mock<Microsoft.Extensions.Caching.Distributed.IDistributedCache>().Object),
             new Mock<Microsoft.Extensions.Logging.ILogger<MessageService>>().Object);
     }

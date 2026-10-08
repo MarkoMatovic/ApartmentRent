@@ -35,7 +35,7 @@ public class ApplicationsContext : DbContext, IUnitOfWork
         try
         {
             await SaveChangesAsync();
-            await transaction?.CommitAsync();
+            await transaction.CommitAsync();
         }
         catch
         {

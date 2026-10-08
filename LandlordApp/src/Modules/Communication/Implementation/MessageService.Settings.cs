@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Lander.Helpers;
 using Lander.src.Common;
+using Lander.src.Infrastructure.FileStorage;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Models;
 using Microsoft.EntityFrameworkCore;
@@ -113,21 +114,43 @@ public partial class MessageService
                 throw new ArgumentException("File content does not match its extension");
         }
 
-        // Store files OUTSIDE wwwroot so UseStaticFiles never serves them directly.
-        // Access goes through the authorized /api/v1/messages/files/{name} endpoint
-        // which verifies the caller is a conversation participant.
-        var uploadsFolder = Path.Combine(_webHostEnvironment.ContentRootPath, "chat-files");
-        Directory.CreateDirectory(uploadsFolder);
-
+        // Private container (Azure: no public access; local: ContentRoot/private-storage).
+        // Clients never get a blob URL — download stays on the authorized API route.
         var uniqueFileName = $"{Guid.NewGuid():N}{extension}";
-        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        var contentType = extension switch
         {
-            await file.CopyToAsync(stream);
-        }
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
+
+        await using var upload = file.OpenReadStream();
+        await _fileStorage.UploadAsync(
+            FileStorageContainers.ChatFiles, uniqueFileName, upload, contentType);
 
         return $"/api/v1/messages/files/{uniqueFileName}";
+    }
+
+    /// <summary>
+    /// Opens a chat attachment if the caller is a participant. Tries blob/private storage
+    /// first, then the legacy ContentRoot/chat-files folder from before the migration.
+    /// </summary>
+    public async Task<Stream?> OpenChatFileAsync(string filename, int userId)
+    {
+        if (!await IsFileAccessibleAsync(filename, userId))
+            return null;
+
+        var stored = await _fileStorage.DownloadAsync(FileStorageContainers.ChatFiles, filename);
+        if (stored is not null)
+            return stored;
+
+        var legacyPath = Path.Combine(_webHostEnvironment.ContentRootPath, "chat-files", filename);
+        if (File.Exists(legacyPath))
+            return File.OpenRead(legacyPath);
+
+        return null;
     }
 
     public async Task<bool> IsFileAccessibleAsync(string filename, int userId)

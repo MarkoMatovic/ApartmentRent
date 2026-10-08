@@ -20,7 +20,11 @@ public class NotificationStreamControllerTests
 
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, userId.ToString())
+            // The controller identifies the caller by the "userId" claim that TokenProvider puts in
+            // every access token (NameIdentifier carries the GUID, not this numeric id). The helper
+            // used NameIdentifier, so GetCurrentUserId() returned 0 and the delivery test could
+            // never pass — it just hung waiting for a message addressed to someone else.
+            new("userId", userId.ToString())
         };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var principal = new ClaimsPrincipal(identity);
@@ -68,6 +72,9 @@ public class NotificationStreamControllerTests
     {
         var service = new NotificationStreamService();
         using var cts = new CancellationTokenSource();
+        // Safety net: if the notification is ever lost, the stream ends and the assertions below
+        // FAIL, instead of the test waiting forever and hanging the whole test host.
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
         var received = new List<NotificationMessage>();
 
         // Open a stream for userId=5
@@ -80,12 +87,15 @@ public class NotificationStreamControllerTests
             }
         });
 
-        await Task.Delay(50);
+        // Wait until the stream has actually registered its channel. A fixed Task.Delay(50) was a
+        // race: on a cold JIT the send happened before registration, the message was dropped, nothing
+        // ever cancelled the stream and this test hung forever.
+        await WaitForConnectionsAsync(service, expected: 1);
 
         var controller = CreateController(service, userId: 5);
         await controller.SendTestNotification("ping");
 
-        await streamTask.ContinueWith(_ => { });
+        await streamTask.ContinueWith(_ => { }).WaitAsync(TimeSpan.FromSeconds(15));
 
         received.Should().ContainSingle();
         received[0].Type.Should().Be("test");
@@ -117,7 +127,7 @@ public class NotificationStreamControllerTests
             await foreach (var _ in service.StreamNotificationsAsync(1, "test-conn", cts.Token)) { }
         });
 
-        await Task.Delay(50);
+        await WaitForConnectionsAsync(service, expected: 1);
 
         var controller = CreateController(service, userId: 1);
         var result = controller.GetConnectionCount();
@@ -126,7 +136,7 @@ public class NotificationStreamControllerTests
         ok.Value!.ToString().Should().Contain("1");
 
         cts.Cancel();
-        await streamTask.ContinueWith(_ => { });
+        await streamTask.ContinueWith(_ => { }).WaitAsync(TimeSpan.FromSeconds(15));
     }
 
     // ─── GET /api/notifications/stream ───────────────────────────────────────
@@ -180,5 +190,17 @@ public class NotificationStreamControllerTests
         // Should not throw
         var act = async () => await controller.SendTestNotification("msg");
         await act.Should().NotThrowAsync();
+    }
+
+    /// <summary>Polls until the service reports <paramref name="expected"/> open streams, or fails after 5 s.</summary>
+    private static async Task WaitForConnectionsAsync(NotificationStreamService service, int expected)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (service.GetActiveConnectionCount() < expected)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"Expected {expected} open stream(s) but found {service.GetActiveConnectionCount()}.");
+            await Task.Delay(10);
+        }
     }
 }

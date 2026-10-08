@@ -37,7 +37,7 @@ public partial class NotificationContext : DbContext, IUnitOfWork
         try
         {
             await SaveChangesAsync();
-            await transaction?.CommitAsync();
+            await transaction.CommitAsync();
         }
         catch
         {

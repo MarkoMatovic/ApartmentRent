@@ -52,6 +52,7 @@ public class AnalyticsController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetAnalyticsSummary, Name = nameof(ApiActionsV1.GetAnalyticsSummary))]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<AnalyticsSummaryDto>> GetSummary([FromQuery] DateRangeQuery range)
     {
         var summary = await _analyticsService.GetSummaryAsync(range.From, range.To);
@@ -59,18 +60,21 @@ public class AnalyticsController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetTopViewedApartments, Name = nameof(ApiActionsV1.GetTopViewedApartments))]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedApartments([FromQuery] TopEntityQuery query)
     {
         return Ok(await _analyticsService.GetTopViewedApartmentsAsync(query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetTopViewedRoommates, Name = nameof(ApiActionsV1.GetTopViewedRoommates))]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<TopEntityDto>>> GetTopViewedRoommates([FromQuery] TopEntityQuery query)
     {
         return Ok(await _analyticsService.GetTopViewedRoommatesAsync(query.Count, query.From, query.To));
     }
 
     [HttpGet(ApiActionsV1.GetTopSearchTerms, Name = nameof(ApiActionsV1.GetTopSearchTerms))]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<SearchTermDto>>> GetTopSearchTerms([FromQuery] TopEntityQuery query)
     {
         return Ok(await _analyticsService.GetTopSearchTermsAsync(query.Count, query.From, query.To));

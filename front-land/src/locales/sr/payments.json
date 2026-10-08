@@ -23,7 +23,7 @@
   "btnRefundPolicy": "Politika povraćaja",
   "orderRef": "Br. narudžbine",
   "activating": "Aktiviramo vašu uslugu...",
-  "sessionRefreshFailed": "Usluga je aktivirana ali nismo uspeli automatski osvežiti sesiju. Odjavite se i ponovo prijavite da vidite promene.",
+  "sessionRefreshFailed": "Plaćanje je primljeno! Vaša kupovina se obrađuje i uskoro će se pojaviti u nalogu. Ako je još ne vidite, osvežite stranicu ili se ponovo prijavite.",
   "btnPaymentHistory": "Istorija plaćanja",
   "successDefault_title": "Plaćanje uspešno!",
   "successDefault_body": "Vaša usluga je aktivirana.",

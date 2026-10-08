@@ -136,6 +136,41 @@ public static class RateLimitingServiceExtensions
                         QueueLimit = 0
                     }));
 
+            // CREATE-PAYMENT: each call creates a transaction through the Paddle API, so cap it
+            // per user (IP fallback): 10 attempts / 5 min is generous for a real checkout.
+            options.AddPolicy<string>("create-payment", httpContext =>
+            {
+                var userKey = httpContext.User?.FindFirst("userId")?.Value
+                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                    ?? "anon";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: $"pay:{userKey}",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(5),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+
+            // IMAGE-UPLOAD: 10 fajlova × 5 MB po requestu — max 10 requesta / 15 min po useru.
+            options.AddPolicy<string>("image-upload", httpContext =>
+            {
+                var userKey = httpContext.User?.FindFirst("userId")?.Value
+                    ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                    ?? "anon";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: $"img:{userKey}",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(15),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    });
+            });
+
             // SEMANTIC-SEARCH: anonimni CPU-teški endpoint — max 20 zahtjeva / minuta po IP-u.
             options.AddPolicy<string>("semantic-search", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(

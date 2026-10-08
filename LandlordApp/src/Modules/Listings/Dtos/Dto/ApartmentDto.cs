@@ -3,11 +3,11 @@ namespace Lander.src.Modules.Listings.Dtos.Dto;
 public class ApartmentDto
 {
     public int ApartmentId { get; set; }
-    public string Title { get; set; }
+    public string Title { get; set; } = null!;
     public decimal Rent { get; set; }
     public decimal? Price { get; set; }
-    public string Address { get; set; }
-    public string City { get; set; }
+    public string Address { get; set; } = null!;
+    public string City { get; set; } = null!;
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     public int? SizeSquareMeters { get; set; }
@@ -28,13 +28,13 @@ public class ApartmentDto
 public class GetApartmentDto
 {
     public int ApartmentId { get; set; }
-    public string Title { get; set; }
-    public string Description { get; set; }
+    public string Title { get; set; } = null!;
+    public string Description { get; set; } = null!;
     public decimal Rent { get; set; }
     public decimal? Price { get; set; }
-    public string Address { get; set; }
-    public string City { get; set; }
-    public string PostalCode { get; set; }
+    public string Address { get; set; } = null!;
+    public string City { get; set; } = null!;
+    public string PostalCode { get; set; } = null!;
     public DateOnly AvailableFrom { get; set; }
     public DateOnly AvailableUntil { get; set; }
     public int NumberOfRooms { get; set; }

@@ -23,7 +23,7 @@
   "btnRefundPolicy": "Rückerstattungsrichtlinie",
   "orderRef": "Bestellnr.",
   "activating": "Ihren Dienst wird aktiviert...",
-  "sessionRefreshFailed": "Dienst aktiviert, aber die Sitzung konnte nicht automatisch aktualisiert werden. Bitte melden Sie sich ab und wieder an, um die Änderungen zu sehen.",
+  "sessionRefreshFailed": "Zahlung erhalten! Ihr Kauf wird bearbeitet und erscheint in Kürze in Ihrem Konto. Falls noch nicht sichtbar, aktualisieren Sie die Seite oder melden Sie sich erneut an.",
   "btnPaymentHistory": "Zahlungshistorie",
   "successDefault_title": "Zahlung erfolgreich!",
   "successDefault_body": "Ihr Dienst wurde aktiviert.",

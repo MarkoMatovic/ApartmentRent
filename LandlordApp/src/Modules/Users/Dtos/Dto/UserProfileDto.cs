@@ -3,9 +3,9 @@ public class UserProfileDto
 {
     public int UserId { get; set; }
     public Guid UserGuid { get; set; }
-    public string FirstName { get; set; }
-    public string LastName { get; set; }
-    public string Email { get; set; }
+    public string FirstName { get; set; } = null!;
+    public string LastName { get; set; } = null!;
+    public string Email { get; set; } = null!;
     public string? PhoneNumber { get; set; }
     public string? ProfilePicture { get; set; }
     public DateTime? DateOfBirth { get; set; }

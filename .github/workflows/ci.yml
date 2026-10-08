@@ -10,6 +10,8 @@ jobs:
   backend:
     name: Backend build & tests
     runs-on: ubuntu-latest
+    # Hard ceiling: a hung test host would otherwise hold the runner for GitHub's 6 h default.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -25,11 +27,13 @@ jobs:
         run: dotnet build LandlordApp.Tests/LandlordApp.Tests.csproj --no-restore -warnaserror:CS0105
 
       - name: Test
-        run: dotnet test LandlordApp.Tests/LandlordApp.Tests.csproj --no-build --verbosity minimal
+        # --blame-hang kills and dumps a test host that stops making progress instead of waiting forever.
+        run: dotnet test LandlordApp.Tests/LandlordApp.Tests.csproj --no-build --verbosity minimal --blame-hang --blame-hang-timeout 10m
 
   frontend:
-    name: Frontend typecheck & build
+    name: Frontend lint, test & build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: front-land
@@ -45,6 +49,12 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Lint (errors fail the build)
+        run: npm run lint:ci
+
+      - name: Test
+        run: npm test
 
       - name: Typecheck & build
         run: npm run build

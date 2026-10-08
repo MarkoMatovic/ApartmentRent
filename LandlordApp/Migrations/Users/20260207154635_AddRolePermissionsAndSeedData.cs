@@ -122,6 +122,25 @@ namespace Lander.Migrations.Users
             // =====================================================
             
             var newRoles = @"
+                -- Base roles. This migration used to assume Admin/Tenant/Guest 'already exist' (they
+                -- were created by hand), so on a brand-new database @AdminRoleId below was NULL and the
+                -- RolePermissions insert failed - a clean database could not be built from migrations.
+                -- Guarded, so it is a no-op where the roles already exist. NOTE: numeric ids are NOT the
+                -- same everywhere (an earlier migration inserts Tenant first, so a database built from
+                -- migrations has Tenant = 1, Admin = 2, while older databases have Admin = 1). Nothing may
+                -- depend on a specific RoleId - the frontend identifies admins by role NAME.
+                IF NOT EXISTS (SELECT 1 FROM [UsersRoles].[Roles] WHERE [RoleName] = 'Admin')
+                    INSERT INTO [UsersRoles].[Roles] ([RoleName], [Description], [CreatedDate])
+                    VALUES ('Admin', 'Platform administrator with full access', GETDATE());
+
+                IF NOT EXISTS (SELECT 1 FROM [UsersRoles].[Roles] WHERE [RoleName] = 'Tenant')
+                    INSERT INTO [UsersRoles].[Roles] ([RoleName], [Description], [CreatedDate])
+                    VALUES ('Tenant', 'Tenant role for users looking for apartments', GETDATE());
+
+                IF NOT EXISTS (SELECT 1 FROM [UsersRoles].[Roles] WHERE [RoleName] = 'Guest')
+                    INSERT INTO [UsersRoles].[Roles] ([RoleName], [Description], [CreatedDate])
+                    VALUES ('Guest', 'Unverified visitor with read-only access', GETDATE());
+
                 IF NOT EXISTS (SELECT 1 FROM [UsersRoles].[Roles] WHERE [RoleName] = 'Landlord')
                 BEGIN
                     INSERT INTO [UsersRoles].[Roles] ([RoleName], [Description], [CreatedDate])

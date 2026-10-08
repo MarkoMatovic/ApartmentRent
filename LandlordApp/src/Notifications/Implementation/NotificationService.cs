@@ -94,8 +94,38 @@ public class NotificationService : INotificationService
             ActionTarget = notification.ActionTarget,
             IsRead = notification.IsRead
         };
-        await _hubContext.Clients.All.SendAsync("ReceiveNotification", notificationDto);
+        // Push ONLY to the recipient's group with the 4 positional args the frontend expects
+        // (title, message, type, metadata). The previous Clients.All.SendAsync(dto) broadcast
+        // the notification to every connected client (a privacy leak) AND sent a single object
+        // where the client reads four arguments, so it never rendered.
+        await _hubContext.Clients
+            .Group(notification.RecipientUserId.ToString())
+            .SendAsync("ReceiveNotification",
+                notification.Title,
+                notification.Message,
+                "info",
+                notification.ActionTarget ?? string.Empty);
         return notificationDto;
+    }
+
+    public async Task PersistNotificationAsync(CreateNotificationInputDto dto)
+    {
+        var notification = new Notification
+        {
+            Title           = dto.Title,
+            Message         = dto.Message,
+            ActionType      = dto.ActionType,
+            ActionTarget    = dto.ActionTarget,
+            CreatedByGuid   = dto.CreatedByGuid,
+            SenderUserId    = dto.SenderUserId,
+            RecipientUserId = dto.RecipientUserId,
+            CreatedDate     = DateTime.UtcNow,
+        };
+        await _context.RunInTransactionAsync(async () =>
+        {
+            _context.Notifications.Add(notification);
+            await _context.SaveEntitiesAsync();
+        });
     }
     public async Task<bool> DeleteNotificationAsync(int notificationId)
     {

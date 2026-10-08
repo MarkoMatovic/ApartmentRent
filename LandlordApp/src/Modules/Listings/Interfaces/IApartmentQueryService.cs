@@ -16,7 +16,7 @@ public interface IApartmentQueryService
     Task<KeysetPagedResult<ApartmentDto>> GetAllApartmentsKeysetAsync(
         ApartmentFilterDto filters, int? afterId, int pageSize = 20);
     Task<PagedResult<ApartmentDto>> GetMyApartmentsAsync();
-    Task<GetApartmentDto> GetApartmentByIdAsync(int apartmentId);
+    Task<GetApartmentDto?> GetApartmentByIdAsync(int apartmentId);
     Task<List<ApartmentDto>> GetApartmentsByLandlordIdAsync(int landlordId);
 
     // Used by the ML vector-search pipeline

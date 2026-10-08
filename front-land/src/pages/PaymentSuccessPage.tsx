@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authApi } from '../shared/api/auth';
 import { useAuth } from '../shared/context/AuthContext';
+import { ROLE_CLAIM_URI } from '../shared/auth/decodeToken';
 import { setAccessToken } from '../shared/api/tokenStore';
 
 const PaymentSuccessPage: React.FC = () => {
@@ -56,7 +57,7 @@ const PaymentSuccessPage: React.FC = () => {
                             email: payload.email || '',
                             isActive: true,
                             userRoleId: payload.userRoleId ? parseInt(payload.userRoleId) : undefined,
-                            roleName: payload.role || payload.roleName,
+                            roleName: payload[ROLE_CLAIM_URI] || payload.role || payload.roleName,
                             permissions: Array.isArray(payload.permission) ? payload.permission : payload.permission ? [payload.permission] : [],
                             hasPersonalAnalytics: payload.hasPersonalAnalytics === 'true' || payload.hasPersonalAnalytics === true,
                             hasLandlordAnalytics: payload.hasLandlordAnalytics === 'true' || payload.hasLandlordAnalytics === true,
@@ -113,9 +114,13 @@ const PaymentSuccessPage: React.FC = () => {
                     <Button variant="contained" onClick={() => navigate(primaryPath)}>
                         {primaryLabel}
                     </Button>
-                    <Button variant="outlined" onClick={() => navigate('/moje-pretplate')}>
-                        {t('btnSubscriptions')}
-                    </Button>
+                    {/* Only show the Subscriptions button when it isn't already the primary action,
+                        otherwise the page renders two identical "My Subscriptions" buttons. */}
+                    {primaryPath !== '/moje-pretplate' && (
+                        <Button variant="outlined" onClick={() => navigate('/moje-pretplate')}>
+                            {t('btnSubscriptions')}
+                        </Button>
+                    )}
                     <Button variant="outlined" onClick={() => navigate('/istorija-placanja')}>
                         {t('btnPaymentHistory')}
                     </Button>

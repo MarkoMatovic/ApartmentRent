@@ -31,6 +31,7 @@ public interface IMessageService
     // File upload / download
     Task<string> UploadFileAsync(IFormFile file, int userId);
     Task<bool> IsFileAccessibleAsync(string filename, int userId);
+    Task<Stream?> OpenChatFileAsync(string filename, int userId);
     
     // Search
     Task<List<MessageDto>> SearchMessagesAsync(int userId, string query);

@@ -69,7 +69,8 @@ public class AuthService : IAuthService
 
         if (user.LockoutUntil.HasValue && user.LockoutUntil.Value > _timeProvider.GetUtcNow().UtcDateTime)
         {
-            _logger.LogWarning("Login attempt for locked account {Email}", user.Email);
+            // Log the id, not the e-mail: the log is a long-lived copy of personal data.
+            _logger.LogWarning("Login attempt for locked account {UserId}", user.UserId);
             return null;
         }
 
@@ -95,8 +96,8 @@ public class AuthService : IAuthService
             {
                 user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(lockoutMinutes);
                 await _context.SaveEntitiesAsync();
-                _logger.LogWarning("Account locked: {Email} after {Attempts} failed attempts",
-                    user.Email, user.FailedLoginAttempts);
+                _logger.LogWarning("Account locked: {UserId} after {Attempts} failed attempts",
+                    user.UserId, user.FailedLoginAttempts);
             }
             return null;
         }
@@ -147,7 +148,6 @@ public class AuthService : IAuthService
 
         var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
 
-        UserRegistrationDto result;
         User registeredUser;
         try
         {

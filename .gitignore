@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .claude/settings.local.json
+
+# Local dev secrets — never commit (Paddle keys, connection strings)
+LandlordApp/appsettings.Development.json

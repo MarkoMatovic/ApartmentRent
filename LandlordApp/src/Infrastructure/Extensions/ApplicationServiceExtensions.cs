@@ -40,15 +40,17 @@ public static class ApplicationServiceExtensions
         // enforce required-field validation in production to avoid blocking local startup.
         var isProd = !env.IsDevelopment() && !env.IsEnvironment("E2eTesting");
 
+        // DataAnnotation validation is enforced in production only. Applying it
+        // unconditionally still throws in Development the moment IOptions<>.Value is read
+        // (e.g. in the EmailService constructor), which blocks local startup when Brevo /
+        // Blob are intentionally left blank. Production keeps both validation + fail-fast.
         var brevo = services.AddOptions<BrevoSettings>()
-            .BindConfiguration("Brevo")
-            .ValidateDataAnnotations();
-        if (isProd) brevo.ValidateOnStart();
+            .BindConfiguration("Brevo");
+        if (isProd) brevo.ValidateDataAnnotations().ValidateOnStart();
 
         var blob = services.AddOptions<Lander.src.Infrastructure.FileStorage.AzureBlobStorageOptions>()
-            .BindConfiguration("AzureBlobStorage")
-            .ValidateDataAnnotations();
-        if (isProd) blob.ValidateOnStart();
+            .BindConfiguration("AzureBlobStorage");
+        if (isProd) blob.ValidateDataAnnotations().ValidateOnStart();
 
         // --- Password hashing ---
         services.AddScoped<IPasswordHashingService, PasswordHashingService>();
@@ -134,15 +136,30 @@ public static class ApplicationServiceExtensions
                            Lander.src.Infrastructure.FileStorage.ImageUrlBuilder>();
         services.AddScoped<Lander.src.Modules.Listings.Services.ApartmentImageBlobMigrationService>();
 
-        // --- Payments (provider-agnostic) ---
-        // The Monri provider was removed. PaymentService exposes plans/status/orders/cancel;
-        // PaymentFulfillmentService grants purchases. A future payment provider plugs in by
-        // confirming charges and calling IPaymentFulfillmentService.FulfillAsync(...).
+        // Failure tracking for background loops (surfaced on /health as Degraded).
+        services.AddSingleton<Lander.src.Infrastructure.Services.BackgroundWorkerHealth>();
+
+        // --- Payments ---
+        // PaymentService exposes plans/status/orders/cancel; PaymentFulfillmentService grants
+        // purchases. The Paddle provider confirms charges (webhook) and calls FulfillAsync(...).
         services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentService,
                            Lander.src.Modules.Payments.Implementation.PaymentService>();
         services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentFulfillmentService,
                            Lander.src.Modules.Payments.Implementation.PaymentFulfillmentService>();
+        services.AddScoped<Lander.src.Modules.Payments.Interfaces.IPaymentReversalService,
+                           Lander.src.Modules.Payments.Implementation.PaymentReversalService>();
         services.AddTransient<Lander.src.Modules.Payments.Services.PremiumExpirationService>();
+
+        // --- Paddle Billing provider ---
+        services.AddOptions<Lander.src.Modules.Payments.Paddle.PaddleOptions>()
+            .BindConfiguration(Lander.src.Modules.Payments.Paddle.PaddleOptions.SectionName);
+        services.AddSingleton<Lander.src.Modules.Payments.Paddle.PaddleSignatureVerifier>();
+        services.AddHttpClient<Lander.src.Modules.Payments.Paddle.IPaddleClient,
+                               Lander.src.Modules.Payments.Paddle.PaddleClient>(c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(20);
+            c.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
 
         // User deletion handlers (decoupled cleanup via IUserDeletedHandler)
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Listings.Implementation.ApartmentUserDeletedHandler>();

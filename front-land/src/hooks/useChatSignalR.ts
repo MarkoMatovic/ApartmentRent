@@ -75,12 +75,14 @@ export const useChatSignalR = (userId: number | null) => {
     };
   }, [userId]);
 
-  const sendMessage = useCallback(async (receiverId: number, messageText: string) => {
-    if (connection && connected) {
-      try {
-        await connection.invoke('SendMessage', receiverId, messageText);
-      } catch {
-      }
+  /** Resolves true if the hub accepted the message, false if it was not sent (caller can fall back to REST). */
+  const sendMessage = useCallback(async (receiverId: number, messageText: string): Promise<boolean> => {
+    if (!connection || !connected) return false;
+    try {
+      await connection.invoke('SendMessage', receiverId, messageText);
+      return true;
+    } catch {
+      return false;
     }
   }, [connection, connected]);
 
@@ -89,6 +91,7 @@ export const useChatSignalR = (userId: number | null) => {
       try {
         await connection.invoke('MarkMessageAsRead', messageId);
       } catch {
+        // Best-effort: a missed read receipt is harmless; the unread count is re-synced from the API.
       }
     }
   }, [connection, connected]);
@@ -98,6 +101,7 @@ export const useChatSignalR = (userId: number | null) => {
       try {
         await connection.invoke('UserTyping', userId, receiverId);
       } catch {
+        // Best-effort: a dropped typing indicator is purely cosmetic.
       }
     }
   }, [connection, connected]);

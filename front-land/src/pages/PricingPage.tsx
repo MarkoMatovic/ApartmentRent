@@ -27,11 +27,11 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { paymentsApi, submitMonriForm } from '../shared/api/paymentsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
 import { useAuth } from '../shared/context/AuthContext';
 import { apiClient } from '../shared/api/client';
 import WithdrawalWaiverModal from '../components/Payment/WithdrawalWaiverModal';
+import PaddleCheckoutDialog from '../components/Payment/PaddleCheckoutDialog';
 
 const PricingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -59,6 +59,9 @@ const PricingPage: React.FC = () => {
   const [pendingApartmentId, setPendingApartmentId] = useState<number | null>(null);
   const [waiverPlanName, setWaiverPlanName] = useState('');
   const [waiverAmount, setWaiverAmount] = useState('');
+
+  // Paddle inline checkout state
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   // Feature lists (built inside component to use t())
   const analyticsFeatures = [
@@ -159,26 +162,24 @@ const PricingPage: React.FC = () => {
     setWaiverOpen(true);
   };
 
-  const handleWaiverConfirm = async () => {
+  // Waiver accepted → open the Paddle inline checkout. The dialog creates the
+  // transaction (custom_data stamped server-side) and drives the payment.
+  const handleWaiverConfirm = () => {
     if (!pendingPlanId) return;
     setWaiverOpen(false);
     setLoading(true);
-    try {
-      const formFields = await paymentsApi.createPayment(
-        pendingPlanId,
-        `${window.location.origin}/payment-success`,
-        `${window.location.origin}/payment-failure`,
-        pendingApartmentId ?? undefined,
-      );
-      submitMonriForm(formFields);
-    } catch (error: any) {
-      addNotification({
-        title: t('paymentErrorTitle'),
-        message: error.response?.data?.message || t('paymentErrorMessage'),
-        type: 'error',
-      });
-      setLoading(false);
-    }
+    setCheckoutOpen(true);
+  };
+
+  const handleCheckoutClose = () => {
+    setCheckoutOpen(false);
+    setLoading(false);
+  };
+
+  const handleCheckoutSuccess = () => {
+    setCheckoutOpen(false);
+    setLoading(false);
+    navigate('/payment-success');
   };
 
   const handleSubscribeAnalytics = () =>
@@ -661,6 +662,14 @@ const PricingPage: React.FC = () => {
         amount={waiverAmount}
         onConfirm={handleWaiverConfirm}
         onCancel={() => setWaiverOpen(false)}
+      />
+
+      <PaddleCheckoutDialog
+        open={checkoutOpen}
+        planId={pendingPlanId}
+        apartmentId={pendingApartmentId}
+        onClose={handleCheckoutClose}
+        onSuccess={handleCheckoutSuccess}
       />
     </Box>
   );

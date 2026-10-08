@@ -15,6 +15,25 @@ namespace Lander.Migrations.Listings
                 schema: "Listings",
                 table: "Apartments");
 
+            // The boolean feature columns are dropped below, but IX_Apartments_Filters_Boolean (created by
+            // 20251219122049_AddPerformanceIndexes) still depends on them. On existing databases that
+            // index had been removed by hand, so the drop worked there; on a brand-new database SQL Server
+            // refuses ("The index ... is dependent on column 'IsFurnished'"). Drop whatever non-primary
+            // index still references these columns first - looked up from the catalog, so it is a no-op
+            // where none remain.
+            migrationBuilder.Sql(@"
+DECLARE @sql nvarchar(max) = N'';
+SELECT @sql += N'DROP INDEX ' + QUOTENAME(i.name) + N' ON [Listings].[Apartments];' + CHAR(10)
+FROM sys.indexes i
+WHERE i.object_id = OBJECT_ID(N'[Listings].[Apartments]')
+  AND i.is_primary_key = 0 AND i.name IS NOT NULL
+  AND EXISTS (SELECT 1 FROM sys.index_columns ic
+              JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+              WHERE ic.object_id = i.object_id AND ic.index_id = i.index_id
+                AND c.name IN (N'HasAirCondition', N'HasBalcony', N'HasElevator', N'HasInternet',
+                               N'HasParking', N'IsFurnished', N'IsPetFriendly', N'IsSmokingAllowed'));
+IF LEN(@sql) > 0 EXEC sp_executesql @sql;");
+
             migrationBuilder.DropColumn(
                 name: "HasAirCondition",
                 schema: "Listings",

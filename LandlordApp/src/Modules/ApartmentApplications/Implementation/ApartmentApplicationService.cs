@@ -21,6 +21,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
     private readonly UsersContext _usersContext;
     private readonly IApartmentService _apartmentService;
     private readonly IHubContext<NotificationHub> _notificationHub;
+    private readonly Lander.src.Notifications.Interfaces.INotificationService _bell;
     private readonly IUserInterface _userService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -30,6 +31,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
         UsersContext usersContext,
         IApartmentService apartmentService,
         IHubContext<NotificationHub> notificationHub,
+        Lander.src.Notifications.Interfaces.INotificationService bell,
         IUserInterface userService,
         IHttpContextAccessor httpContextAccessor)
     {
@@ -38,8 +40,26 @@ public class ApartmentApplicationService : IApartmentApplicationService
         _usersContext = usersContext;
         _apartmentService = apartmentService;
         _notificationHub = notificationHub;
+        _bell = bell;
         _userService = userService;
         _httpContextAccessor = httpContextAccessor;
+    }
+
+    // Persists a bell-history notification alongside the real-time SignalR push above, so the
+    // recipient still finds it in the bell if they were offline. Best-effort — never throws.
+    private async Task PersistBellAsync(int recipientUserId, string title, string message,
+        string actionType, string actionTarget, int senderUserId = 0)
+    {
+        try
+        {
+            await _bell.PersistNotificationAsync(new Lander.src.Notifications.Dtos.InputDto.CreateNotificationInputDto
+            {
+                Title = title, Message = message,
+                ActionType = actionType, ActionTarget = actionTarget,
+                CreatedByGuid = Guid.Empty, SenderUserId = senderUserId, RecipientUserId = recipientUserId
+            });
+        }
+        catch { /* bell persistence is best-effort — the live push already went out */ }
     }
 
     public async Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId, bool isPriority = false)
@@ -84,10 +104,13 @@ public class ApartmentApplicationService : IApartmentApplicationService
         // or we fetch the apartment to get the landlord ID.
         if (apartment != null && apartment.LandlordId.HasValue)
         {
-             await _notificationHub.Clients.Group(apartment.LandlordId.Value.ToString()).SendAsync("ReceiveNotification", 
-                "New Application!", 
-                $"You have a new application for '{apartment.Title}'.", 
+             await _notificationHub.Clients.Group(apartment.LandlordId.Value.ToString()).SendAsync("ReceiveNotification",
+                "New Application!",
+                $"You have a new application for '{apartment.Title}'.",
                 "info");
+             await PersistBellAsync(apartment.LandlordId.Value, "New Application!",
+                $"You have a new application for '{apartment.Title}'.",
+                "application_new", apartmentId.ToString(), senderUserId: userId);
         }
 
         return application;
@@ -241,13 +264,14 @@ public class ApartmentApplicationService : IApartmentApplicationService
                 : null;
             var aptTitle = apartment?.Title ?? "the apartment";
 
+            var aptTarget = (application.ApartmentId ?? 0).ToString();
             if (status == ApplicationStatuses.Approved)
             {
+                var msg = $"Congratulations! Your application for '{aptTitle}' has been approved. You can now schedule a viewing.";
                 await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification",
-                    "Application Approved! 🎉",
-                    $"Congratulations! Your application for '{aptTitle}' has been approved. You can now schedule a viewing.",
-                    "success");
+                    "ReceiveNotification", "Application Approved! 🎉", msg, "success");
+                await PersistBellAsync(application.UserId.Value, "Application Approved! 🎉", msg,
+                    "application_approved", aptTarget, senderUserId: landlordUserId);
             }
             else if (status == ApplicationStatuses.Rejected)
             {
@@ -256,20 +280,19 @@ public class ApartmentApplicationService : IApartmentApplicationService
                     apartmentTitle = aptTitle,
                     apartmentId = application.ApartmentId ?? 0
                 });
+                var msg = $"Your application for '{aptTitle}' was not approved.";
                 await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification",
-                    "Application Rejected",
-                    $"Your application for '{aptTitle}' was not approved.",
-                    "rejection",
-                    metadata);
+                    "ReceiveNotification", "Application Rejected", msg, "rejection", metadata);
+                await PersistBellAsync(application.UserId.Value, "Application Rejected", msg,
+                    "application_rejected", aptTarget, senderUserId: landlordUserId);
             }
             else
             {
+                var msg = $"Your application status has been updated to: {status}.";
                 await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification",
-                    $"Application {status}",
-                    $"Your application status has been updated to: {status}.",
-                    "info");
+                    "ReceiveNotification", $"Application {status}", msg, "info");
+                await PersistBellAsync(application.UserId.Value, $"Application {status}", msg,
+                    "application_status", aptTarget, senderUserId: landlordUserId);
             }
         }
 

@@ -70,6 +70,7 @@ public class NotificationStreamController : ControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetConnectionCount, Name = nameof(ApiActionsV1.GetConnectionCount))]
+    [Authorize(Roles = "Admin")]
     public IActionResult GetConnectionCount()
     {
         var count = _streamService.GetActiveConnectionCount();

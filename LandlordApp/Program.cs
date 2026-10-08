@@ -117,9 +117,12 @@ builder.Services.AddOpenTelemetry()
                     !ctx.Request.Path.StartsWithSegments("/favicon");
             })
             .AddHttpClientInstrumentation()
-            // SetDbStatementForText includes the full SQL text in traces.
-            // Disable in production to avoid leaking query parameters (potential PII).
-            .AddSqlClientInstrumentation(o => o.SetDbStatementForText = builder.Environment.IsDevelopment());
+            // OpenTelemetry SqlClient 1.15 on .NET 10 has no SetDbStatementForText any more (the old
+            // switch that kept SQL text out of production traces). It always records db.query.text -
+            // for EF Core that is the PARAMETERIZED text ("... WHERE Email = @p0"), and parameter
+            // values (where PII would actually live) are never recorded on this target framework.
+            // Revisit if code ever builds SQL by string interpolation: that text would be exported as is.
+            .AddSqlClientInstrumentation();
 
         var otlpEndpoint = builder.Configuration["OpenTelemetry:OtlpEndpoint"];
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
@@ -212,6 +215,16 @@ if (!string.IsNullOrWhiteSpace(redisConnectionString))
         opts.InstanceName = "Landlander:";
     });
 
+    // Shared OutputCache store. The default store is per-process memory, so on a scaled-out
+    // deployment EvictByTagAsync("apartments") after an edit only cleared the instance that handled
+    // the write, and every other instance kept serving the stale apartment detail for up to its
+    // 10-minute TTL. Must be registered before AddOutputCache below.
+    builder.Services.AddStackExchangeRedisOutputCache(opts =>
+    {
+        opts.Configuration = redisConnectionString;
+        opts.InstanceName = "Landlander:output:";
+    });
+
     // SignalR Redis backplane — all horizontal instances share the same pub/sub bus.
     // Without this every app instance has an isolated in-memory hub and users on
     // different pods cannot receive each other's chat messages or notifications.
@@ -256,18 +269,17 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
     var dp = builder.Services.AddDataProtection()
         .SetApplicationName("Landlander");
 
-    if (!string.IsNullOrWhiteSpace(redisConnectionString))
+    // Persist whenever Blob is configured — do not gate on Redis. A multi-instance
+    // deploy without Redis still needs a shared key ring or every pod mints new keys
+    // and users get logged out on every request that hits a different instance.
+    var dpBlobConn = builder.Configuration["AzureBlobStorage:ConnectionString"];
+    if (!string.IsNullOrWhiteSpace(dpBlobConn))
     {
-        // When Azure Blob connection string is available, persist keys there.
-        var dpBlobConn = builder.Configuration["AzureBlobStorage:ConnectionString"];
-        if (!string.IsNullOrWhiteSpace(dpBlobConn))
-        {
-            var blobClient = new Azure.Storage.Blobs.BlobClient(
-                dpBlobConn, "data-protection", "keys.xml");
-            dp.PersistKeysToAzureBlobStorage(blobClient);
-        }
+        var blobClient = new Azure.Storage.Blobs.BlobClient(
+            dpBlobConn, "data-protection", "keys.xml");
+        dp.PersistKeysToAzureBlobStorage(blobClient);
     }
-    // In dev / single-instance without Azure, keys persist to the default local filesystem.
+    // Dev / single-instance without Azure: default local filesystem.
 }
 
 // ─── Hangfire ─────────────────────────────────────────────────────────────────
@@ -294,7 +306,8 @@ builder.Services.AddHangfireServer(opts =>
 
 var hcBuilder = builder.Services.AddHealthChecks()
     .AddDbContextCheck<Lander.ListingsContext>("db-listings")
-    .AddDbContextCheck<Lander.UsersContext>("db-users");
+    .AddDbContextCheck<Lander.UsersContext>("db-users")
+    .AddCheck<Lander.src.Infrastructure.Services.BackgroundWorkersHealthCheck>("background-workers");
 
 if (!string.IsNullOrWhiteSpace(redisConnectionString))
 {
@@ -403,12 +416,19 @@ app.Use(async (context, next) =>
             ? "https:"
             : $"{new Uri(blobPublicBase).GetLeftPart(UriPartial.Authority)}";
 
+        // Paddle Billing checkout: Paddle.js loads from cdn.paddle.com, the inline
+        // checkout renders in an iframe from *.paddle.com, and it calls the Paddle
+        // API/checkout service over the same domain. Without these the strict CSP
+        // blocks the script, the iframe, and the network calls.
+        // NOTE: Paddle.js (like MUI/emotion) injects <style> at runtime; if styling
+        // breaks under this policy, add 'unsafe-inline' (or a nonce) to style-src.
         headers.Append("Content-Security-Policy",
             "default-src 'self'; " +
-            "script-src 'self'; " +
+            "script-src 'self' https://cdn.paddle.com; " +
             "style-src 'self'; " +
-            $"img-src 'self' data: blob: {imgSrcHosts}; " +
-            "connect-src 'self' wss: ws:; " +
+            $"img-src 'self' data: blob: {imgSrcHosts} https://*.paddle.com; " +
+            "connect-src 'self' wss: ws: https://*.paddle.com; " +
+            "frame-src https://*.paddle.com; " +
             "frame-ancestors 'none'; " +
             "base-uri 'self'; " +
             "form-action 'self'");
@@ -476,10 +496,36 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub").RequireRateLimiting("signalr");
 app.MapHub<ChatHub>("/chatHub").RequireRateLimiting("signalr");
 app.MapHealthChecks("/health");
-// Prometheus scrape endpoint — restrict to internal network at the reverse-proxy level in prod.
-app.MapMetrics("/metrics");
+// Prometheus: not a public API. Allow in Development, from loopback, or with
+// Metrics:ScrapeToken sent as X-Metrics-Token. Missing token in prod → loopback only.
+app.MapMetrics("/metrics").AddEndpointFilter(async (efi, next) =>
+{
+    if (IsMetricsScrapeAllowed(efi.HttpContext, app.Environment, app.Configuration))
+        return await next(efi);
+    return Results.NotFound();
+});
 
 app.Run();
+
+static bool IsMetricsScrapeAllowed(HttpContext ctx, IWebHostEnvironment env, IConfiguration config)
+{
+    if (env.IsDevelopment()) return true;
+
+    var ip = ctx.Connection.RemoteIpAddress;
+    if (ip is not null && System.Net.IPAddress.IsLoopback(ip)) return true;
+
+    var expected = config["Metrics:ScrapeToken"];
+    if (string.IsNullOrEmpty(expected)) return false;
+
+    if (!ctx.Request.Headers.TryGetValue("X-Metrics-Token", out var provided) ||
+        string.IsNullOrEmpty(provided))
+        return false;
+
+    var expectedBytes = System.Text.Encoding.UTF8.GetBytes(expected);
+    var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided.ToString());
+    if (expectedBytes.Length != providedBytes.Length) return false;
+    return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
+}
 
 // Required for WebApplicationFactory<Program> in integration tests
 public partial class Program { }

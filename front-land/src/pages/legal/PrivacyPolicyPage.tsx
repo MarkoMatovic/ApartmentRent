@@ -44,7 +44,7 @@ const PrivacyPolicyPage: React.FC = () => (
       <Box component="ul" sx={{ pl: 3 }}>
         <Li><strong>Podaci o nalogu:</strong> ime, prezime, e-mail adresa, lozinka (hashirana BCrypt algoritmom), datum rođenja, broj telefona, profilna fotografija.</Li>
         <Li><strong>Podaci oglasa:</strong> adresa nekretnine, opis, fotografije (EXIF metapodaci se automatski uklanjaju pri upload-u), cena, kontakt telefon.</Li>
-        <Li><strong>Podaci o plaćanju:</strong> broj narudžbenice, status transakcije. <strong>Ne čuvamo podatke kartice</strong> — platnu kartičnu obradu vrši Monri Payments d.o.o. (PCI DSS Level 1 sertifikat).</Li>
+        <Li><strong>Podaci o plaćanju:</strong> broj narudžbenice, status transakcije. <strong>Ne čuvamo podatke kartice</strong> — plaćanje obrađuje Paddle.com Market Limited (Paddle), koji je prodavac u transakciji (Merchant of Record) i vodi PCI DSS usklađenu obradu kartica.</Li>
         <Li><strong>Komunikacijski podaci:</strong> poruke između korisnika, obaveštenja, e-mailovi platforme.</Li>
         <Li><strong>Tehnički podaci:</strong> IP adresa, vrsta pregledača, log zapisi (čuvaju se 14 dana), kolačići sesije.</Li>
         <Li><strong>Analitički podaci:</strong> pregledi oglasa, vreme provedeno na stranici, pretrage (samo za korisnike koji su kupili analitičku pretplatu).</Li>
@@ -62,7 +62,7 @@ const PrivacyPolicyPage: React.FC = () => (
 
     <Section title="4. Sa kim delimo vaše podatke?">
       <Box component="ul" sx={{ pl: 3 }}>
-        <Li><strong>Monri Payments d.o.o.</strong> — obrada platnih transakcija (podaci kartice nikad ne dospevaju do naše platforme).</Li>
+        <Li><strong>Paddle.com Market Limited (Paddle)</strong> — obrada plaćanja, obračun poreza i izdavanje računa kao Merchant of Record. Podatke koje unosite na Paddle stranici za plaćanje (e-mail, zemlja, podaci kartice) Paddle obrađuje prema sopstvenoj politici privatnosti; podaci kartice nikad ne dospevaju do naše platforme.</Li>
         <Li><strong>Brevo (Sendinblue S.A.S.)</strong> — slanje transakcijskih e-mailova (dobrodošlica, verifikacija, obaveštenja).</Li>
         <Li><strong>Twilio Inc.</strong> — slanje SMS poruka (za verifikaciju i obaveštenja).</Li>
         <Li><strong>Microsoft Azure</strong> — hosting i infrastruktura (podaci se čuvaju u EU regionu).</Li>

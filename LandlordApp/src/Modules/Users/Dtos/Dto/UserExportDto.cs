@@ -6,9 +6,9 @@ namespace Lander.src.Modules.Users.Dtos.Dto
 {
     public class UserExportDto
     {
-        public UserProfileDto UserProfile { get; set; }
+        public UserProfileDto UserProfile { get; set; } = null!;
         public RoommateDto? RoommateProfile { get; set; }
-        public IEnumerable<ApartmentDto> ListedApartments { get; set; }
+        public IEnumerable<ApartmentDto> ListedApartments { get; set; } = null!;
         public DateTime ExportedAt { get; set; } = DateTime.UtcNow;
     }
 }

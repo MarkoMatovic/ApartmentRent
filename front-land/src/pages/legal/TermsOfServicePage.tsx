@@ -97,10 +97,10 @@ const TermsOfServicePage: React.FC = () => (
     <Section title="5. Premium usluge i plaćanje">
       <P>
         TuRentaj nudi opcione plaćene usluge (analitika, isticanje oglasa, listing krediti, boost profila,
-        priority inbox, tokeni). Plaćanje se vrši putem Monri Payments platnog prolaza.
+        priority inbox, tokeni). Plaćanje se vrši preko Paddle.com Market Limited (Paddle), koji je prodavac u transakciji (Merchant of Record), obrađuje uplatu i izdaje račun.
       </P>
       <Box component="ul" sx={{ pl: 3 }}>
-        <Li>Sve cene su prikazane u eurima (EUR), bez PDV-a (ako je TuRentaj PDV obveznik, PDV se prikazuje posebno).</Li>
+        <Li>Sve cene su prikazane u eurima (EUR). Primenjivi porezi (PDV) obračunavaju se pri plaćanju prema zemlji kupca i prikazuju se na Paddle stranici za plaćanje i na računu.</Li>
         <Li>Sva plaćanja su jednokratna (nema automatskog obnavljanja pretplate).</Li>
         <Li>Usluge digitalne prirode aktiviraju se odmah po uspešnoj uplati.</Li>
         <Li>Kupovinom digitalne usluge izričito se odričete prava na odustajanje od ugovora (v. tačku 7).</Li>

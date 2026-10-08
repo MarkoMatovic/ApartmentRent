@@ -5,6 +5,7 @@ using Lander.src.Modules.Listings.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
@@ -58,6 +59,7 @@ public class ImageUploadController : ControllerBase
     }
 
     [HttpPost(ApiActionsV1.UploadImages, Name = nameof(ApiActionsV1.UploadImages))]
+    [EnableRateLimiting("image-upload")]
     [Microsoft.AspNetCore.Http.Timeouts.RequestTimeout(60_000)] // 60s — ImageSharp processing može biti sporo za 10 fajlova
     public async Task<ActionResult<List<UploadedImageDto>>> UploadImages([FromForm] List<IFormFile> files)
     {

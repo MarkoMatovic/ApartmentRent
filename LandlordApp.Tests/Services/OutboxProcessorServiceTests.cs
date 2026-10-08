@@ -70,7 +70,8 @@ public class OutboxProcessorServiceTests
         ILogger<OutboxProcessorService>? logger = null)
     {
         logger ??= new Mock<ILogger<OutboxProcessorService>>().Object;
-        return new OutboxProcessorService(scopeFactory, logger);
+        return new OutboxProcessorService(scopeFactory, logger,
+            new Lander.src.Infrastructure.Services.BackgroundWorkerHealth(TimeProvider.System));
     }
 
     // ─── ProcessPendingEventsAsync — happy path ───────────────────────────────
