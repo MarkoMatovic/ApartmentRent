@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { getAccessToken, setAccessToken } from './tokenStore';
 
+// VITE_API_URL is optional. When the SPA is served by the API itself (Azure App Service, single
+// origin) it is left empty and every request uses a relative URL; set it only if the API lives
+// on a different origin.
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-if (!API_BASE_URL && import.meta.env.PROD) {
-  throw new Error('VITE_API_URL is not set. This environment variable is required in production.');
-}
 // In dev (no VITE_API_URL) use a RELATIVE base URL so every request flows through the Vite
 // proxy (see vite.config.ts: /api, /uploads, /notificationHub, /chatHub → https://localhost:7092).
 // This keeps the browser same-origin with the API (http://localhost:5173), so the SameSite=Strict

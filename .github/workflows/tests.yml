@@ -1,10 +1,9 @@
-name: CI
+name: Tests
 
+# Manual only (Actions tab -> Tests -> Run workflow). Deliberately NOT triggered by push, so a
+# failing test never blocks a deploy - deploy-azure.yml is a separate workflow.
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
   backend:

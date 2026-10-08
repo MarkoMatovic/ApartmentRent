@@ -364,7 +364,20 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
+// The SPA shell and PWA service worker must never be cached by the browser, otherwise users keep
+// running an old bundle after a deploy. Hashed assets under /assets are immutable and cached.
+var staticFileOptions = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var name = ctx.File.Name;
+        if (name is "index.html" or "sw.js" or "registerSW.js" or "manifest.webmanifest")
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+        else if (ctx.Context.Request.Path.StartsWithSegments("/assets"))
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+    }
+};
+app.UseStaticFiles(staticFileOptions);
 app.UseResponseCompression();
 app.UseHttpMetrics(); // prometheus-net: captures HTTP request duration / status code metrics
 
@@ -412,9 +425,13 @@ app.Use(async (context, next) =>
         // img-src: when an Azure Blob CDN base URL is configured, restrict to that
         // origin instead of the open "https:" wildcard.
         var blobPublicBase = app.Configuration["AzureBlobStorage:PublicBaseUrl"];
+        // Third-party image hosts the SPA uses regardless of Blob: OSM map tiles, Leaflet marker
+        // icons (cdnjs), and the demo/placeholder images.
+        const string spaImageHosts =
+            "https://*.tile.openstreetmap.org https://cdnjs.cloudflare.com https://images.unsplash.com https://via.placeholder.com";
         var imgSrcHosts = string.IsNullOrWhiteSpace(blobPublicBase)
             ? "https:"
-            : $"{new Uri(blobPublicBase).GetLeftPart(UriPartial.Authority)}";
+            : $"{new Uri(blobPublicBase).GetLeftPart(UriPartial.Authority)} {spaImageHosts}";
 
         // Paddle Billing checkout: Paddle.js loads from cdn.paddle.com, the inline
         // checkout renders in an iframe from *.paddle.com, and it calls the Paddle
@@ -425,7 +442,9 @@ app.Use(async (context, next) =>
         headers.Append("Content-Security-Policy",
             "default-src 'self'; " +
             "script-src 'self' https://cdn.paddle.com; " +
-            "style-src 'self'; " +
+            // 'unsafe-inline' is required: MUI/emotion and Leaflet inject <style> and style="" at runtime.
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; " +
+            "font-src 'self' data: https://fonts.gstatic.com; " +
             $"img-src 'self' data: blob: {imgSrcHosts} https://*.paddle.com; " +
             "connect-src 'self' wss: ws: https://*.paddle.com; " +
             "frame-src https://*.paddle.com; " +
@@ -504,6 +523,14 @@ app.MapMetrics("/metrics").AddEndpointFilter(async (efi, next) =>
         return await next(efi);
     return Results.NotFound();
 });
+
+// SPA fallback: the React build is served from wwwroot, so client-side routes (/apartments/5, ...)
+// must resolve to index.html. Server paths are excluded so a mistyped API URL still returns 404
+// instead of HTML.
+app.MapFallbackToFile(
+    "{*path:regex(^(?!api/|notificationHub|chatHub|hangfire|health|metrics|swagger|uploads/).*$)}",
+    "index.html",
+    staticFileOptions);
 
 app.Run();
 
