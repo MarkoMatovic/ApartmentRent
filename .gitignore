@@ -366,3 +366,7 @@ FodyWeavers.xsd
 
 # Local dev secrets — never commit (Paddle keys, connection strings)
 LandlordApp/appsettings.Development.json
+
+# Frontend build output copied into the API for publish (generated from front-land)
+LandlordApp/wwwroot/
+.claude/launch.json
