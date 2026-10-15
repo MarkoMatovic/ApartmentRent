@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apartmentsApi } from '../shared/api/apartments';
 import { ApartmentUpdateInputDto } from '../shared/types/apartment';
@@ -83,20 +84,9 @@ const EditApartmentPage: React.FC = () => {
                 navigate('/my-apartments');
             }, 2000);
         },
-        onError: (err: any) => {
-            let errorMessage = t('apartments:updateFailed', { defaultValue: 'Failed to update apartment listing' });
-
-            if (err.response?.data?.message) {
-                errorMessage = err.response.data.message;
-            } else if (err.response?.data) {
-                errorMessage = typeof err.response.data === 'string'
-                    ? err.response.data
-                    : JSON.stringify(err.response.data);
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-
-            setError(errorMessage);
+        onError: (err: unknown) => {
+            setError(getApiErrorMessage(err, t, {},
+                t('apartments:updateFailed', { defaultValue: 'Failed to update apartment listing' })));
         },
     });
 

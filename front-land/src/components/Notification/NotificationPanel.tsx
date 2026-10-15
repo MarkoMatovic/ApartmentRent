@@ -12,8 +12,10 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../shared/context/NotificationContext';
 import { format } from 'date-fns';
+import { describeNotification } from '../../shared/notifications/descriptor';
 
 interface NotificationPanelProps {
   anchorEl: HTMLElement | null;
@@ -22,7 +24,8 @@ interface NotificationPanelProps {
 }
 
 const NotificationPanel: React.FC<NotificationPanelProps> = ({ anchorEl, open, onClose }) => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'notifications']);
+  const navigate = useNavigate();
   const { notifications, markAsRead, markAllAsRead, clearNotification, unreadCount } =
     useNotifications();
 
@@ -69,18 +72,32 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ anchorEl, open, o
         </Box>
       ) : (
         <List sx={{ maxHeight: 400, overflow: 'auto' }}>
-          {notifications.map((notification) => (
+          {notifications.map((notification) => {
+            const { title, message } = describeNotification(t, notification, i18n.language);
+            const link = notification.descriptor?.link;
+            const open = () => {
+              if (!link) return;
+              markAsRead(notification.id);
+              onClose();
+              navigate(link);
+            };
+            return (
             <ListItem
               key={notification.id}
+              onClick={link ? open : undefined}
+              onKeyDown={link ? (e) => { if (e.key === 'Enter') open(); } : undefined}
+              role={link ? 'link' : undefined}
+              tabIndex={link ? 0 : undefined}
               sx={{
                 bgcolor: notification.read ? 'transparent' : 'action.hover',
+                cursor: link ? 'pointer' : 'default',
                 '&:hover': { bgcolor: 'action.selected' },
               }}
             >
               <ListItemText
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="subtitle2">{notification.title}</Typography>
+                    <Typography variant="subtitle2">{title}</Typography>
                     {!notification.read && (
                       <CheckCircleIcon sx={{ fontSize: 16, color: 'primary.main' }} />
                     )}
@@ -89,7 +106,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ anchorEl, open, o
                 secondary={
                   <>
                     <Typography variant="body2" color="text.secondary">
-                      {notification.message}
+                      {message}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {format(notification.timestamp, 'PPp')}
@@ -99,7 +116,9 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ anchorEl, open, o
               />
               <IconButton
                 size="small"
-                onClick={() => {
+                aria-label={t('common:close')}
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (!notification.read) {
                     markAsRead(notification.id);
                   } else {
@@ -110,7 +129,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ anchorEl, open, o
                 <CloseIcon fontSize="small" />
               </IconButton>
             </ListItem>
-          ))}
+            );
+          })}
         </List>
       )}
     </Menu>

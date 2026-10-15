@@ -30,6 +30,8 @@ export interface Roommate {
   preferredLocation?: string;
   lookingForApartmentId?: number;
   isActive?: boolean;
+  /** Agreed to be roommates with someone: no longer available to others. */
+  isTaken?: boolean;
   // New fields
   gender?: RoommateGender;
   languages?: string;      // comma-separated, e.g. "Srpski,Engleski"

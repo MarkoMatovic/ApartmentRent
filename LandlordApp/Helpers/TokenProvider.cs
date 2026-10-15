@@ -20,7 +20,8 @@ public sealed class TokenProvider
         _context = context;
     }
 
-    public async Task<string> CreateAsync(User user)
+    /// <param name="twoFactorVerified">The session was confirmed with an authenticator code; required for admin powers.</param>
+    public async Task<string> CreateAsync(User user, bool twoFactorVerified = false)
     {
         var secretKey = _configuration["Jwt:Secret"]
             ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
@@ -52,6 +53,12 @@ public sealed class TokenProvider
         if (!string.IsNullOrEmpty(user.PhoneNumber))
         {
             claims.Add(new Claim("phone_number", user.PhoneNumber));
+        }
+
+        if (twoFactorVerified)
+        {
+            claims.Add(new Claim(Lander.src.Modules.Users.Implementation.UserImplementation.TwoFactorPolicy.ClaimType,
+                Lander.src.Modules.Users.Implementation.UserImplementation.TwoFactorPolicy.ClaimValue));
         }
 
         if (user.UserRoleId.HasValue)

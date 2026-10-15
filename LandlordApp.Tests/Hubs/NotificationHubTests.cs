@@ -39,6 +39,31 @@ public class NotificationHubTests
         };
     }
 
+    // ─── OnConnectedAsync ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task OnConnectedAsync_PutsTheConnectionInTheOwnersGroup_WithoutTheClientAskingToJoin()
+    {
+        // The group of a connection is gone after an automatic reconnect; joining on connect keeps notifications flowing.
+        await _hub.OnConnectedAsync();
+
+        _mockGroups.Verify(
+            g => g.AddToGroupAsync("conn-notify-1", "7", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WithoutAUserClaim_JoinsNothing()
+    {
+        _mockContext.Setup(c => c.User).Returns(new System.Security.Claims.ClaimsPrincipal());
+
+        await _hub.OnConnectedAsync();
+
+        _mockGroups.Verify(
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ─── JoinNotificationGroup ───────────────────────────────────────────────
 
     [Fact]

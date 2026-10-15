@@ -1,4 +1,5 @@
 using FluentValidation;
+using Lander.src.Common.Validation;
 using Lander.src.Modules.Users.Dtos.InputDto;
 namespace Lander.src.Modules.Users.Validators;
 public class LoginUserInputDtoValidator : AbstractValidator<LoginUserInputDto>
@@ -6,9 +7,13 @@ public class LoginUserInputDtoValidator : AbstractValidator<LoginUserInputDto>
     public LoginUserInputDtoValidator()
     {
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required")
-            .EmailAddress().WithMessage("Invalid email format");
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithCode(ValidationCodes.EmailRequired)
+            .EmailAddress().WithCode(ValidationCodes.EmailInvalid);
+
+        // Login only checks presence: the password policy applies when a password is created,
+        // and revealing the policy here would say nothing about whether the credentials are right.
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required");
+            .NotEmpty().WithCode(ValidationCodes.PasswordRequired);
     }
 }

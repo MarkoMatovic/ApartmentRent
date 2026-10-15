@@ -58,6 +58,8 @@ export const decodeToken = (token: string): User | null => {
       tokenBalance: payload.tokenBalance !== undefined ? parseInt(payload.tokenBalance) : 3,
       listingCredits: payload.listingCredits !== undefined ? parseInt(payload.listingCredits) : 0,
       isIncognito: payload.isIncognito === 'true' || payload.isIncognito === true,
+      // "amr" (how the sign-in was confirmed) is "mfa" after the authenticator-app code.
+      twoFactorVerified: payload.amr === 'mfa' || (Array.isArray(payload.amr) && payload.amr.includes('mfa')),
     };
   } catch (error) {
     return null;

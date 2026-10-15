@@ -67,7 +67,13 @@ public sealed class ListingExpirationService
                     Title           = "Oglas uskoro ističe",
                     Message         = $"Vaš oglas \"{apt.Title}\" ističe za {daysLeft} dan(a). Obnovite ga kako bi ostao vidljiv.",
                     ActionType      = "listing_expiry_reminder",
-                    ActionTarget    = apt.ApartmentId.ToString(),
+                    ActionTarget    = $"/apartments/{apt.ApartmentId}",
+                    Key             = "listing_expiry_reminder",
+                    Params          = new Dictionary<string, string>
+                    {
+                        ["title"] = apt.Title,
+                        ["days"]  = daysLeft.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    },
                     CreatedByGuid   = Guid.Empty,
                     SenderUserId    = apt.LandlordId!.Value,
                     RecipientUserId = apt.LandlordId.Value

@@ -50,6 +50,35 @@ public class UserRegistrationE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // The 400 body carries a stable validation code per field (not an English sentence) so the
+    // frontend can translate it.
+
+    [Theory]
+    [InlineData("Ab1", "PASSWORD_TOO_SHORT")]
+    [InlineData("password1", "PASSWORD_NEEDS_UPPER")]
+    [InlineData("PASSWORD1", "PASSWORD_NEEDS_LOWER")]
+    [InlineData("Passwordd", "PASSWORD_NEEDS_DIGIT")]
+    public async Task Register_WeakPassword_ReturnsTheBrokenRuleAsACode(string password, string expectedCode)
+    {
+        var response = await new RegisterWithDetailsEndpoint(HttpClient)
+            .CallAsync("reg-code@e2e.com", password);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("errors").GetProperty("Password")[0].GetString().Should().Be(expectedCode);
+    }
+
+    [Fact]
+    public async Task Register_InvalidEmail_ReturnsEmailInvalidCode()
+    {
+        var response = await new RegisterWithDetailsEndpoint(HttpClient)
+            .CallAsync("not-an-email", "Password123!");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("errors").GetProperty("Email")[0].GetString().Should().Be("EMAIL_INVALID");
+    }
+
     // ── GetUserProfile ────────────────────────────────────────────────────────
 
     [Fact]
@@ -120,6 +149,44 @@ public class UserRegistrationE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("firstName").GetString().Should().Be("Novo");
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithPicture_StoresItInFileStorageAndReturnsItsAddress()
+    {
+        var user   = await Data.CreateUserAsync("upd-pic@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new UpdateProfileEndpoint(client).CallAsync(user.UserId, new
+        {
+            ProfilePicture = LandlordApp.Tests.Services.ProfilePictureServiceTests.PhotoDataUrl(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var picture = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("profilePicture").GetString();
+        picture.Should().StartWith($"https://storage.test/avatars/{user.UserGuid:N}/").And.EndWith(".webp");
+        Fixture.Factory.Storage.Files.Should().ContainSingle();
+
+        // The profile read afterwards carries the same short address.
+        var profile = await client.GetFromJsonAsync<JsonElement>($"/api/v1/auth/profile/{user.UserId}");
+        profile.GetProperty("profilePicture").GetString().Should().Be(picture);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_WithSomethingThatIsNotAPicture_Returns422WithCode()
+    {
+        var user   = await Data.CreateUserAsync("upd-badpic@e2e.com");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new UpdateProfileEndpoint(client).CallAsync(user.UserId, new
+        {
+            ProfilePicture = "https://tracker.example/pixel.png",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()
+            .Should().Be("INVALID_PROFILE_PICTURE");
+        Fixture.Factory.Storage.Files.Should().BeEmpty();
     }
 
     [Fact]
@@ -216,6 +283,21 @@ public class UserRegistrationE2eTests : E2eTestBase
             .CallAsync(user.UserGuid, "WrongPassword!", "NewPassword456!");
 
         ((int)response.StatusCode).Should().BeGreaterThanOrEqualTo(400);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithWrongOldPassword_Returns422WithBusinessCode()
+    {
+        // A wrong current password is the caller's mistake, not a server fault (it used to be a 500).
+        var user   = await Data.CreateUserAsync("chpwd-code@e2e.com", password: "Correct123!");
+        var client = CreateAuthenticatedClient(user.UserId, user.UserGuid);
+
+        var response = await new ChangePasswordEndpoint(client)
+            .CallAsync(user.UserGuid, "WrongPassword1!", "NewPassword456!");
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("code").GetString().Should().Be("INCORRECT_OLD_PASSWORD");
     }
 
     [Fact]

@@ -62,10 +62,24 @@ export interface ModelMetrics {
 }
 
 // Roommate Matching Types
+/** The part of the roommate profile that comes with a match. */
+export interface MatchedRoommate {
+    roommateId: number;
+    userId: number;
+    firstName: string;
+    lastName?: string;
+    profilePicture?: string | null;
+    profession?: string | null;
+    preferredLocation?: string | null;
+}
+
+/** What GET /api/v1/ml/roommate-matches returns for each candidate (RoommateMatchScoreDto). */
 export interface RoommateMatchScore {
     roommateId: number;
-    roommate?: any; // RoommateDto
+    roommate?: MatchedRoommate;
+    /** 0-100 */
     matchPercentage: number;
-    featureScores: Record<string, number>;
-    matchQuality: string;
+    /** Budget, Lifestyle, Preferences and Location, each 0-100. */
+    featureScores?: Partial<Record<'Budget' | 'Lifestyle' | 'Preferences' | 'Location', number>>;
+    matchQuality?: string;
 }

@@ -84,7 +84,6 @@
   "profileCount_few": "{{count}} профиля",
   "profileCount_other": "{{count}} профилей",
   "aiMatchPrompt": "Создайте профиль соседа, чтобы видеть совпадения с другими через ИИ.",
-  "myProfile": "Мой профиль",
   "noResults": "Нет результатов для этих фильтров",
   "noResultsHint": "Попробуйте с меньшим количеством фильтров",
   "removeAllFilters": "Удалить все фильтры",
@@ -196,12 +195,18 @@
   "matchesUnavailable": "Для подбора соседей необходим профиль соседа. Создайте его, чтобы видеть совпадения.",
   "noMatches": "Совпадений пока не найдено.",
   "noMatchesHint": "Заполните профиль соседа подробнее для улучшения подбора.",
-  "matchesFound": "Найдено {{count}} совместимых соседей",
   "compatibility": "Совместимость",
   "lifestyleFactor": "Образ жизни {{percent}}%",
   "budgetFactor": "Бюджет {{percent}}%",
   "cleanlinessFactor": "Чистота {{percent}}%",
   "compatibilityTooltip": "{{percent}}% совместимость",
   "budgetMinPrefix": "от",
-  "budgetMaxPrefix": "до"
+  "budgetMaxPrefix": "до",
+  "matchesFound_one": "Найден {{count}} подходящий сосед",
+  "matchesFound_few": "Найдено {{count}} подходящих соседа",
+  "matchesFound_many": "Найдено {{count}} подходящих соседей",
+  "matchesFound_other": "Найдено {{count}} подходящих соседей",
+  "preferencesFactor": "Предпочтения {{percent}}%",
+  "locationFactor": "Локация {{percent}}%",
+  "refreshMatches": "Обновить подборку"
 }

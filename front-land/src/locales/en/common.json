@@ -30,7 +30,6 @@
   "edit": "Edit",
   "view": "View",
   "contact": "Contact",
-  "apply": "Apply",
   "favorites": "Favorites",
   "notifications": "Notifications",
   "noNotifications": "You have no new notifications",
@@ -93,5 +92,6 @@
   "footerRefund": "Refund Policy",
   "footerCopyright": "All rights reserved.",
   "footerDisclaimer": "TuRentaj is an advertising platform and does <strong>not act as an intermediary</strong> in real estate transactions or rentals. Contact:",
-  "tokensBuyTooltip": "Tokens — click to purchase"
+  "tokensBuyTooltip": "Tokens — click to purchase",
+  "moreOptions": "More options"
 }

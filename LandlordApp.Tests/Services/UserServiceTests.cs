@@ -21,6 +21,11 @@ using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Roommates.Dtos.Dto;
 using Lander.src.Common;
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
+using Lander.src.Infrastructure.FileStorage;
+using LandlordApp.Tests.Infrastructure;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LandlordApp.Tests.Services;
 
@@ -36,6 +41,7 @@ public class UserServiceTests : IDisposable
     private readonly Mock<ILogger<UserService>> _mockLogger;
     private readonly IConfiguration _configuration;
     private readonly UserService _userService;
+    private readonly InMemoryFileStorage _storage = new();
 
     // Helper: creates a valid User with all required non-nullable fields
     private User MakeUser(int? userId = null, string email = "test@test.com", bool isActive = true, int? roleId = 1)
@@ -97,7 +103,7 @@ public class UserServiceTests : IDisposable
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             Array.Empty<IUserDeletedHandler>(),
-            refreshTokenService, _configuration);
+            refreshTokenService, _configuration, _storage);
 
         SeedTestData();
     }
@@ -334,12 +340,114 @@ public class UserServiceTests : IDisposable
             _mockHttpContextAccessor.Object, _mockEmailService.Object,
             _mockApartmentService.Object, _mockRoommateService.Object,
             new[] { mockHandler.Object },
-            refreshTokenService, _configuration);
+            refreshTokenService, _configuration, _storage);
 
         await svc.DeleteUserAsync(new DeleteUserInputDto { UserGuid = guid });
 
         mockHandler.Verify(h => h.HandleAsync(99), Times.Once);
         (await _context.Users.AnyAsync(u => u.UserGuid == guid)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteUserAsync_DeletesTheStoredProfilePicture()
+    {
+        var user = MakeUser(email: "del-pic@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl() });
+        _storage.Files.Should().ContainSingle();
+
+        await _userService.DeleteUserAsync(new DeleteUserInputDto { UserGuid = user.UserGuid });
+
+        _storage.Files.Should().BeEmpty();
+    }
+
+    // ─── Profile picture ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateUserProfileAsync_NewPicture_StoresItsAddressAndDeletesThePreviousOne()
+    {
+        var user = MakeUser(email: "pic@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var first = await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl() });
+        var second = await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl(300, 500) });
+
+        first.ProfilePicture.Should().StartWith($"{InMemoryFileStorage.BaseUrl}/avatars/{user.UserGuid:N}/");
+        second.ProfilePicture.Should().StartWith($"{InMemoryFileStorage.BaseUrl}/avatars/{user.UserGuid:N}/")
+            .And.NotBe(first.ProfilePicture);
+        (await _context.Users.AsNoTracking().SingleAsync(u => u.UserId == user.UserId)).ProfilePicture
+            .Should().Be(second.ProfilePicture, "only the short address is kept in the database");
+        _storage.PathsIn(FileStorageContainers.Avatars).Should().ContainSingle()
+            .Which.Should().Be(ProfilePictureService.KeyOf(second.ProfilePicture));
+    }
+
+    [Fact]
+    public async Task UpdateUserProfileAsync_OtherFieldsOnly_KeepThePicture()
+    {
+        var user = MakeUser(email: "pic-keep@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        var withPicture = await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl() });
+
+        var renamed = await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { FirstName = "Renamed", ProfilePicture = withPicture.ProfilePicture });
+
+        renamed.ProfilePicture.Should().Be(withPicture.ProfilePicture);
+        _storage.Files.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task UpdateUserProfileAsync_EmptyPicture_RemovesItFromProfileAndStorage()
+    {
+        var user = MakeUser(email: "pic-del@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        await _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl() });
+
+        var result = await _userService.UpdateUserProfileAsync(user.UserId, new UserProfileUpdateInputDto { ProfilePicture = "" });
+
+        result.ProfilePicture.Should().BeNull();
+        _storage.Files.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateUserProfileAsync_ForeignUrl_IsRefusedAndNothingChanges()
+    {
+        var user = MakeUser(email: "pic-foreign@test.com");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        var act = () => _userService.UpdateUserProfileAsync(user.UserId,
+            new UserProfileUpdateInputDto { FirstName = "Changed", ProfilePicture = "https://tracker.example/p.png" });
+
+        (await act.Should().ThrowAsync<BusinessRuleException>()).Which.Code.Should().Be(BusinessErrorCodes.InvalidProfilePicture);
+        var stored = await _context.Users.AsNoTracking().SingleAsync(u => u.UserId == user.UserId);
+        stored.ProfilePicture.Should().BeNull();
+        stored.FirstName.Should().Be("Test");
+    }
+
+    [Fact]
+    public async Task RegisterUserAsync_WithPicture_StoresItUnderTheNewUsersId()
+    {
+        var result = await _userService.RegisterUserAsync(new UserRegistrationInputDto
+        {
+            FirstName = "Pic", LastName = "User",
+            Email = "reg-pic@test.com", Password = "Pass123!",
+            DateOfBirth = new DateTime(1990, 1, 1),
+            ProfilePicture = ProfilePictureServiceTests.PhotoDataUrl(),
+        });
+
+        var user = await _context.Users.AsNoTracking().SingleAsync(u => u.Email == "reg-pic@test.com");
+        user.UserGuid.ToString().Should().Be(result.UserGuid);
+        user.ProfilePicture.Should().StartWith($"{InMemoryFileStorage.BaseUrl}/avatars/{user.UserGuid:N}/");
+        result.ProfilePicture.Should().Be(user.ProfilePicture);
     }
 
     // ─── Account Lockout ─────────────────────────────────────────────────────
@@ -557,9 +665,15 @@ public class UserServiceTests : IDisposable
         IRoommateService roommateService,
         IEnumerable<IUserDeletedHandler> deletionHandlers,
         RefreshTokenService refreshTokenService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IFileStorageService? storage = null)
     {
         var passwordHasher = new PasswordHashingService();
+        var twoFactor = new TwoFactorService(
+            context, new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(),
+            TimeProvider.System, NullLogger<TwoFactorService>.Instance);
+        var profilePictures = new ProfilePictureService(
+            storage ?? new InMemoryFileStorage(), NullLogger<ProfilePictureService>.Instance);
 
         var passwordService = new PasswordService(
             context,
@@ -582,7 +696,9 @@ public class UserServiceTests : IDisposable
             configuration,
             new Mock<ILogger<AuthService>>().Object,
             TimeProvider.System,
-            new Mock<IJwtBlacklistService>().Object);
+            new Mock<IJwtBlacklistService>().Object,
+            profilePictures,
+            twoFactor);
 
         var profileService = new UserProfileService(
             context,
@@ -594,7 +710,8 @@ public class UserServiceTests : IDisposable
             new UserRoleUpgradeService(context, new Mock<ILogger<UserRoleUpgradeService>>().Object, TimeProvider.System),
             new Mock<ILogger<UserProfileService>>().Object,
             new Mock<IAuditLogService>().Object,
-            new RefreshTokenService(context));
+            new RefreshTokenService(context),
+            profilePictures);
 
         return new UserService(authService, passwordService, profileService);
     }

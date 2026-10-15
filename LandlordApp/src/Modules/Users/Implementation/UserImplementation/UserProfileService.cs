@@ -26,6 +26,7 @@ public class UserProfileService : IUserProfileService
     private readonly ILogger<UserProfileService> _logger;
     private readonly IAuditLogService _auditLog;
     private readonly RefreshTokenService _refreshTokenService;
+    private readonly IProfilePictureService _profilePictures;
 
     public UserProfileService(
         UsersContext context,
@@ -37,7 +38,8 @@ public class UserProfileService : IUserProfileService
         IUserRoleUpgradeService roleUpgradeService,
         ILogger<UserProfileService> logger,
         IAuditLogService auditLog,
-        RefreshTokenService refreshTokenService)
+        RefreshTokenService refreshTokenService,
+        IProfilePictureService profilePictures)
     {
         _context = context;
         _reviewsContext = reviewsContext;
@@ -49,6 +51,7 @@ public class UserProfileService : IUserProfileService
         _logger = logger;
         _auditLog = auditLog;
         _refreshTokenService = refreshTokenService;
+        _profilePictures = profilePictures;
     }
 
     public async Task<User?> GetUserByGuidAsync(Guid userGuid)
@@ -92,6 +95,8 @@ public class UserProfileService : IUserProfileService
             UserRoleId = user.UserRoleId,
             RoleName = user.UserRole?.RoleName,
             CreatedDate = user.CreatedDate,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            TwoFactorRequired = TwoFactorPolicy.RequiresTwoFactor(user.UserRole?.RoleName),
             AverageRating = averageRating,
             ReviewCount = allReviews.Count,
             HasPersonalAnalytics = user.HasPersonalAnalytics,
@@ -111,13 +116,25 @@ public class UserProfileService : IUserProfileService
         if (updateDto.LastName != null) user.LastName = updateDto.LastName;
         // Email se ne mijenja ovdje — promjena emaila zahtijeva verifikaciju nove adrese (poseban endpoint).
         if (updateDto.PhoneNumber != null) user.PhoneNumber = updateDto.PhoneNumber;
-        if (updateDto.ProfilePicture != null) user.ProfilePicture = updateDto.ProfilePicture;
+        var previousPicture = user.ProfilePicture;
+        if (updateDto.ProfilePicture != null)
+            user.ProfilePicture = await _profilePictures.ResolveAsync(user.UserGuid, previousPicture, updateDto.ProfilePicture);
         if (updateDto.DateOfBirth.HasValue) user.DateOfBirth = updateDto.DateOfBirth.Value;
         user.ModifiedByGuid = Guid.TryParse(currentUserGuid, out var upMg) ? upMg : null;
         user.ModifiedDate = DateTime.UtcNow;
 
-        // Single-entity update — no explicit transaction needed
-        await _context.SaveEntitiesAsync();
+        var pictureChanged = !string.Equals(previousPicture, user.ProfilePicture, StringComparison.Ordinal);
+        try
+        {
+            // Single-entity update — no explicit transaction needed
+            await _context.SaveEntitiesAsync();
+        }
+        catch
+        {
+            if (pictureChanged) await _profilePictures.DeleteAsync(user.ProfilePicture);
+            throw;
+        }
+        if (pictureChanged) await _profilePictures.DeleteAsync(previousPicture);
         _auditLog.Log("UpdateUserProfile", "User", userId, currentUserGuid);
 
         return new UserProfileDto
@@ -221,6 +238,7 @@ public class UserProfileService : IUserProfileService
             _logger.LogError(ex, "Error in DeleteUserAsync");
             throw;
         }
+        await _profilePictures.DeleteAsync(user.ProfilePicture);
         _auditLog.Log("DeleteUser", "User", dto.UserGuid, callerGuid);
         return true;
     }

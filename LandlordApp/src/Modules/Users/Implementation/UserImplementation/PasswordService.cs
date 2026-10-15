@@ -1,3 +1,4 @@
+using Lander.src.Common.Validation;
 using System.Security.Claims;
 using Lander.Helpers;
 using Lander.src.Common.Exceptions;
@@ -47,7 +48,7 @@ public class PasswordService : IPasswordService
             throw new UnauthorizedAccessException("Invalid or missing user identity.");
         var user = await _context.Users.FirstOrDefaultAsync(u => u.UserGuid == parsedUserGuid);
         if (user == null || !_passwordHashingService.Verify(dto.OldPassword, user.Password))
-            throw new InvalidOperationException("Incorrect old password.");
+            throw new BusinessRuleException(BusinessErrorCodes.IncorrectOldPassword);
 
         try
         {

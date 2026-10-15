@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { roommatesApi } from '../shared/api/roommates';
 import { analyticsApi } from '../shared/api/analytics';
 import { useAuth } from '../shared/context/AuthContext';
+import ProposeRoommateButton from '../components/Roommate/ProposeRoommateButton';
 import {
   getAge, formatAvailableFrom,
   LIFESTYLE_ICONS, LIFESTYLE_KEYS,
@@ -117,6 +118,9 @@ const RoommateDetailPage: React.FC = () => {
                       <Typography component="span" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '1rem', ml: 1 }}>
                         · {t(GENDER_KEYS[roommate.gender as number])}
                       </Typography>
+                    )}
+                    {roommate.isTaken && (
+                      <Chip label={t('pairing:taken')} size="small" color="warning" sx={{ ml: 1.5, fontWeight: 700, verticalAlign: 'middle' }} />
                     )}
                   </Typography>
                   {roommate.profession && (
@@ -272,6 +276,9 @@ const RoommateDetailPage: React.FC = () => {
               <CardContent>
                 {!isOwn ? (
                   <>
+                    {user && (
+                      <ProposeRoommateButton userId={roommate.userId} firstName={roommate.firstName} isTaken={roommate.isTaken} />
+                    )}
                     <Button fullWidth variant="contained" color="secondary" size="large"
                       onClick={() => navigate(`/chat?userId=${roommate.userId}`)} sx={{ mb: 1.5, borderRadius: 2 }}>
                       {t('sendMessage')}

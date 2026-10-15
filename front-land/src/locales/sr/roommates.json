@@ -84,7 +84,6 @@
   "profileCount_few": "{{count}} profila",
   "profileCount_other": "{{count}} profila",
   "aiMatchPrompt": "Kreiraj roommate profil da vidiš AI poklapanje s drugima.",
-  "myProfile": "Moj profil",
   "noResults": "Nema rezultata za ove filtere",
   "noResultsHint": "Pokušaj sa manje filtera",
   "removeAllFilters": "Ukloni sve filtere",
@@ -196,12 +195,17 @@
   "matchesUnavailable": "Poklapanje cimera zahteva profil cimera. Kreirajte jedan da vidite vaša poklapanja.",
   "noMatches": "Još uvek nema poklapanja.",
   "noMatchesHint": "Popunite profil cimera s više detalja da poboljšate poklapanje.",
-  "matchesFound": "Pronađeno {{count}} kompatibilnih cimera",
   "compatibility": "Kompatibilnost",
   "lifestyleFactor": "Stil života {{percent}}%",
   "budgetFactor": "Budžet {{percent}}%",
   "cleanlinessFactor": "Urednost {{percent}}%",
   "compatibilityTooltip": "{{percent}}% kompatibilnost",
   "budgetMinPrefix": "od",
-  "budgetMaxPrefix": "do"
+  "budgetMaxPrefix": "do",
+  "matchesFound_one": "Pronađen {{count}} kompatibilan cimer",
+  "matchesFound_few": "Pronađena {{count}} kompatibilna cimera",
+  "matchesFound_other": "Pronađeno {{count}} kompatibilnih cimera",
+  "preferencesFactor": "Preferencije {{percent}}%",
+  "locationFactor": "Lokacija {{percent}}%",
+  "refreshMatches": "Osveži poklapanja"
 }

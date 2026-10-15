@@ -45,7 +45,7 @@ const normalizeRoommate = (r: Roommate): Roommate => ({
 export const roommatesApi = {
   getAll: async (filters?: RoommateFilters): Promise<Roommate[]> => {
     const params: Record<string, any> = {};
-    if (filters?.location)            params.location = filters.location;
+    if (filters?.location?.trim())    params.location = filters.location.trim();
     if (filters?.minBudget)           params.minBudget = filters.minBudget;
     if (filters?.maxBudget)           params.maxBudget = filters.maxBudget;
     if (filters?.smokingAllowed !== undefined) params.smokingAllowed = filters.smokingAllowed;

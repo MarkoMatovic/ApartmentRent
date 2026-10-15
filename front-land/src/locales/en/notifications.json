@@ -21,5 +21,123 @@
         "applicationRejected": "Application rejected",
         "newReview": "New review",
         "paymentReceived": "Payment received"
+    },
+    "events": {
+        "pairing_proposed": {
+            "title": "Roommate proposal",
+            "message": "{{name}} proposes that you become roommates."
+        },
+        "pairing_accepted": {
+            "title": "Roommate agreement confirmed 🎉",
+            "message": "{{name}} accepted. You are now roommates and no longer available to others."
+        },
+        "pairing_declined": {
+            "title": "Roommate proposal declined",
+            "message": "{{name}} declined your proposal to be roommates."
+        },
+        "pairing_ended": {
+            "title": "Roommate agreement ended",
+            "message": "{{name}} ended the roommate agreement. You are available to other roommate seekers again."
+        },
+        "pairing_void": {
+            "title": "Roommate proposal no longer open",
+            "message": "{{name}} has found a roommate in the meantime."
+        },
+        "pairing_apartment": {
+            "title": "New apartment on the shared list",
+            "message": "{{name}} shared the apartment \"{{title}}\" with you."
+        },
+        "group_created": {
+            "title": "New shared chat",
+            "message": "{{name}} added you to a shared chat."
+        },
+        "group_message": {
+            "title": "New message in the shared chat",
+            "message": "{{name}} wrote in the shared chat."
+        },
+        "new_message": {
+            "title": "New message",
+            "message": "You have a new message from {{name}}"
+        },
+        "application_new": {
+            "title": "New application for your apartment",
+            "message": "{{name}} applied for \"{{title}}\"."
+        },
+        "appointment_new": {
+            "title": "New viewing request",
+            "message": "{{name}} would like to view \"{{title}}\" ({{when}})."
+        },
+        "application_approved": {
+            "title": "Application approved! 🎉",
+            "message": "Congratulations! Your application for \"{{title}}\" was approved. You can now schedule a viewing."
+        },
+        "application_rejected": {
+            "title": "Application declined",
+            "message": "Your application for \"{{title}}\" was not approved."
+        },
+        "application_pending": {
+            "title": "Application: pending",
+            "message": "The status of your application for \"{{title}}\" was updated: pending."
+        },
+        "application_cancelled": {
+            "title": "Application: cancelled",
+            "message": "Your application for \"{{title}}\" was cancelled."
+        },
+        "application_status": {
+            "title": "Application: {{status}}",
+            "message": "The status of your application for \"{{title}}\" was updated: {{status}}."
+        },
+        "listing_expiry_reminder": {
+            "title": "Your listing expires soon",
+            "message": "Your listing \"{{title}}\" expires in {{days}} day(s). Renew it to keep it visible."
+        },
+        "new_listing_match": {
+            "title": "A new listing matches your search",
+            "message": "A new listing \"{{title}}\" in {{city}} for €{{price}} matches your search \"{{search}}\"."
+        },
+        "price_drop": {
+            "title": "The price of a listing dropped!",
+            "message": "The listing \"{{title}}\" from your search \"{{search}}\" went down from €{{oldRent}} to €{{newRent}} (−€{{drop}}, {{percent}}% cheaper)."
+        },
+        "new_listing": {
+            "title": "New apartment on the site!",
+            "message": "A new apartment \"{{title}}\" is available in {{city}}."
+        },
+        "purchase_tokens": {
+            "title": "Purchase successful",
+            "message": "You bought {{tokens}} tokens — they were added to your account."
+        },
+        "purchase_analytics": {
+            "title": "Purchase successful",
+            "message": "Advanced analytics is now active on your account."
+        },
+        "purchase_featured": {
+            "title": "Purchase successful",
+            "message": "Your listing is featured at the top of the search for the next {{days}} days."
+        },
+        "purchase_credits": {
+            "title": "Purchase successful",
+            "message": "{{credits}} listing credit(s) were added."
+        },
+        "purchase_boost": {
+            "title": "Purchase successful",
+            "message": "Your roommate profile boost is active for 7 days."
+        },
+        "purchase_priority": {
+            "title": "Purchase successful",
+            "message": "Priority Inbox is active for 30 days."
+        },
+        "purchase_generic": {
+            "title": "Purchase successful",
+            "message": "Your purchase was processed successfully."
+        },
+        "purchase_chargeback": {
+            "title": "Purchase reversed",
+            "message": "The payment was disputed with the bank, so the benefits of that purchase were removed from your account."
+        },
+        "purchase_refunded": {
+            "title": "Refund processed",
+            "message": "The refund for your purchase was processed, so the benefits of that purchase were removed from your account."
+        }
     }
 }

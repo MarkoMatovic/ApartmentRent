@@ -20,9 +20,13 @@ public class MessageUserDeletedHandler : IUserDeletedHandler
             .ToListAsync();
 
         if (messages.Count > 0)
-        {
             _context.Messages.RemoveRange(messages);
+
+        // Group conversations: the user's own messages go and they leave every group; the others keep theirs.
+        _context.ChatGroupMessages.RemoveRange(await _context.ChatGroupMessages.Where(m => m.SenderId == userId).ToListAsync());
+        _context.ChatGroupMembers.RemoveRange(await _context.ChatGroupMembers.Where(m => m.UserId == userId).ToListAsync());
+
+        if (_context.ChangeTracker.HasChanges())
             await _context.SaveEntitiesAsync();
-        }
     }
 }

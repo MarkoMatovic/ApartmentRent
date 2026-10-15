@@ -22,6 +22,18 @@ public class ChatHub : Hub
         _cache = cache;
     }
 
+    /// <summary>
+    /// Puts every new connection into its owner's group right away (the user id comes from the token), so a
+    /// message that arrives before the client has asked to join, or after an automatic reconnect, is not lost.
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        if (int.TryParse(Context.User?.FindFirstValue("userId"), out var userId))
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+
+        await base.OnConnectedAsync();
+    }
+
     private int GetCurrentUserId()
     {
         var claim = Context.User?.FindFirstValue("userId");
@@ -65,49 +77,16 @@ public class ChatHub : Hub
         var senderId = GetCurrentUserId();
         await EnforceMessageRateLimitAsync(senderId);
 
-        MessageDto? message;
+        // SendMessageAsync pushes "ReceiveMessage" and "MessageSent" itself (it is shared with the REST
+        // path), so the hub sends nothing more: a second copy reached every client twice.
         try
         {
-            message = await _messageService.SendMessageAsync(senderId, receiverId, messageText);
+            await _messageService.SendMessageAsync(senderId, receiverId, messageText);
         }
         catch (InvalidOperationException ex)
         {
             throw new HubException(ex.Message);
         }
-        if (message is null) return;
-
-        await Clients.Group($"user_{receiverId}").SendAsync("ReceiveMessage", new
-        {
-            message.MessageId,
-            message.SenderId,
-            message.ReceiverId,
-            message.MessageText,
-            message.SentAt,
-            message.IsRead,
-            message.SenderName,
-            message.SenderProfilePicture,
-            message.FileUrl,
-            message.FileName,
-            message.FileSize,
-            message.FileType,
-            message.IsSuperLike
-        });
-        await Clients.Group($"user_{senderId}").SendAsync("MessageSent", new
-        {
-            message.MessageId,
-            message.SenderId,
-            message.ReceiverId,
-            message.MessageText,
-            message.SentAt,
-            message.IsRead,
-            message.ReceiverName,
-            message.ReceiverProfilePicture,
-            message.FileUrl,
-            message.FileName,
-            message.FileSize,
-            message.FileType,
-            message.IsSuperLike
-        });
     }
 
     public async Task MarkMessageAsRead(int messageId)
@@ -117,16 +96,8 @@ public class ChatHub : Hub
         if (!await _messageService.IsMessageRecipientAsync(messageId, callerId))
             throw new HubException("Unauthorized");
 
+        // MarkAsReadAsync pushes "MessageRead" to the sender itself (it is shared with the REST path).
         await _messageService.MarkAsReadAsync(messageId);
-        var message = await _messageService.GetMessageByIdAsync(messageId);
-        if (message != null)
-        {
-            await Clients.Group($"user_{message.SenderId}").SendAsync("MessageRead", new
-            {
-                MessageId = messageId,
-                ReadAt = DateTime.UtcNow
-            });
-        }
     }
 
     public async Task UserTyping(int receiverId)

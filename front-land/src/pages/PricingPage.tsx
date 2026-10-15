@@ -11,6 +11,8 @@ import {
   ListItemText,
   Tab,
   Tabs,
+  useMediaQuery,
+  useTheme,
   Select,
   MenuItem,
   FormControl,
@@ -36,6 +38,9 @@ import PaddleCheckoutDialog from '../components/Payment/PaddleCheckoutDialog';
 const PricingPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('subscriptions');
+  const theme = useTheme();
+  // Five tabs do not fit a phone: let them scroll sideways there, keep them centred on larger screens.
+  const isNarrow = useMediaQuery(theme.breakpoints.down('md'));
   const { addNotification } = useNotifications();
   const { isAuthenticated } = useAuth();
   const [tabIndex, setTabIndex] = useState(0);
@@ -208,7 +213,10 @@ const PricingPage: React.FC = () => {
       <Tabs
         value={tabIndex}
         onChange={(_, newValue) => setTabIndex(newValue)}
-        centered
+        variant={isNarrow ? 'scrollable' : 'standard'}
+        scrollButtons={isNarrow ? 'auto' : false}
+        allowScrollButtonsMobile
+        centered={!isNarrow}
         sx={{
           mb: 4,
           '& .MuiTabs-indicator': { backgroundColor: '#89D9F8' },

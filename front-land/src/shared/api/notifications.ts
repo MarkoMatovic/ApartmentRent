@@ -1,34 +1,29 @@
 import { apiClient } from './client';
 
-export interface Notification {
-    notificationId: number;
-    userId: number;
+/** A notification as the server stores it (NotificationDto): the unread ones, newest first. */
+export interface StoredNotification {
+    id: number;
+    /** Serbian text: shown only when the browser has no translation of `key`. */
     title: string;
     message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
+    actionType: string;
+    /** A route of the app when the notification leads somewhere; older ones hold an id or nothing useful. */
+    actionTarget: string;
+    /** Translation key, `notifications:events.<key>` (null for notifications stored before keys existed). */
+    key?: string | null;
+    /** Values for the translated text (name, title...). */
+    params?: Record<string, string> | null;
     isRead: boolean;
     createdDate: string;
-    link?: string;
-}
-
-export interface CreateNotificationInput {
-    userId: number;
-    title: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    link?: string;
+    senderUserId: number;
+    recipientUserId: number;
 }
 
 export const notificationsApi = {
-    getUserNotifications: async (userId: number): Promise<Notification[]> => {
-        const response = await apiClient.get(`/api/v1/notification/get-user-notifications`, {
+    getUserNotifications: async (userId: number): Promise<StoredNotification[]> => {
+        const response = await apiClient.get<StoredNotification[]>(`/api/v1/notification/get-user-notifications`, {
             params: { id: userId },
         });
-        return response.data;
-    },
-
-    sendNotification: async (input: CreateNotificationInput): Promise<Notification> => {
-        const response = await apiClient.post('/api/v1/notification/send-notification', input);
         return response.data;
     },
 

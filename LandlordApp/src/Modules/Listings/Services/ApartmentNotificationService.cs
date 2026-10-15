@@ -45,10 +45,17 @@ public class ApartmentNotificationService : IApartmentNotificationService
 
     public async Task NotifyNewListingAsync(string title, string city)
     {
+        // Everybody who is on the site hears about it; the 5th argument lets each browser show it in its own language.
+        var descriptor = Lander.src.Notifications.NotificationDescriptor.Create(
+            "new_listing",
+            new Dictionary<string, string> { ["title"] = title, ["city"] = city },
+            "/apartments");
         await _notificationHub.Clients.All.SendAsync("ReceiveNotification",
-            "New Apartment Listed!",
-            $"A new apartment '{title}' is now available in {city}.",
-            "success");
+            "Novi stan na sajtu!",
+            $"Novi stan „{title}“ je dostupan u mestu {city}.",
+            "success",
+            string.Empty,
+            descriptor);
     }
 
     public async Task NotifyListingRemovedAsync(int apartmentId, string title)
@@ -97,22 +104,13 @@ public class ApartmentNotificationService : IApartmentNotificationService
     {
         try
         {
-            var matched = await MatchSavedSearchesAsync(listing);
-            if (matched.Count == 0) return;
-
             var now = DateTime.UtcNow;
+            // Searches told about a listing within the cooldown are left out by the query.
+            var matched = await MatchSavedSearchesAsync(listing, notifiedBefore: now - AlertCooldown);
+            if (matched.Count == 0) return;
 
             foreach (var (search, userId) in matched)
             {
-                // Skip if we already notified this search within the cooldown window.
-                if (search.LastNotificationSent.HasValue &&
-                    now - search.LastNotificationSent.Value < AlertCooldown)
-                    continue;
-
-                // Don't notify the landlord about their own listing.
-                if (listing.LandlordId.HasValue && userId == listing.LandlordId.Value)
-                    continue;
-
                 try
                 {
                     await _inAppNotifications.SendNotificationAsync(new CreateNotificationInputDto
@@ -121,7 +119,15 @@ public class ApartmentNotificationService : IApartmentNotificationService
                         Message         = $"Pronađen je novi oglas \"{listing.Title}\" u {listing.City ?? "vašem gradu"} " +
                                           $"za {listing.Rent:N0} € koji odgovara pretrazi \"{search.Name}\".",
                         ActionType      = "new_listing_match",
-                        ActionTarget    = listing.ApartmentId.ToString(),
+                        ActionTarget    = $"/apartments/{listing.ApartmentId}",
+                        Key             = "new_listing_match",
+                        Params          = new Dictionary<string, string>
+                        {
+                            ["title"]  = listing.Title,
+                            ["city"]   = listing.City ?? string.Empty,
+                            ["price"]  = listing.Rent.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+                            ["search"] = search.Name ?? string.Empty,
+                        },
                         CreatedByGuid   = Guid.Empty,
                         SenderUserId    = 0,
                         RecipientUserId = userId
@@ -156,7 +162,7 @@ public class ApartmentNotificationService : IApartmentNotificationService
     {
         try
         {
-            var matched = await MatchSavedSearchesAsync(listing);
+            var matched = await MatchSavedSearchesAsync(listing, notifiedBefore: null);
             if (matched.Count == 0) return;
 
             decimal dropAmount  = oldRent - listing.Rent;
@@ -165,10 +171,6 @@ public class ApartmentNotificationService : IApartmentNotificationService
 
             foreach (var (search, userId) in matched)
             {
-                // Don't notify the landlord about their own listing.
-                if (listing.LandlordId.HasValue && userId == listing.LandlordId.Value)
-                    continue;
-
                 try
                 {
                     await _inAppNotifications.SendNotificationAsync(new CreateNotificationInputDto
@@ -178,7 +180,17 @@ public class ApartmentNotificationService : IApartmentNotificationService
                                           $"je pojeftinio sa {oldRent:N0} € na {listing.Rent:N0} € " +
                                           $"(−{dropAmount:N0} €, {dropPercent:F0}% jeftinije).",
                         ActionType      = "price_drop",
-                        ActionTarget    = listing.ApartmentId.ToString(),
+                        ActionTarget    = $"/apartments/{listing.ApartmentId}",
+                        Key             = "price_drop",
+                        Params          = new Dictionary<string, string>
+                        {
+                            ["title"]   = listing.Title,
+                            ["search"]  = search.Name ?? string.Empty,
+                            ["oldRent"] = oldRent.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+                            ["newRent"] = listing.Rent.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+                            ["drop"]    = dropAmount.ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+                            ["percent"] = dropPercent.ToString("F0", System.Globalization.CultureInfo.InvariantCulture),
+                        },
                         CreatedByGuid   = Guid.Empty,
                         SenderUserId    = 0,
                         RecipientUserId = userId
@@ -208,23 +220,55 @@ public class ApartmentNotificationService : IApartmentNotificationService
 
     // ─── Shared matching logic ───────────────────────────────────────────────────
 
+    /// <summary>Saved searches read per round; memory stays the same however many there are.</summary>
+    private const int MatchBatchSize = 500;
+
     /// <summary>
-    /// Loads all active, notification-enabled saved searches and returns those
-    /// whose filters match <paramref name="listing"/>, together with their owner userId.
+    /// The active, notification-enabled saved searches whose filters match <paramref name="listing"/>,
+    /// with their owner. The database already leaves out the landlord's own searches and, with
+    /// <paramref name="notifiedBefore"/>, those notified since then; the filters themselves are JSON and
+    /// are checked here, a batch at a time, reading only the columns the check needs.
     /// </summary>
     private async Task<List<(SavedSearch Search, int UserId)>> MatchSavedSearchesAsync(
-        ListingAlertContext listing)
+        ListingAlertContext listing, DateTime? notifiedBefore)
     {
-        // Load only the searches that have notifications enabled.
-        // FiltersJson is loaded client-side for in-memory filter evaluation.
-        var activeSavedSearches = await _savedSearchesContext.SavedSearches
-            .AsNoTracking()
-            .Where(ss => ss.IsActive && ss.EmailNotificationsEnabled)
-            .ToListAsync();
-
         var result = new List<(SavedSearch, int)>();
+        var landlordId = listing.LandlordId;
+        var afterId = 0;
 
-        foreach (var ss in activeSavedSearches)
+        while (true)
+        {
+            var query = _savedSearchesContext.SavedSearches
+                .AsNoTracking()
+                .Where(ss => ss.IsActive && ss.EmailNotificationsEnabled && ss.FiltersJson != null && ss.SavedSearchId > afterId);
+            if (landlordId.HasValue)
+                query = query.Where(ss => ss.UserId != landlordId.Value);
+            if (notifiedBefore.HasValue)
+                query = query.Where(ss => ss.LastNotificationSent == null || ss.LastNotificationSent < notifiedBefore.Value);
+
+            var batch = await query
+                .OrderBy(ss => ss.SavedSearchId)
+                .Take(MatchBatchSize)
+                .Select(ss => new SavedSearch
+                {
+                    SavedSearchId = ss.SavedSearchId,
+                    UserId = ss.UserId,
+                    Name = ss.Name,
+                    SearchType = ss.SearchType,
+                    FiltersJson = ss.FiltersJson,
+                    LastNotificationSent = ss.LastNotificationSent,
+                })
+                .ToListAsync();
+
+            AddMatches(batch, listing, result);
+            if (batch.Count < MatchBatchSize) return result;
+            afterId = batch[^1].SavedSearchId;
+        }
+    }
+
+    private void AddMatches(List<SavedSearch> searches, ListingAlertContext listing, List<(SavedSearch, int)> result)
+    {
+        foreach (var ss in searches)
         {
             if (string.IsNullOrWhiteSpace(ss.FiltersJson)) continue;
 
@@ -243,8 +287,6 @@ public class ApartmentNotificationService : IApartmentNotificationService
             if (ApartmentMatchesFilters(listing, filters))
                 result.Add((ss, ss.UserId));
         }
-
-        return result;
     }
 
     /// <summary>

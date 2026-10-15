@@ -1,3 +1,5 @@
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using FluentAssertions;
 using Lander;
 using Lander.Helpers;
@@ -79,7 +81,9 @@ public class UserServiceLockoutTests : IDisposable
             cfg,
             new Mock<ILogger<Lander.src.Modules.Users.Implementation.UserImplementation.AuthService>>().Object,
             TimeProvider.System,
-            new Mock<Lander.src.Infrastructure.Services.IJwtBlacklistService>().Object);
+            new Mock<Lander.src.Infrastructure.Services.IJwtBlacklistService>().Object,
+            new Mock<IProfilePictureService>().Object,
+            new Mock<ITwoFactorService>().Object);
 
         _userService = new UserService(
             authService,
@@ -222,7 +226,8 @@ public class AppointmentServiceConflictTests : IDisposable
             _mockHttp.Object,
             new Mock<ILogger<AppointmentService>>().Object,
             mockApproval.Object,
-            config);
+            config,
+            new Mock<Lander.src.Notifications.Interfaces.INotificationService>().Object);
     }
 
     public void Dispose()
@@ -261,8 +266,8 @@ public class AppointmentServiceConflictTests : IDisposable
             ApartmentId = AptId, AppointmentDate = futureDate
         });
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*already booked*");
+        await act.Should().ThrowAsync<BusinessRuleException>()
+            .WithMessage(BusinessErrorCodes.TimeSlotTaken);
     }
 
     [Fact]
@@ -378,7 +383,8 @@ public class ApartmentServiceFeaturesTests : IDisposable
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
             new ConfigurationBuilder().Build(),
-            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object);
+            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object,
+            new Mock<Lander.src.Modules.Listings.Interfaces.IGeocodingService>().Object);
     }
 
     public void Dispose()

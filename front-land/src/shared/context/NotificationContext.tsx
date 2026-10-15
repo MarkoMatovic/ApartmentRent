@@ -1,9 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import * as signalR from '@microsoft/signalr';
+import { useQueryClient } from '@tanstack/react-query';
 import { messagesApi } from '../../api/messagesApi';
 import RejectionDialog from '../../components/Dialogs/RejectionDialog';
+import { parseServerDate } from '../../components/Chat/chatMessageUtils';
 import { apiBaseUrl } from '../api/client';
 import { getAccessToken } from '../api/tokenStore';
+import { notificationsApi, StoredNotification } from '../api/notifications';
+import { MY_PAIRING_KEY, SHARED_APARTMENTS_KEY } from '../api/queryKeys';
+import { NotificationDescriptor, isInAppRoute, parseDescriptor } from '../notifications/descriptor';
+import { useAuth } from './AuthContext';
 
 interface Notification {
   id: string;
@@ -12,6 +18,8 @@ interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   timestamp: Date;
   read: boolean;
+  /** Set by notifications that come from the server: translated at display time, and where a click leads. */
+  descriptor?: NotificationDescriptor;
 }
 
 interface NotificationContextType {
@@ -29,184 +37,185 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+/** The bell keeps this many; the older ones stay on the server until they are marked read. */
+const MAX_NOTIFICATIONS = 50;
+const UNREAD_POLL_MS = 30_000;
+
+const hubUrl = (path: string) => apiBaseUrl + path;
+
+const buildConnection = (url: string) =>
+  new signalR.HubConnectionBuilder()
+    .withUrl(url, {
+      // Read from the in-memory store each time (a reconnect may come after the token was renewed).
+      accessTokenFactory: () => getAccessToken() ?? '',
+    })
+    .withAutomaticReconnect()
+    .build();
+
+/** A notification stored on the server, shown in the bell as if it had just arrived. */
+const fromStored = (n: StoredNotification): Notification => ({
+  id: `server-${n.id}`,
+  title: n.title,
+  message: n.message,
+  type: 'info',
+  timestamp: parseServerDate(n.createdDate),
+  read: false,
+  descriptor: {
+    id: n.id,
+    key: n.key ?? undefined,
+    params: n.params ?? undefined,
+    link: isInAppRoute(n.actionTarget) ? n.actionTarget : undefined,
+  },
+});
+
+/** Newest first, one entry per stored notification, no more than the bell can hold. */
+const mergeNotifications = (current: Notification[], incoming: Notification[]): Notification[] => {
+  const known = new Set(current.map(n => n.descriptor?.id).filter((id): id is number => id !== undefined));
+  const fresh = incoming.filter(n => n.descriptor?.id === undefined || !known.has(n.descriptor.id));
+  return [...current, ...fresh]
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, MAX_NOTIFICATIONS);
+};
+
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
+  const { user, token } = useAuth();
+  // Only a signed-in user (a token AND the user it belongs to) gets live connections.
+  const userId = token && user && user.userId > 0 ? user.userId : null;
+  const userIdRef = useRef<number | null>(userId);
+  userIdRef.current = userId;
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const [rejectionInfo, setRejectionInfo] = useState<{ apartmentTitle: string; apartmentId: number } | null>(null);
 
-  // Učitaj broj nepročitanih poruka — memoised so consumers get a stable reference
+  // Broj nepročitanih poruka — memoised so consumers get a stable reference
   const refreshUnreadMessagesCount = useCallback(async () => {
+    const id = userIdRef.current;
+    if (!id) return;
     try {
-      // Use in-memory token only — never sessionStorage (XSS risk).
-      const token = getAccessToken();
-      if (!token) return;
-
-      // Parsiraj userId iz JWT tokena
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userId = parseInt(payload.userId);
-
-      if (userId) {
-        const count = await messagesApi.getUnreadCount(userId);
-        setUnreadMessagesCount(count);
-      }
-    } catch (error) {
-      // Ignoriši greške
+      const count = await messagesApi.getUnreadCount(id);
+      // The user may have signed out while the request was running.
+      if (userIdRef.current === id) setUnreadMessagesCount(count);
+    } catch {
+      // The badge simply keeps its last value.
     }
   }, []);
 
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotification: Notification = {
+      ...notification,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: new Date(),
+      read: false,
+    };
+    // Cap so the in-memory array never grows unboundedly during a long session.
+    setNotifications((prev) => [newNotification, ...prev].slice(0, MAX_NOTIFICATIONS));
+  }, []);
+
+  // Connect when somebody is signed in, disconnect when they sign out. This used to run once when the
+  // app started, before the session was restored, so there was no token, nothing connected, and
+  // notifications never arrived live until the page was loaded again (and then the same happened).
   useEffect(() => {
-    // NotificationHub is [Authorize] — without a token the handshake is rejected
-    // and notifications silently die. Skip connecting until we have a token.
-    const initialToken = getAccessToken();
-    if (!initialToken) return;
+    // Whatever the bell and the badge held belonged to somebody else (or to nobody): start from nothing.
+    setNotifications([]);
+    setUnreadMessagesCount(0);
+    if (!userId) return;
 
-    const notificationHubUrl = import.meta.env.VITE_SIGNALR_URL || (apiBaseUrl + '/notificationHub');
-    const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(notificationHubUrl, {
-        accessTokenFactory: () => getAccessToken() ?? '',
-      })
-      .withAutomaticReconnect()
-      .build();
+    // Notifications that arrived while the user was away (or before this page was opened).
+    const loadStored = () =>
+      notificationsApi
+        .getUserNotifications(userId)
+        .then(stored => {
+          if (userIdRef.current !== userId) return;
+          setNotifications(prev => mergeNotifications(prev, stored.map(fromStored)));
+        })
+        .catch(() => {
+          // The live ones still work; the stored ones are tried again at the next reconnect.
+        });
 
-    let userId = 0;
-    try {
-      const payload = JSON.parse(atob(initialToken.split('.')[1]));
-      userId = parseInt(payload.userId);
-    } catch { /* malformed token — connection will simply not join a group */ }
+    const notificationHub = buildConnection(import.meta.env.VITE_SIGNALR_URL || hubUrl('/notificationHub'));
+    const chatHub = buildConnection(hubUrl('/chatHub'));
 
-    newConnection
-      .start()
-      .then(() => {
-        if (userId) return newConnection.invoke('JoinNotificationGroup', userId);
-      })
-      .catch(() => { });
+    // Handlers first, then start: nothing that arrives right after the connection opens is missed.
+    notificationHub.on('ReceiveNotification', (title: string, message: string, type: string, metadata?: string, descriptorJson?: string) => {
+      const descriptor = parseDescriptor(descriptorJson);
 
-    newConnection.on('ReceiveNotification', (title: string, message: string, type: string, metadata?: string) => {
-      // Check if this is a rejection notification
+      // The other person answered a roommate proposal or shared an apartment: what this user sees is out of date now.
+      if (descriptor?.key?.startsWith('pairing_')) {
+        queryClient.invalidateQueries({ queryKey: [MY_PAIRING_KEY] });
+        queryClient.invalidateQueries({ queryKey: [SHARED_APARTMENTS_KEY] });
+      }
+
+      // A rejected application opens the dialog that offers to keep or remove the apartment.
       if (type === 'rejection' || title.toLowerCase().includes('reject') || message.toLowerCase().includes('rejected')) {
         try {
           const meta = metadata ? JSON.parse(metadata) : null;
-          const aptTitle = meta?.apartmentTitle || 'the apartment';
-          const aptId = meta?.apartmentId || 0;
-          setRejectionInfo({ apartmentTitle: aptTitle, apartmentId: aptId });
+          setRejectionInfo({ apartmentTitle: meta?.apartmentTitle || 'the apartment', apartmentId: meta?.apartmentId || 0 });
         } catch {
           setRejectionInfo({ apartmentTitle: 'the apartment', apartmentId: 0 });
         }
       }
-      addNotification({
+
+      const live: Notification = {
+        id: descriptor?.id !== undefined ? `server-${descriptor.id}` : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         title,
         message,
         type: (type === 'rejection' ? 'error' : type) as Notification['type'],
-      });
+        timestamp: new Date(),
+        read: false,
+        descriptor,
+      };
+      setNotifications(prev => mergeNotifications(prev, [live]));
     });
 
-    return () => {
-      if (newConnection) {
-        newConnection.stop();
-      }
-    };
-  }, []);
+    // Chat: the badge counts one-to-one and shared-conversation messages alike.
+    chatHub.on('ReceiveMessage', refreshUnreadMessagesCount);
+    chatHub.on('MessageSent', refreshUnreadMessagesCount);
+    chatHub.on('ReceiveGroupMessage', refreshUnreadMessagesCount);
 
-  // Poveži se na ChatHub za real-time ažuriranje broja nepročitanih poruka
-  useEffect(() => {
-    const token = getAccessToken();
-    if (!token) return;
+    notificationHub
+      .start()
+      .then(() => notificationHub.invoke('JoinNotificationGroup', userId))
+      .catch(() => { });
+    chatHub
+      .start()
+      .then(() => chatHub.invoke('JoinChatRoom', userId))
+      .catch(() => { });
 
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userId = parseInt(payload.userId);
+    // A reconnect is a new connection: whatever came in the meantime is fetched, not guessed.
+    notificationHub.onreconnected(() => {
+      notificationHub.invoke('JoinNotificationGroup', userId).catch(() => { });
+      loadStored();
+    });
+    chatHub.onreconnected(() => {
+      chatHub.invoke('JoinChatRoom', userId).catch(() => { });
+      refreshUnreadMessagesCount();
+    });
 
-      if (!userId) return;
+    loadStored();
+    refreshUnreadMessagesCount();
+    const interval = setInterval(refreshUnreadMessagesCount, UNREAD_POLL_MS);
 
-      const chatHubUrl = apiBaseUrl + '/chatHub';
-      const newChatConnection = new signalR.HubConnectionBuilder()
-        .withUrl(chatHubUrl, {
-          // Always read from in-memory store at connection time — token may have rotated.
-          accessTokenFactory: () => getAccessToken() ?? ''
-        })
-        .withAutomaticReconnect()
-        .build();
-
-      newChatConnection
-        .start()
-        .then(() => {
-          newChatConnection.invoke('JoinChatRoom', userId).catch(() => { });
-          // Učitaj broj nepročitanih poruka kada se poveže
-          refreshUnreadMessagesCount();
-        })
-        .catch(() => { });
-
-      // Osveži broj nepročitanih poruka kada stigne nova poruka
-      newChatConnection.on('ReceiveMessage', () => {
-        refreshUnreadMessagesCount();
-      });
-
-      newChatConnection.on('MessageSent', () => {
-        refreshUnreadMessagesCount();
-      });
-
-      return () => {
-        if (newChatConnection) {
-          newChatConnection.stop();
-        }
-      };
-    } catch (error) {
-      // Ignoriši greške
-    }
-  }, []);
-
-  // Učitaj broj nepročitanih poruka kada postoji token (korisnik je ulogovan)
-  useEffect(() => {
-    const checkAndLoad = async () => {
-      // Use in-memory token — never sessionStorage (XSS risk).
-      const token = getAccessToken();
-      if (!token) {
-        setUnreadMessagesCount(0);
-        return;
-      }
-
-      await refreshUnreadMessagesCount();
-    };
-
-    // Proveri odmah kada se komponenta mount-uje
-    checkAndLoad();
-
-    // Osveži svakih 30 sekundi
-    const interval = setInterval(() => {
-      checkAndLoad();
-    }, 30000);
-
-    // Osluškuj custom event za promenu tokena (kada se korisnik uloguje u istom prozoru)
-    const handleAuthChange = () => {
-      checkAndLoad();
-    };
-
-    window.addEventListener('authTokenChanged', handleAuthChange);
     return () => {
       clearInterval(interval);
-      window.removeEventListener('authTokenChanged', handleAuthChange);
+      notificationHub.stop().catch(() => { });
+      chatHub.stop().catch(() => { });
     };
-  }, []); // Prazan dependency array - učitava se samo jednom pri mount-u
+  }, [userId, queryClient, refreshUnreadMessagesCount]);
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-      read: false,
-    };
-    // Cap at 50 so the in-memory array never grows unboundedly during a long session.
-    setNotifications((prev) => [newNotification, ...prev].slice(0, 50));
-  };
+  // What the user marks read in the bell is marked read on the server too, or it would come back at the next load.
+  const markOnServer = (call: () => Promise<unknown>) => { call().catch(() => { }); };
 
   const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
-    );
+    const serverId = notifications.find(n => n.id === id)?.descriptor?.id;
+    setNotifications((prev) => prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)));
+    if (serverId !== undefined) markOnServer(() => notificationsApi.markAsRead(serverId));
   };
 
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
+    if (userId) markOnServer(() => notificationsApi.markAllAsRead());
   };
 
   const clearNotification = (id: string) => {
@@ -267,4 +276,3 @@ export const useNotifications = () => {
   }
   return context;
 };
-

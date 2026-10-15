@@ -34,6 +34,13 @@ export interface User {
   // Rating
   averageRating?: number;
   reviewCount?: number;
+  // Two-step sign-in
+  /** This session was confirmed with an authenticator code (from the token). */
+  twoFactorVerified?: boolean;
+  /** From the stored profile. */
+  twoFactorEnabled?: boolean;
+  /** Some features of the account work only once two-step sign-in is on (from the stored profile). */
+  twoFactorRequired?: boolean;
 }
 
 export interface PrivacySettings {

@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using FluentAssertions;
+using Polly;
+using SendSmtpEmail = sib_api_v3_sdk.Model.SendSmtpEmail;
 
 namespace LandlordApp.Tests.Communication;
 
@@ -30,6 +32,24 @@ public class EmailServiceTests
         _httpContextMock.Setup(x => x.HttpContext).Returns((HttpContext?)null);
     }
 
+    /// <summary>Stands in for Brevo: no network, and it refuses until told to accept.</summary>
+    private sealed class FakeBrevo : IBrevoEmailClient
+    {
+        public bool Accepts { get; set; }
+        public List<SendSmtpEmail> Sent { get; } = new();
+
+        public Task<string?> SendAsync(SendSmtpEmail email, CancellationToken ct)
+        {
+            if (!Accepts) throw new sib_api_v3_sdk.Client.ApiException(401, "Brevo refused the key");
+            Sent.Add(email);
+            return Task.FromResult<string?>("<msg-1@brevo>");
+        }
+    }
+
+    private readonly FakeBrevo _brevo = new();
+
+    // The tests used to call the real Brevo API with a wrong key, which took ~15 s per test (with the
+    // retries) and needed the network. Retries are left out here (ResiliencePipeline.Empty).
     private EmailService CreateService(string apiKey = "test-key")
     {
         var settings = Options.Create(new BrevoSettings
@@ -38,13 +58,45 @@ public class EmailServiceTests
             SenderEmail = "noreply@landlander.com",
             SenderName = "Landlander Platform"
         });
-        return new EmailService(settings, _context, _httpContextMock.Object, new Mock<IEmailTemplateRenderer>().Object, _loggerMock.Object);
+        return new EmailService(settings, _context, _httpContextMock.Object, new Mock<IEmailTemplateRenderer>().Object,
+            _loggerMock.Object, _brevo, ResiliencePipeline.Empty);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendEmailAsync_WhenBrevoAccepts_ReturnsTrueAndLogsTheDelivery()
+    {
+        _brevo.Accepts = true;
+        var service = CreateService();
+
+        var result = await service.SendEmailAsync("test@example.com", "Test Subject", "<h1>Test</h1>");
+
+        result.Should().BeTrue();
+        var sent = _brevo.Sent.Should().ContainSingle().Subject;
+        sent.To.Should().ContainSingle().Which.Email.Should().Be("test@example.com");
+        sent.Sender.Email.Should().Be("noreply@landlander.com");
+        sent.Subject.Should().Be("Test Subject");
+        var log = await _context.EmailLogs.SingleAsync();
+        log.IsDelivered.Should().BeTrue();
+        log.ProviderMessageId.Should().Be("<msg-1@brevo>");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendBulkEmailAsync_WhenBrevoAccepts_SendsOneMailToAllAndLogsEach()
+    {
+        _brevo.Accepts = true;
+        var service = CreateService();
+
+        var result = await service.SendBulkEmailAsync(new List<string> { "a@example.com", "b@example.com" }, "Bulk", "<p>x</p>");
+
+        result.Should().BeTrue();
+        _brevo.Sent.Should().ContainSingle().Which.To.Select(t => t.Email).Should().Equal("a@example.com", "b@example.com");
+        (await _context.EmailLogs.CountAsync(l => l.IsDelivered == true)).Should().Be(2);
     }
 
 
 
     [Fact]
-    public async System.Threading.Tasks.Task SendEmailAsync_WithInvalidApiKey_ReturnsFalseAndLogsError()
+    public async System.Threading.Tasks.Task SendEmailAsync_WhenBrevoRefuses_ReturnsFalseAndLogsError()
     {
         var service = CreateService("invalid-key-that-wont-work");
 
@@ -77,7 +129,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendBulkEmailAsync_WithInvalidApiKey_LogsAllRecipients()
+    public async System.Threading.Tasks.Task SendBulkEmailAsync_WhenBrevoRefuses_LogsAllRecipients()
     {
         var service = CreateService("invalid-key");
         var recipients = new List<string>
@@ -97,7 +149,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendWelcomeEmailAsync_WithInvalidApiKey_ReturnsFalse()
+    public async System.Threading.Tasks.Task SendWelcomeEmailAsync_WhenBrevoRefuses_ReturnsFalse()
     {
         var service = CreateService("invalid-key");
 
@@ -106,11 +158,11 @@ public class EmailServiceTests
         result.Should().BeFalse();
         var log = await _context.EmailLogs.FirstOrDefaultAsync();
         log.Should().NotBeNull();
-        log!.Subject.Should().Be("Welcome to Landlander Platform!");
+        log!.Subject.Should().Be("Dobrodošli na TuRentaj!");
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendApplicationStatusEmailAsync_WithInvalidApiKey_ReturnsFalse()
+    public async System.Threading.Tasks.Task SendApplicationStatusEmailAsync_WhenBrevoRefuses_ReturnsFalse()
     {
         var service = CreateService("invalid-key");
 
@@ -123,18 +175,18 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendNewMessageEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendNewMessageEmailAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
 
         await service.SendNewMessageEmailAsync("recipient@example.com", "Stefan", "Imate li parking?");
 
         var log = await _context.EmailLogs.FirstOrDefaultAsync();
-        log!.Subject.Should().Be("New Message from Stefan");
+        log!.Subject.Should().Be("Nova poruka od Stefan");
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendAppointmentConfirmationEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendAppointmentConfirmationEmailAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
         var appointmentDate = new DateTime(2026, 3, 15, 14, 0, 0);
@@ -143,11 +195,11 @@ public class EmailServiceTests
             "tenant@example.com", "Nikola", appointmentDate, "Dvosoban u Novom Beogradu");
 
         var log = await _context.EmailLogs.FirstOrDefaultAsync();
-        log!.Subject.Should().Be("Appointment Confirmation");
+        log!.Subject.Should().Be("Potvrda razgledanja stana");
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendSavedSearchAlertEmailAsync_WithInvalidApiKey_IncludesMatchCount()
+    public async System.Threading.Tasks.Task SendSavedSearchAlertEmailAsync_WhenBrevoRefuses_IncludesMatchCount()
     {
         var service = CreateService("invalid-key");
 
@@ -158,7 +210,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendNewApplicationEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendNewApplicationEmailAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
 
@@ -166,12 +218,37 @@ public class EmailServiceTests
 
         var log = await _context.EmailLogs.FirstOrDefaultAsync();
         log.Should().NotBeNull();
-        log!.Subject.Should().Be("New Application for Your Apartment");
+        log!.Subject.Should().Be("Nova prijava za vaš stan");
         log.RecipientEmail.Should().Be("landlord@example.com");
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendListingUnavailableEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendRoommateProposalEmailAsync_NamesTheProposerInTheSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendRoommateProposalEmailAsync("marko@example.com", "Marko", "Ana Anić");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("Ana Anić vam predlaže da budete cimeri");
+        log.RecipientEmail.Should().Be("marko@example.com");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendRoommateAcceptedEmailAsync_SetsCorrectSubject()
+    {
+        var service = CreateService("invalid-key");
+
+        await service.SendRoommateAcceptedEmailAsync("ana@example.com", "Ana", "Marko Marković");
+
+        var log = await _context.EmailLogs.FirstOrDefaultAsync();
+        log.Should().NotBeNull();
+        log!.Subject.Should().Be("Cimerstvo je potvrđeno");
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SendListingUnavailableEmailAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
 
@@ -184,7 +261,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendEmailVerificationAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendEmailVerificationAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
 
@@ -197,7 +274,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendPasswordResetEmailAsync_WithInvalidApiKey_SetsCorrectSubject()
+    public async System.Threading.Tasks.Task SendPasswordResetEmailAsync_WhenBrevoRefuses_SetsCorrectSubject()
     {
         var service = CreateService("invalid-key");
 
@@ -210,7 +287,7 @@ public class EmailServiceTests
     }
 
     [Fact]
-    public async System.Threading.Tasks.Task SendTemplatedEmailAsync_WithInvalidApiKey_DelegatesToSendEmailAsync()
+    public async System.Threading.Tasks.Task SendTemplatedEmailAsync_WhenBrevoRefuses_DelegatesToSendEmailAsync()
     {
         var service = CreateService("invalid-key");
 

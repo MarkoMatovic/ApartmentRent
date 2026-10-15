@@ -37,9 +37,15 @@ public class GlobalExceptionHandlerMiddleware
         var statusCode = HttpStatusCode.InternalServerError;
         var message = "An error occurred while processing your request.";
         string? details = null;
+        string? code = null;
 
         switch (exception)
         {
+            case BusinessRuleException ruleEx:
+                statusCode = HttpStatusCode.UnprocessableEntity;
+                message = ruleEx.Message;
+                code = ruleEx.Code;
+                break;
             case NotFoundException notFoundEx:
                 statusCode = HttpStatusCode.NotFound;
                 message = notFoundEx.Message;
@@ -87,6 +93,7 @@ public class GlobalExceptionHandlerMiddleware
             Message = message,
             StatusCode = (int)statusCode,
             Details = details,
+            Code = code,
             TraceId = context.TraceIdentifier
         };
 

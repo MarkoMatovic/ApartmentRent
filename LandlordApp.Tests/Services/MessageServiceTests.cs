@@ -25,8 +25,10 @@ public class MessageServiceTests : IDisposable
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<IHubContext<ChatHub>> _mockChatHub;
+    private readonly Mock<Lander.src.Infrastructure.Services.IPresenceTracker> _mockPresence = new();
     private readonly Mock<IHubContext<NotificationHub>> _mockNotificationHub;
     private readonly Mock<IWebHostEnvironment> _mockWebHostEnv;
+    private readonly Mock<IClientProxy> _notificationProxy;
     private readonly MessageService _service;
 
     private const int Sender1Id   = 1;
@@ -71,7 +73,7 @@ public class MessageServiceTests : IDisposable
 
         // Setup hub clients to not throw
         SetupHub(_mockChatHub);
-        SetupHub(_mockNotificationHub);
+        _notificationProxy = SetupHub(_mockNotificationHub);
 
         _service = new MessageService(
             _commsContext,
@@ -83,15 +85,17 @@ public class MessageServiceTests : IDisposable
             _mockWebHostEnv.Object,
             new Mock<Lander.src.Infrastructure.FileStorage.IFileStorageService>().Object,
             new IdempotencyService(new Mock<Microsoft.Extensions.Caching.Distributed.IDistributedCache>().Object),
-            new Mock<Microsoft.Extensions.Logging.ILogger<MessageService>>().Object);
+            new Mock<Microsoft.Extensions.Logging.ILogger<MessageService>>().Object,
+            _mockPresence.Object);
     }
 
-    private static void SetupHub<T>(Mock<IHubContext<T>> mock) where T : Hub
+    private static Mock<IClientProxy> SetupHub<T>(Mock<IHubContext<T>> mock) where T : Hub
     {
         var clients     = new Mock<IHubClients>();
         var clientProxy = new Mock<IClientProxy>();
         clients.Setup(x => x.Group(It.IsAny<string>())).Returns(clientProxy.Object);
         mock.Setup(x => x.Clients).Returns(clients.Object);
+        return clientProxy;
     }
 
     public void Dispose()
@@ -165,6 +169,45 @@ public class MessageServiceTests : IDisposable
         _mockEmailService.Verify(
             x => x.SendNewMessageEmailAsync("receiver@test.com", It.IsAny<string>(), It.IsAny<string>()),
             Times.AtMostOnce());
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_TheReceiversPushIsTranslatableAndOpensThatChat()
+    {
+        await _service.SendMessageAsync(Sender1Id, Receiver1Id, "Zdravo");
+
+        _notificationProxy.Verify(p => p.SendCoreAsync(
+            "ReceiveNotification",
+            It.Is<object?[]>(a => a.Length == 5
+                                  && (string)a[0]! == "Nova poruka"
+                                  && ((string)a[4]!).Contains("\"key\":\"new_message\"")
+                                  && ((string)a[4]!).Contains("Sender One")
+                                  && ((string)a[4]!).Contains($"\"link\":\"/chat?userId={Sender1Id}\"")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_ReceiverIsAway_SendsTheEmail()
+    {
+        _mockPresence.Setup(p => p.IsOnline(Receiver1Id)).Returns(false);
+
+        await _service.SendMessageAsync(Sender1Id, Receiver1Id, "Jesi tu?");
+
+        _mockEmailService.Verify(
+            x => x.SendNewMessageEmailAsync("receiver@test.com", It.IsAny<string>(), "Jesi tu?"), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_ReceiverIsOnTheSite_DoesNotEmailThem()
+    {
+        // They are looking at the chat / the bell right now; a mail would only be noise.
+        _mockPresence.Setup(p => p.IsOnline(Receiver1Id)).Returns(true);
+
+        var sent = await _service.SendMessageAsync(Sender1Id, Receiver1Id, "Vidiš me uživo");
+
+        sent.Should().NotBeNull("the message itself is delivered live");
+        _mockEmailService.Verify(
+            x => x.SendNewMessageEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -317,6 +360,125 @@ public class MessageServiceTests : IDisposable
         var inDb = await _commsContext.Messages.FindAsync(msg.MessageId);
         inDb!.IsRead.Should().BeTrue();
     }
+
+    private Mock<IClientProxy> CaptureSenderGroup(int senderId)
+    {
+        var senderProxy = new Mock<IClientProxy>();
+        var clients = new Mock<IHubClients>();
+        clients.Setup(x => x.Group(It.IsAny<string>())).Returns(new Mock<IClientProxy>().Object);
+        clients.Setup(x => x.Group($"user_{senderId}")).Returns(senderProxy.Object);
+        _mockChatHub.Setup(x => x.Clients).Returns(clients.Object);
+        return senderProxy;
+    }
+
+    [Fact]
+    public async Task MarkAsReadAsync_UnreadMessage_TellsTheSenderLiveThatItWasRead()
+    {
+        // The sender's chat flips the tick to "read" without a reload, whichever path marked it
+        // (opening the conversation goes through REST, a live message through the hub).
+        var msg = await SeedMessage(Sender1Id, Receiver1Id, "Unread", isRead: false);
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+
+        await _service.MarkAsReadAsync(msg.MessageId);
+
+        senderProxy.Verify(p => p.SendCoreAsync(
+            "MessageRead",
+            It.Is<object?[]>(args => args.Length == 1),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task MarkAsReadAsync_AlreadyRead_DoesNotNotifyAgain()
+    {
+        var msg = await SeedMessage(Sender1Id, Receiver1Id, "Already read", isRead: true);
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+
+        await _service.MarkAsReadAsync(msg.MessageId);
+
+        senderProxy.Verify(p => p.SendCoreAsync(
+            It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MarkAsReadAsync_WhenThePushFails_TheMessageIsStillMarkedRead()
+    {
+        var msg = await SeedMessage(Sender1Id, Receiver1Id, "Unread", isRead: false);
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+        senderProxy.Setup(p => p.SendCoreAsync(
+                It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+
+        var act = async () => await _service.MarkAsReadAsync(msg.MessageId);
+
+        await act.Should().NotThrowAsync();
+        (await _commsContext.Messages.FindAsync(msg.MessageId))!.IsRead.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task MarkConversationAsReadAsync_MarksOnlyWhatTheOtherPersonSentToMe()
+    {
+        var a = await SeedMessage(Sender1Id, Receiver1Id, "1");
+        var b = await SeedMessage(Sender1Id, Receiver1Id, "2");
+        var mine = await SeedMessage(Receiver1Id, Sender1Id, "my reply");
+        var otherSender = await SeedMessage(Sender2Id, Receiver1Id, "someone else");
+
+        var count = await _service.MarkConversationAsReadAsync(Receiver1Id, Sender1Id);
+
+        count.Should().Be(2);
+        var stored = await _commsContext.Messages.AsNoTracking().ToDictionaryAsync(m => m.MessageId);
+        stored[a.MessageId].IsRead.Should().BeTrue();
+        stored[b.MessageId].IsRead.Should().BeTrue();
+        stored[mine.MessageId].IsRead.Should().BeFalse("the caller's own messages are read by the other person");
+        stored[otherSender.MessageId].IsRead.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task MarkConversationAsReadAsync_TellsTheSenderOnceWithAllIds()
+    {
+        var a = await SeedMessage(Sender1Id, Receiver1Id, "1");
+        var b = await SeedMessage(Sender1Id, Receiver1Id, "2");
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+
+        await _service.MarkConversationAsReadAsync(Receiver1Id, Sender1Id);
+
+        senderProxy.Verify(p => p.SendCoreAsync(
+            "MessagesRead",
+            It.Is<object?[]>(args => args.Length == 1 && IdsOf(args[0]).SequenceEqual(new[] { a.MessageId, b.MessageId })),
+            It.IsAny<CancellationToken>()), Times.Once);
+        senderProxy.Verify(p => p.SendCoreAsync(
+            "MessageRead", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MarkConversationAsReadAsync_NothingUnread_ChangesNothingAndSendsNothing()
+    {
+        await SeedMessage(Sender1Id, Receiver1Id, "read", isRead: true);
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+
+        var count = await _service.MarkConversationAsReadAsync(Receiver1Id, Sender1Id);
+
+        count.Should().Be(0);
+        senderProxy.Verify(p => p.SendCoreAsync(
+            It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task MarkConversationAsReadAsync_WhenThePushFails_TheMessagesAreStillRead()
+    {
+        var msg = await SeedMessage(Sender1Id, Receiver1Id, "Unread");
+        var senderProxy = CaptureSenderGroup(Sender1Id);
+        senderProxy.Setup(p => p.SendCoreAsync(
+                It.IsAny<string>(), It.IsAny<object?[]>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+
+        var act = () => _service.MarkConversationAsReadAsync(Receiver1Id, Sender1Id);
+
+        (await act.Should().NotThrowAsync()).Which.Should().Be(1);
+        (await _commsContext.Messages.AsNoTracking().SingleAsync(m => m.MessageId == msg.MessageId)).IsRead.Should().Be(true);
+    }
+
+    private static IEnumerable<int> IdsOf(object? payload) =>
+        (IEnumerable<int>)payload!.GetType().GetProperty("MessageIds")!.GetValue(payload)!;
 
     [Fact]
     public async Task MarkAsReadAsync_NonExistentMessage_ShouldNotThrow()

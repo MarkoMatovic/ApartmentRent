@@ -28,12 +28,21 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../shared/context/AuthContext';
 import { machineLearningApi, RoommateMatchScore } from '../shared/api/machineLearning';
 
-const getScoreColor = (score: number): 'success' | 'primary' | 'warning' | 'error' => {
-  if (score >= 0.8) return 'success';
-  if (score >= 0.6) return 'primary';
-  if (score >= 0.4) return 'warning';
+/** `percent` is 0-100, as the server sends it. */
+const getScoreColor = (percent: number): 'success' | 'primary' | 'warning' | 'error' => {
+  if (percent >= 80) return 'success';
+  if (percent >= 60) return 'primary';
+  if (percent >= 40) return 'warning';
   return 'error';
 };
+
+// The four parts of the score the server reports, and the text that names each of them.
+const FACTORS = [
+  ['Lifestyle', 'lifestyleFactor'],
+  ['Budget', 'budgetFactor'],
+  ['Preferences', 'preferencesFactor'],
+  ['Location', 'locationFactor'],
+] as const;
 
 const RoommateMatchesPage: React.FC = () => {
   const { t } = useTranslation(['common', 'roommates']);
@@ -128,18 +137,16 @@ const RoommateMatchesPage: React.FC = () => {
       {!isLoading && !error && matches && matches.length > 0 && (
         <>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {t('roommates:matchesFound', {
-              defaultValue: `Found ${matches.length} compatible roommates`,
-              count: matches.length,
-            })}
+            {t('roommates:matchesFound', { count: matches.length })}
           </Typography>
           <Grid container spacing={3}>
             {matches.map((match, index) => {
-              const scorePercent = Math.round(match.matchScore * 100);
-              const color = getScoreColor(match.matchScore);
+              const roommate = match.roommate;
+              const scorePercent = Math.round(match.matchPercentage);
+              const color = getScoreColor(match.matchPercentage);
 
               return (
-                <Grid item xs={12} sm={6} md={4} key={match.userId}>
+                <Grid item xs={12} sm={6} md={4} key={match.roommateId}>
                   <Card
                     sx={{
                       height: '100%',
@@ -152,8 +159,12 @@ const RoommateMatchesPage: React.FC = () => {
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                         <Box sx={{ position: 'relative' }}>
-                          <Avatar sx={{ width: 56, height: 56, bgcolor: `${color}.light` }}>
-                            <PersonIcon />
+                          <Avatar
+                            src={roommate?.profilePicture || undefined}
+                            alt={roommate?.firstName}
+                            sx={{ width: 56, height: 56, bgcolor: `${color}.light` }}
+                          >
+                            {roommate?.firstName ? roommate.firstName[0].toUpperCase() : <PersonIcon />}
                           </Avatar>
                           {index < 3 && (
                             <Chip
@@ -172,9 +183,9 @@ const RoommateMatchesPage: React.FC = () => {
                         </Box>
                         <Box>
                           <Typography variant="subtitle1" fontWeight={600}>
-                            {match.userName}
+                            {roommate?.firstName}
                           </Typography>
-                          <Tooltip title={`${scorePercent}% compatibility`}>
+                          <Tooltip title={t('roommates:compatibilityTooltip', { percent: scorePercent })}>
                             <Chip
                               label={`${scorePercent}%`}
                               size="small"
@@ -202,29 +213,19 @@ const RoommateMatchesPage: React.FC = () => {
                         />
                       </Box>
 
-                      {match.compatibilityFactors && (
+                      {match.featureScores && (
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {match.compatibilityFactors.lifestyle !== undefined && (
-                            <Chip
-                              label={`Lifestyle ${Math.round(match.compatibilityFactors.lifestyle * 100)}%`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                          {match.compatibilityFactors.budget !== undefined && (
-                            <Chip
-                              label={`Budget ${Math.round(match.compatibilityFactors.budget * 100)}%`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
-                          {match.compatibilityFactors.cleanliness !== undefined && (
-                            <Chip
-                              label={`Cleanliness ${Math.round(match.compatibilityFactors.cleanliness * 100)}%`}
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
+                          {FACTORS.map(([factor, labelKey]) => {
+                            const value = match.featureScores?.[factor];
+                            return value === undefined ? null : (
+                              <Chip
+                                key={factor}
+                                label={t(`roommates:${labelKey}`, { percent: Math.round(value) })}
+                                size="small"
+                                variant="outlined"
+                              />
+                            );
+                          })}
                         </Box>
                       )}
                     </CardContent>
@@ -234,7 +235,7 @@ const RoommateMatchesPage: React.FC = () => {
                         size="small"
                         variant="outlined"
                         startIcon={<VisibilityIcon />}
-                        onClick={() => navigate(`/roommates/${match.userId}`)}
+                        onClick={() => navigate(`/roommates/${match.roommateId}`)}
                       >
                         {t('common:view', { defaultValue: 'View' })}
                       </Button>
@@ -243,7 +244,8 @@ const RoommateMatchesPage: React.FC = () => {
                         variant="contained"
                         color="secondary"
                         startIcon={<MessageIcon />}
-                        onClick={() => navigate(`/messages?userId=${match.userId}`)}
+                        disabled={!roommate}
+                        onClick={() => roommate && navigate(`/chat?userId=${roommate.userId}`)}
                       >
                         {t('roommates:contact', { defaultValue: 'Contact' })}
                       </Button>
@@ -256,7 +258,7 @@ const RoommateMatchesPage: React.FC = () => {
 
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
             <Button variant="outlined" onClick={() => refetch()}>
-              {t('common:refresh', { defaultValue: 'Refresh Matches' })}
+              {t('roommates:refreshMatches')}
             </Button>
           </Box>
         </>

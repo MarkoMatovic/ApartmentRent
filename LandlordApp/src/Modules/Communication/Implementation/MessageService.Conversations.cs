@@ -1,5 +1,6 @@
 using Lander.Helpers;
 using Lander.src.Modules.Communication.Dtos.Dto;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.Communication.Implementation;
@@ -164,15 +165,70 @@ public partial class MessageService
                 message.ModifiedDate = DateTime.UtcNow;
                 await _context.SaveEntitiesAsync();
             });
+
+            // Tell the sender live so the ticks next to their message turn to "read". It is done here,
+            // not in the hub, because opening a conversation marks messages read over REST and that
+            // path must notify too. A failed push must never fail the read itself.
+            try
+            {
+                await _chatHubContext.Clients.Group($"user_{message.SenderId}").SendAsync("MessageRead", new
+                {
+                    MessageId = messageId,
+                    ReadAt = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not push MessageRead for message {MessageId}", messageId);
+            }
         }
+    }
+
+    public async Task<int> MarkConversationAsReadAsync(int userId, int otherUserId)
+    {
+        // Only what the other person sent to the caller: nobody can mark someone else's inbox read.
+        var unread = await _context.Messages
+            .Where(m => m.SenderId == otherUserId && m.ReceiverId == userId && m.IsRead == false)
+            .ToListAsync();
+        if (unread.Count == 0) return 0;
+
+        var now = DateTime.UtcNow;
+        await _context.RunInTransactionAsync(async () =>
+        {
+            foreach (var message in unread)
+            {
+                message.IsRead = true;
+                message.ModifiedDate = now;
+            }
+            await _context.SaveEntitiesAsync();
+        });
+
+        // One push for the whole conversation, so the sender's ticks turn to "read" together.
+        try
+        {
+            await _chatHubContext.Clients.Group($"user_{otherUserId}").SendAsync("MessagesRead", new
+            {
+                ReaderId = userId,
+                MessageIds = unread.Select(m => m.MessageId).ToList(),
+                ReadAt = now
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not push MessagesRead for the conversation of {UserId} with {OtherUserId}", userId, otherUserId);
+        }
+        return unread.Count;
     }
 
     public async Task<int> GetUnreadCountAsync(int userId)
     {
-        return await _context.Messages
+        var direct = await _context.Messages
             .AsNoTracking()
             .Where(m => m.ReceiverId == userId && m.IsRead == false)
             .CountAsync();
+
+        // Messages in group conversations count towards the same inbox badge.
+        return direct + await _context.UnreadGroupMessages(userId).CountAsync();
     }
 
     public async Task<MessageDto?> GetMessageByIdAsync(int messageId)

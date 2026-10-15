@@ -30,7 +30,11 @@ public class RoommateMatchingService : IRoommateMatchingService
         // entire table for every request.
         var candidateQuery = _roommatesContext.Roommates
             .AsNoTracking()
-            .Where(r => r.UserId != userId && r.IsActive);
+            .Where(r => r.UserId != userId && r.IsActive)
+            // People who already agreed to be roommates with someone are not available to be matched.
+            .Where(r => !_roommatesContext.Pairings.Any(p =>
+                p.Status == PairingStatus.Accepted
+                && (p.RequesterUserId == r.UserId || p.PartnerUserId == r.UserId)));
 
         if (!string.IsNullOrEmpty(userRoommate.PreferredLocation))
             candidateQuery = candidateQuery

@@ -13,5 +13,7 @@ public interface IEmailService
     Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason);
     Task<bool> SendEmailVerificationAsync(string to, string userName, string verificationLink);
     Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink);
+    Task<bool> SendRoommateProposalEmailAsync(string to, string userName, string proposerName);
+    Task<bool> SendRoommateAcceptedEmailAsync(string to, string userName, string partnerName);
     Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur);
 }

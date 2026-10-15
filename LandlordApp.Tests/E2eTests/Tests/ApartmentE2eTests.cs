@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using Lander.src.Modules.Listings.Interfaces;
 using LandlordApp.Tests.E2eTests.Infrastructure;
 using LandlordApp.Tests.E2eTests.Shared;
+using Moq;
 
 namespace LandlordApp.Tests.E2eTests.Tests;
 
@@ -37,6 +39,34 @@ public class ApartmentE2eTests : E2eTestBase
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("apartmentId").GetInt32().Should().BeGreaterThan(0);
         body.GetProperty("title").GetString().Should().Be("Lijepi stan u centru");
+    }
+
+    [Fact]
+    public async Task CreateApartment_WithoutCoordinates_GetsThemFromTheAddress()
+    {
+        Fixture.Factory.MockGeocoding
+            .Setup(g => g.GeocodeAsync("Valjevska", "Beograd", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeoPoint(44.804082m, 20.465123m));
+        var landlord = await Data.CreateUserAsync("landlord-geo@e2e.com", role: "Landlord");
+        var client   = CreateAuthenticatedClient(landlord.UserId, landlord.UserGuid, "Landlord");
+
+        var created = await new CreateApartmentEndpoint(client).CallAsync(new
+        {
+            Title       = "Stan sa mapom",
+            Description = "Stan ciju adresu pretvaramo u koordinate.",
+            Rent        = 500m,
+            Address     = "Valjevska",
+            City        = "Beograd",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("apartmentId").GetInt32();
+
+        var fetched = await new GetApartmentEndpoint(client).CallAsync(id);
+
+        fetched.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await fetched.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("latitude").GetDecimal().Should().Be(44.804082m);
+        body.GetProperty("longitude").GetDecimal().Should().Be(20.465123m);
     }
 
     [Fact]
@@ -92,6 +122,22 @@ public class ApartmentE2eTests : E2eTestBase
         items.EnumerateArray()
              .Should().OnlyContain(a =>
                  a.GetProperty("city").GetString() == "Mostar");
+    }
+
+    [Fact]
+    public async Task GetAllApartments_FilterByCityWithSurroundingSpaces_StillMatches()
+    {
+        // "Beograd " (a trailing space is easy to type) used to return nothing.
+        var landlord = await Data.CreateUserAsync("landlord-city-space@e2e.com", role: "Landlord");
+        await Data.CreateApartmentAsync(landlord.UserId, title: "Beograd stan", rent: 500m, city: "Beograd");
+
+        var response = await new GetAllApartmentsEndpoint(HttpClient).CallAsync(city: "  Beograd ");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body  = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.ValueKind == JsonValueKind.Array ? body : body.GetProperty("items");
+
+        items.EnumerateArray().Should().Contain(a => a.GetProperty("city").GetString() == "Beograd");
     }
 
     [Fact]

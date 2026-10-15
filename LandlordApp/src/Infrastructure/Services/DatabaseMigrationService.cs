@@ -16,9 +16,11 @@ public class DatabaseMigrationService(
 
         using var scope = scopeFactory.CreateScope();
 
+        // Order matters on an empty database: Listings and Applications have foreign keys to
+        // UsersRoles.Users, and Applications also references Listings.Apartments.
         await MigrateAsync<UsersContext>(scope, cancellationToken);
-        await MigrateAsync<ApplicationsContext>(scope, cancellationToken);
         await MigrateAsync<ListingsContext>(scope, cancellationToken);
+        await MigrateAsync<ApplicationsContext>(scope, cancellationToken);
         await MigrateAsync<NotificationContext>(scope, cancellationToken);
         await MigrateAsync<ReviewsContext>(scope, cancellationToken);
         await MigrateAsync<CommunicationsContext>(scope, cancellationToken);

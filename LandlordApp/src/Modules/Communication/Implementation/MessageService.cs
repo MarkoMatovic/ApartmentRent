@@ -1,13 +1,17 @@
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using System.Security.Claims;
 using System.Text.Json;
 using Lander.Helpers;
 using Lander.src.Common;
 using Lander.src.Infrastructure.FileStorage;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Communication.Dtos.Dto;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Communication.Hubs;
+using Lander.src.Notifications;
 using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +30,7 @@ public partial class MessageService : IMessageService
     private readonly IFileStorageService _fileStorage;
     private readonly IdempotencyService _idempotencyService;
     private readonly ILogger<MessageService> _logger;
+    private readonly IPresenceTracker _presence;
 
     public MessageService(
         CommunicationsContext context,
@@ -37,7 +42,8 @@ public partial class MessageService : IMessageService
         IWebHostEnvironment webHostEnvironment,
         IFileStorageService fileStorage,
         IdempotencyService idempotencyService,
-        ILogger<MessageService> logger)
+        ILogger<MessageService> logger,
+        IPresenceTracker presence)
     {
         _context = context;
         _usersContext = usersContext;
@@ -49,6 +55,7 @@ public partial class MessageService : IMessageService
         _fileStorage = fileStorage;
         _idempotencyService = idempotencyService;
         _logger = logger;
+        _presence = presence;
     }
 
     public async Task<MessageDto?> SendMessageAsync(int senderId, int receiverId, string messageText, bool isSuperLike = false, string? idempotencyKey = null,
@@ -67,11 +74,11 @@ public partial class MessageService : IMessageService
             var isValidPath = fileUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
                 || fileUrl.StartsWith("/api/v1/messages/files/", StringComparison.OrdinalIgnoreCase);
             if (Uri.TryCreate(fileUrl, UriKind.Absolute, out _) || !isValidPath || fileUrl.Contains(".."))
-                throw new InvalidOperationException("Nevažeći URL fajla.");
+                throw new BusinessRuleException(BusinessErrorCodes.InvalidFileUrl);
         }
 
         if (await IsUserBlockedAsync(receiverId, senderId))
-            throw new InvalidOperationException("You cannot send messages to this user.");
+            throw new BusinessRuleException(BusinessErrorCodes.MessagingNotAllowed);
 
         var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -81,7 +88,7 @@ public partial class MessageService : IMessageService
             var senderUser = await _usersContext.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserId == senderId);
             if (senderUser == null || senderUser.TokenBalance < 1)
-                throw new InvalidOperationException("Nemate dovoljno tokena za Super-Like.");
+                throw new BusinessRuleException(BusinessErrorCodes.InsufficientTokens);
         }
 
         var callerGuid = Guid.TryParse(currentUserGuid, out var cg) ? cg : (Guid?)null;
@@ -127,7 +134,9 @@ public partial class MessageService : IMessageService
             .ToDictionaryAsync(u => u.UserId);
         users.TryGetValue(senderId, out var sender);
         users.TryGetValue(receiverId, out var receiver);
-        if (receiver != null && !string.IsNullOrEmpty(receiver.Email))
+        // E-mail only reaches people who are away: someone with the site open already sees the message
+        // live (chat + bell), so a mail about it would just be noise.
+        if (receiver != null && !string.IsNullOrEmpty(receiver.Email) && !_presence.IsOnline(receiverId))
         {
             var senderName = sender != null ? $"{sender.FirstName} {sender.LastName}" : "Unknown";
             var preview = safeText.Length > 100 ? safeText.Substring(0, 100) + "..." : safeText;
@@ -164,10 +173,17 @@ public partial class MessageService : IMessageService
         await _chatHubContext.Clients.Group($"user_{senderId}").SendAsync("MessageSent", messageDto);
 
         // Broadcast to NotificationHub (Global Notification Bell)
+        // The 5th argument lets the browser show this in the user's language and open this chat on click.
+        var descriptor = NotificationDescriptor.Create(
+            "new_message",
+            new Dictionary<string, string> { ["name"] = messageDto.SenderName ?? string.Empty },
+            $"/chat?userId={senderId}");
         await _notificationHubContext.Clients.Group(receiverId.ToString()).SendAsync("ReceiveNotification",
-            "New Message",
-            $"You have a new message from {messageDto.SenderName}",
-            "info");
+            "Nova poruka",
+            $"Imate novu poruku od {messageDto.SenderName}",
+            "info",
+            string.Empty,
+            descriptor);
 
         return messageDto;
     }

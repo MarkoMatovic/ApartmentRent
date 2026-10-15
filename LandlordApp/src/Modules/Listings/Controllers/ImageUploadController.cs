@@ -105,7 +105,7 @@ public class ImageUploadController : ControllerBase
             string saveExtension;
             try
             {
-                using var img = await Image.LoadAsync(file.OpenReadStream());
+                using var img = await SafeImageDecoding.LoadAsync(file.OpenReadStream());
                 // Strip all EXIF, XMP, IPTC metadata
                 img.Metadata.ExifProfile = null;
                 img.Metadata.XmpProfile = null;

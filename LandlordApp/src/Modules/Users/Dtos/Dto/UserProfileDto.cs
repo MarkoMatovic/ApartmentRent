@@ -26,6 +26,11 @@ public class UserProfileDto
     public DateTime? BoostedUntil { get; set; }
     public DateTime? PriorityInboxUntil { get; set; }
 
+    // Two-step sign-in (own profile only)
+    public bool TwoFactorEnabled { get; set; }
+    /// <summary>Some features of this account work only while two-step sign-in is on.</summary>
+    public bool TwoFactorRequired { get; set; }
+
     // Rating information
     public decimal? AverageRating { get; set; }
     public int ReviewCount { get; set; }

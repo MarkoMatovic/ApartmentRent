@@ -1,20 +1,19 @@
 import React from 'react';
 import {
-  Card, CardActionArea, Box, Typography, Avatar, Chip,
+  Card, CardActionArea, CardActions, Box, Typography, Avatar, Chip,
   LinearProgress, Tooltip,
 } from '@mui/material';
-import {
-  LocationOn as LocationIcon,
-  Euro as EuroIcon,
-  CalendarToday as CalIcon,
-  SmokingRooms as SmokingIcon,
-  SmokeFree as NoSmokingIcon,
-  Pets as PetsIcon,
-  MusicNote as MusicIcon,
-  Favorite as HeartIcon,
-} from '@mui/icons-material';
+import LocationIcon from '@mui/icons-material/LocationOn';
+import EuroIcon from '@mui/icons-material/Euro';
+import CalIcon from '@mui/icons-material/CalendarToday';
+import SmokingIcon from '@mui/icons-material/SmokingRooms';
+import NoSmokingIcon from '@mui/icons-material/SmokeFree';
+import PetsIcon from '@mui/icons-material/Pets';
+import MusicIcon from '@mui/icons-material/MusicNote';
+import HeartIcon from '@mui/icons-material/Favorite';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import ProposeRoommateButton from './ProposeRoommateButton';
 import {
   Roommate,
   getAge, formatAvailableFrom,
@@ -72,19 +71,28 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
       transition: 'transform 0.15s, box-shadow 0.15s',
       '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 },
     }}>
-      {/* Badges */}
-      <Box sx={{ position: 'absolute', top: 10, left: 10, zIndex: 2, display: 'flex', gap: 0.5, flexDirection: 'column' }}>
-        {isOwn && (
-          <Chip label={t('myProfileBadge')} size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
-        )}
-      </Box>
-      {matchScore !== undefined && (
-        <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}>
-          <Chip
-            icon={<HeartIcon sx={{ fontSize: '0.9rem !important', color: matchColor + ' !important' }} />}
-            label={`${matchScore.toFixed(0)}%`} size="small"
-            sx={{ bgcolor: 'background.paper', fontWeight: 800, fontSize: '0.78rem', border: `2px solid ${matchColor}`, color: matchColor }}
-          />
+      {/* Badges: in the top-right corner of the card, above the name, never over the photo */}
+      {(isOwn || roommate.isTaken || matchScore !== undefined) && (
+        <Box
+          data-card-badges
+          sx={{
+            position: 'absolute', top: 10, right: 10, zIndex: 2, maxWidth: 'calc(100% - 20px)',
+            display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 0.5,
+          }}
+        >
+          {isOwn && (
+            <Chip label={t('myProfileBadge')} size="small" color="primary" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+          )}
+          {roommate.isTaken && (
+            <Chip label={t('pairing:taken')} size="small" color="warning" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+          )}
+          {matchScore !== undefined && (
+            <Chip
+              icon={<HeartIcon sx={{ fontSize: '0.9rem !important', color: matchColor + ' !important' }} />}
+              label={`${matchScore.toFixed(0)}%`} size="small"
+              sx={{ bgcolor: 'background.paper', fontWeight: 800, fontSize: '0.78rem', border: `2px solid ${matchColor}`, color: matchColor }}
+            />
+          )}
         </Box>
       )}
 
@@ -200,6 +208,13 @@ const RoommateCard: React.FC<Props> = ({ roommate, matchScore, isOwn }) => {
           </Box>
         )}
       </CardActionArea>
+
+      {/* Proposing to be roommates does not need the profile page first. Not on my own card. */}
+      {!isOwn && (
+        <CardActions sx={{ px: 2, pb: 1.5, pt: 0, justifyContent: 'flex-end' }}>
+          <ProposeRoommateButton compact userId={roommate.userId} firstName={roommate.firstName} isTaken={roommate.isTaken} />
+        </CardActions>
+      )}
     </Card>
   );
 };

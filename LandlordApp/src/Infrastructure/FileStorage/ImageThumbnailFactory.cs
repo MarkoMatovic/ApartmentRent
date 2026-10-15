@@ -23,8 +23,7 @@ public static class ImageThumbnailFactory
     {
         try
         {
-            using var input = new MemoryStream(sourceBytes);
-            using var image = await Image.LoadAsync(input, ct);
+            using var image = SafeImageDecoding.Load(sourceBytes);
 
             image.Metadata.ExifProfile = null;
             image.Metadata.XmpProfile = null;

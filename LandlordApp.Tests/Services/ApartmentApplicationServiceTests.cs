@@ -2,15 +2,19 @@ using Xunit;
 using Moq;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
+using Lander.src.Notifications.Dtos.InputDto;
+using Lander.src.Notifications.Interfaces;
 using Lander;
 using Lander.src.Modules.ApartmentApplications.Implementation;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Listings.Interfaces;
 using Lander.src.Modules.Listings.Models;
-using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
+using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
+using Lander.src.Modules.Communication.Interfaces;
+using Lander.src.Infrastructure.Services;
+using Microsoft.Extensions.Logging;
 
 namespace LandlordApp.Tests.Services;
 
@@ -18,8 +22,11 @@ public class ApartmentApplicationServiceTests : IDisposable
 {
     private readonly ApplicationsContext _context;
     private readonly Mock<IApartmentService> _mockApartmentService;
-    private readonly Mock<IHubContext<NotificationHub>> _mockNotificationHub;
     private readonly Mock<IUserInterface> _mockUserService;
+    private readonly Mock<IEmailService> _mockEmail = new();
+    private readonly Mock<IPresenceTracker> _mockPresence = new();
+    private readonly Mock<INotificationService> _mockBell = new();
+    private readonly List<CreateNotificationInputDto> _sent = new();
     private readonly ApartmentApplicationService _service;
 
     private const int TenantUserId    = 10;
@@ -36,14 +43,13 @@ public class ApartmentApplicationServiceTests : IDisposable
         _context = new ApplicationsContext(options);
 
         _mockApartmentService  = new Mock<IApartmentService>();
-        _mockNotificationHub   = new Mock<IHubContext<NotificationHub>>();
         _mockUserService       = new Mock<IUserInterface>();
 
-        // Setup notification hub (so calls don't throw)
-        var mockClients      = new Mock<IHubClients>();
-        var mockClientProxy  = new Mock<IClientProxy>();
-        mockClients.Setup(x => x.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
-        _mockNotificationHub.Setup(x => x.Clients).Returns(mockClients.Object);
+        // Every notification goes through INotificationService (stored + pushed); remember what was sent.
+        _mockBell
+            .Setup(b => b.SendNotificationAsync(It.IsAny<CreateNotificationInputDto>()))
+            .Callback<CreateNotificationInputDto>(dto => _sent.Add(dto))
+            .ReturnsAsync(new Lander.src.Notifications.Dtos.Dto.NotificationDto());
 
         // Default apartment stub
         _mockApartmentService
@@ -80,6 +86,11 @@ public class ApartmentApplicationServiceTests : IDisposable
         });
         listingsContext.SaveChanges();
 
+        usersContext.Users.AddRange(
+            new User { UserId = LandlordUserId, UserGuid = Guid.NewGuid(), FirstName = "Lana", LastName = "Stanodavac", Email = "lana@test.com", Password = "x", IsActive = true },
+            new User { UserId = TenantUserId, UserGuid = Guid.NewGuid(), FirstName = "Tara", LastName = "Stanar", Email = "tara@test.com", Password = "x", IsActive = true });
+        usersContext.SaveChanges();
+
         var mockHttp = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
         mockHttp.Setup(x => x.HttpContext).Returns(new Microsoft.AspNetCore.Http.DefaultHttpContext());
 
@@ -88,10 +99,24 @@ public class ApartmentApplicationServiceTests : IDisposable
             listingsContext,
             usersContext,
             _mockApartmentService.Object,
-            _mockNotificationHub.Object,
-            new Mock<Lander.src.Notifications.Interfaces.INotificationService>().Object,
+            _mockBell.Object,
             _mockUserService.Object,
-            mockHttp.Object);
+            mockHttp.Object,
+            _mockEmail.Object,
+            _mockPresence.Object,
+            new Mock<ILogger<ApartmentApplicationService>>().Object);
+    }
+
+    private async Task<ApartmentApplication> SeedApplicationAsync(string status)
+    {
+        var app = new ApartmentApplication
+        {
+            UserId = TenantUserId, ApartmentId = ApartmentId, Status = status,
+            ApplicationDate = DateTime.UtcNow, CreatedDate = DateTime.UtcNow, CreatedByGuid = Guid.NewGuid(),
+        };
+        _context.ApartmentApplications.Add(app);
+        await _context.SaveChangesAsync();
+        return app;
     }
 
     public void Dispose()
@@ -156,14 +181,76 @@ public class ApartmentApplicationServiceTests : IDisposable
     [Fact]
     public async Task ApplyForApartmentAsync_ShouldNotifyLandlord()
     {
-        // Act
         await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
 
-        // Assert — SignalR ReceiveNotification called for landlord group
-        var mockClients = _mockNotificationHub.Object.Clients;
-        Mock.Get(mockClients).Verify(
-            x => x.Group(LandlordUserId.ToString()),
-            Times.AtLeastOnce);
+        _sent.Should().ContainSingle(n => n.RecipientUserId == LandlordUserId);
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_TheNotificationNamesTheApplicantAndTheApartmentInSerbian()
+    {
+        await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        var n = _sent.Single();
+        n.Title.Should().Be("Nova prijava za vaš stan");
+        n.Message.Should().Contain("Tara Stanar").And.Contain("Test Apartment");
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_TheNotificationIsTranslatableAndOpensTheReceivedApplications()
+    {
+        await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        var n = _sent.Single();
+        n.Key.Should().Be("application_new");
+        n.Params.Should().Contain("name", "Tara Stanar").And.Contain("title", "Test Apartment");
+        n.ActionTarget.Should().Be("/applications/received");
+        n.SenderUserId.Should().Be(TenantUserId);
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_WhenTheNotificationCannotBeSent_TheApplicationIsStillSaved()
+    {
+        _mockBell.Setup(b => b.SendNotificationAsync(It.IsAny<CreateNotificationInputDto>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+
+        var result = await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        result.Should().NotBeNull();
+        (await _context.ApartmentApplications.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_LandlordIsAway_GetsAnEmailToo()
+    {
+        _mockPresence.Setup(p => p.IsOnline(LandlordUserId)).Returns(false);
+
+        await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        _mockEmail.Verify(e => e.SendNewApplicationEmailAsync("lana@test.com", "Lana", "Test Apartment"), Times.Once);
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_LandlordIsOnTheSite_NoEmailJustTheLiveNotification()
+    {
+        _mockPresence.Setup(p => p.IsOnline(LandlordUserId)).Returns(true);
+
+        await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        _mockEmail.Verify(e => e.SendNewApplicationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _sent.Should().ContainSingle(n => n.RecipientUserId == LandlordUserId);
+    }
+
+    [Fact]
+    public async Task ApplyForApartmentAsync_WhenTheEmailFails_TheApplicationIsStillSaved()
+    {
+        _mockEmail.Setup(e => e.SendNewApplicationEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("mail down"));
+
+        var result = await _service.ApplyForApartmentAsync(TenantUserId, ApartmentId);
+
+        result.Should().NotBeNull();
+        (await _context.ApartmentApplications.CountAsync()).Should().Be(1);
     }
 
     #endregion
@@ -299,6 +386,51 @@ public class ApartmentApplicationServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result!.Status.Should().Be("Rejected");
+    }
+
+    [Fact]
+    public async Task UpdateApplicationStatusAsync_Approved_TellsTheTenantAndLinksToTheApartment()
+    {
+        var app = await SeedApplicationAsync("Pending");
+
+        await _service.UpdateApplicationStatusAsync(app.ApplicationId, "Approved", LandlordUserId);
+
+        var n = _sent.Single(x => x.RecipientUserId == TenantUserId);
+        n.Key.Should().Be("application_approved");
+        n.Type.Should().Be("success");
+        n.Params.Should().Contain("title", "Test Apartment");
+        n.ActionTarget.Should().Be($"/apartments/{ApartmentId}");
+        n.Message.Should().Contain("odobrena");
+    }
+
+    [Fact]
+    public async Task UpdateApplicationStatusAsync_Rejected_SendsTheRejectionTypeWithTheDataTheDialogNeeds()
+    {
+        var app = await SeedApplicationAsync("Pending");
+
+        await _service.UpdateApplicationStatusAsync(app.ApplicationId, "Rejected", LandlordUserId);
+
+        var n = _sent.Single(x => x.RecipientUserId == TenantUserId);
+        n.Key.Should().Be("application_rejected");
+        n.Type.Should().Be("rejection");
+        n.Metadata.Should().Contain("Test Apartment").And.Contain($"\"apartmentId\":{ApartmentId}");
+        n.ActionTarget.Should().Be("/applications/sent");
+    }
+
+    [Theory]
+    [InlineData("Pending", "application_pending")]
+    [InlineData("Cancelled", "application_cancelled")]
+    [InlineData("Completed", "application_status")]
+    public async Task UpdateApplicationStatusAsync_OtherStatuses_UseTheirOwnKeyOrTheGenericOne(string status, string key)
+    {
+        var app = await SeedApplicationAsync("Approved");
+
+        await _service.UpdateApplicationStatusAsync(app.ApplicationId, status, LandlordUserId);
+
+        var n = _sent.Single(x => x.RecipientUserId == TenantUserId);
+        n.Key.Should().Be(key);
+        n.Params.Should().Contain("status", status);
+        n.Type.Should().Be("info");
     }
 
     [Fact]

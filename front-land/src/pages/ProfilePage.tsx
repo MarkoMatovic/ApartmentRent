@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -25,15 +26,38 @@ import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Tooltip from '@mui/material/Tooltip';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import TwoFactorSection from '../components/Profile/TwoFactorSection';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { useAuth } from '../shared/context/AuthContext';
 import { authApi } from '../shared/api/auth';
+import { usersApi } from '../shared/api/usersApi';
+import { mergeProfile } from '../shared/auth/userProfile';
 import { setAccessToken } from '../shared/api/tokenStore';
 import { apiClient } from '../shared/api/client';
 
 const ProfilePage: React.FC = () => {
   const { t } = useTranslation(['common', 'profile']);
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logoutEverywhere } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // AuthContext already merges the stored profile once after sign-in; this refreshes it when the
+  // page opens so the form shows what is stored right now instead of a stale copy.
+  const { data: serverProfile } = useQuery({
+    queryKey: ['my-profile', user?.userId],
+    queryFn: () => usersApi.getProfile(user!.userId),
+    enabled: !!user?.userId,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!serverProfile || !user) return;
+    updateUser(mergeProfile(user, serverProfile));
+    // Merge once per fetched profile; `user`/`updateUser` change as a result and must not re-trigger it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverProfile]);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
@@ -44,6 +68,21 @@ const ProfilePage: React.FC = () => {
   const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordError, setPasswordError] = useState('');
   const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+
+  const handleLogoutEverywhere = async () => {
+    setLoggingOutAll(true);
+    try {
+      await logoutEverywhere();
+      navigate('/login', { replace: true });
+    } catch {
+      setError(t('profile:logoutEverywhereFailed'));
+      setLogoutAllDialogOpen(false);
+    } finally {
+      setLoggingOutAll(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setIsUpdating(true);
@@ -62,8 +101,8 @@ const ProfilePage: React.FC = () => {
         sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);
-    } catch (error: any) {
-      setError(error.response?.data || 'Failed to delete account');
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, t));
     } finally {
       setIsUpdating(false);
       setDeleteDialogOpen(false);
@@ -163,8 +202,8 @@ const ProfilePage: React.FC = () => {
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data || 'Failed to update profile');
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, t));
     } finally {
       setIsUpdating(false);
     }
@@ -187,8 +226,8 @@ const ProfilePage: React.FC = () => {
         sessionStorage.removeItem('user');
         window.location.href = '/login';
       }, 2000);
-    } catch (error: any) {
-      setError(error.response?.data || 'Failed to deactivate account');
+    } catch (error: unknown) {
+      setError(getApiErrorMessage(error, t));
     } finally {
       setDeactivateDialogOpen(false);
     }
@@ -238,11 +277,7 @@ const ProfilePage: React.FC = () => {
   const handleChangePassword = async () => {
     setPasswordError('');
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return;
-    }
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters');
+      setPasswordError(t('auth:passwordsDoNotMatch'));
       return;
     }
     if (!user?.userGuid) return;
@@ -257,8 +292,10 @@ const ProfilePage: React.FC = () => {
       setChangePasswordDialogOpen(false);
       setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setPasswordError(err.response?.data || 'Failed to change password');
+    } catch (err: unknown) {
+      // The password policy is enforced by the server, which reports the broken rule as a code;
+      // a wrong current password comes back as a business-rule code.
+      setPasswordError(getApiErrorMessage(err, t));
     } finally {
       setPasswordUpdating(false);
     }
@@ -529,12 +566,25 @@ const ProfilePage: React.FC = () => {
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
           <Typography variant="h6" gutterBottom>{t('profile:security', { defaultValue: 'Security' })}</Typography>
-          <Button
-            variant="outlined"
-            onClick={() => setChangePasswordDialogOpen(true)}
-          >
-            {t('profile:changePassword', { defaultValue: 'Change Password' })}
-          </Button>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setChangePasswordDialogOpen(true)}
+            >
+              {t('profile:changePassword', { defaultValue: 'Change Password' })}
+            </Button>
+            <Button variant="outlined" onClick={() => setLogoutAllDialogOpen(true)}>
+              {t('profile:logoutEverywhere')}
+            </Button>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {t('profile:logoutEverywhereHint')}
+          </Typography>
+          <TwoFactorSection
+            enabled={!!user?.twoFactorEnabled}
+            required={!!user?.twoFactorRequired}
+            onChanged={() => queryClient.invalidateQueries({ queryKey: ['my-profile', user?.userId] })}
+          />
         </Box>
 
         <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
@@ -604,6 +654,19 @@ const ProfilePage: React.FC = () => {
           <Button onClick={() => setDeactivateDialogOpen(false)}>{t('common:cancel')}</Button>
           <Button onClick={handleDeactivateAccount} color="error" variant="contained" disabled={isUpdating}>
             {isUpdating ? <CircularProgress size={24} /> : t('profile:deactivate')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={logoutAllDialogOpen} onClose={() => setLogoutAllDialogOpen(false)}>
+        <DialogTitle>{t('profile:logoutEverywhere')}</DialogTitle>
+        <DialogContent>
+          <Typography>{t('profile:logoutEverywhereConfirm')}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoutAllDialogOpen(false)}>{t('common:cancel')}</Button>
+          <Button onClick={handleLogoutEverywhere} variant="contained" disabled={loggingOutAll}>
+            {loggingOutAll ? <CircularProgress size={24} /> : t('profile:logoutEverywhere')}
           </Button>
         </DialogActions>
       </Dialog>

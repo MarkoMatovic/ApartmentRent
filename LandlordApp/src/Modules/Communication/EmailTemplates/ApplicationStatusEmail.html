@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bs">
+<html lang="sr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,22 +23,22 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Azuriranje statusa prijave</h1>
+            <h1>Ažuriranje statusa prijave</h1>
         </div>
         <div class="content">
             <p>Zdravo <strong>{{TenantName}}</strong>,</p>
-            <p>Status vase prijave za stan <strong>{{ApartmentTitle}}</strong> je azuriran:</p>
+            <p>Status vaše prijave za stan <strong>{{ApartmentTitle}}</strong> je ažuriran:</p>
             <div class="status-box status-{{StatusLower}}">
                 {{StatusLabel}}
             </div>
-            <p>Prijavite se na vase korisnicko mjesto da vidite detalje i eventualne poruke od stanodavca.</p>
+            <p>Prijavite se na svoj nalog da vidite detalje i eventualne poruke od stanodavca.</p>
             <div class="button-wrap">
-                <a href="https://turentaj.com/my-applications" class="button">Pogledaj prijavu</a>
+                <a href="{{BaseUrl}}/applications/sent" class="button">Pogledaj prijavu</a>
             </div>
         </div>
         <div class="footer">
-            <p>&copy; 2026 TuRentaj. Sva prava zadrzana.</p>
-            <p>Pitanja? Pisite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
+            <p>&copy; 2026 TuRentaj. Sva prava zadržana.</p>
+            <p>Pitanja? Pišite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
         </div>
     </div>
 </body>

@@ -1,5 +1,8 @@
 using Lander;
 using Lander.src.Modules.Communication.Interfaces;
+using Lander.src.Modules.Listings.Interfaces;
+using Lander.src.Infrastructure.FileStorage;
+using LandlordApp.Tests.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Lander.src.Modules.Reviews.Interfaces;
 using Lander.src.Modules.Reviews.proto;
@@ -31,6 +34,10 @@ public class E2eWebApplicationFactory : WebApplicationFactory<Program>
     // ── Exposed mocks (tests can Setup / Verify on these) ────────────────────
     public Mock<IEmailService>     MockEmail  { get; } = new();
     public Mock<IReviewFavoriteService> MockReviews  { get; } = new();
+    /// <summary>Stands in for OpenStreetMap Nominatim: no test may touch the network.</summary>
+    public Mock<IGeocodingService> MockGeocoding { get; } = new();
+    /// <summary>File storage in memory, so tests never write into the API's wwwroot or a real blob account.</summary>
+    public InMemoryFileStorage Storage { get; } = new();
 
     public E2eWebApplicationFactory(string connectionString)
     {
@@ -75,8 +82,14 @@ public class E2eWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IEmailService>();
             services.AddScoped<IEmailService>(_ => MockEmail.Object);
 
+            services.RemoveAll<IGeocodingService>();
+            services.AddScoped<IGeocodingService>(_ => MockGeocoding.Object);
+
             services.RemoveAll<IReviewFavoriteService>();
             services.AddScoped<IReviewFavoriteService>(_ => MockReviews.Object);
+
+            services.RemoveAll<IFileStorageService>();
+            services.AddSingleton<IFileStorageService>(Storage);
 
             // Default NoopGrpcClient behaviour so tests that don't care don't fail
             SetupDefaultGrpcMockBehavior();
@@ -95,6 +108,8 @@ public class E2eWebApplicationFactory : WebApplicationFactory<Program>
     {
         MockEmail.Reset();
         MockReviews.Reset();
+        MockGeocoding.Reset();
+        Storage.Reset();
         SetupDefaultGrpcMockBehavior();
     }
 

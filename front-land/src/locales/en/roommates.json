@@ -83,7 +83,6 @@
   "profileCount_one": "{{count}} profile",
   "profileCount_other": "{{count}} profiles",
   "aiMatchPrompt": "Create a roommate profile to see AI matches with others.",
-  "myProfile": "My profile",
   "noResults": "No results for these filters",
   "noResultsHint": "Try with fewer filters",
   "removeAllFilters": "Remove all filters",
@@ -195,12 +194,16 @@
   "matchesUnavailable": "Roommate matching requires a roommate profile. Create one to see your matches.",
   "noMatches": "No matches found yet.",
   "noMatchesHint": "Complete your roommate profile with more details to improve matching.",
-  "matchesFound": "Found {{count}} compatible roommates",
   "compatibility": "Compatibility",
   "lifestyleFactor": "Lifestyle {{percent}}%",
   "budgetFactor": "Budget {{percent}}%",
   "cleanlinessFactor": "Cleanliness {{percent}}%",
   "compatibilityTooltip": "{{percent}}% compatibility",
   "budgetMinPrefix": "from",
-  "budgetMaxPrefix": "up to"
+  "budgetMaxPrefix": "up to",
+  "matchesFound_one": "Found {{count}} compatible roommate",
+  "matchesFound_other": "Found {{count}} compatible roommates",
+  "preferencesFactor": "Preferences {{percent}}%",
+  "locationFactor": "Location {{percent}}%",
+  "refreshMatches": "Refresh matches"
 }

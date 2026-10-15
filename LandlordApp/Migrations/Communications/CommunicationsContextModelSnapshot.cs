@@ -23,6 +23,75 @@ namespace Lander.Migrations.Communications
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroup", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupId"));
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("GroupId");
+
+                    b.ToTable("ChatGroups", "Communication");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroupMember", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("JoinedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("LastReadMessageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ChatGroupMembers", "Communication");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroupMessage", b =>
+                {
+                    b.Property<int>("GroupMessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupMessageId"));
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("GroupMessageId");
+
+                    b.HasIndex("GroupId", "GroupMessageId");
+
+                    b.ToTable("ChatGroupMessages", "Communication");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Communication.Models.ConversationSettings", b =>
                 {
                     b.Property<int>("SettingId")
@@ -317,6 +386,28 @@ namespace Lander.Migrations.Communications
                     b.ToTable("ReportedMessages", "Communication");
                 });
 
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroupMember", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Communication.Models.ChatGroup", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroupMessage", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Communication.Models.ChatGroup", "Group")
+                        .WithMany("Messages")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Communication.Models.ReportedMessage", b =>
                 {
                     b.HasOne("Lander.src.Modules.Communication.Models.Message", "Message")
@@ -327,6 +418,13 @@ namespace Lander.Migrations.Communications
                         .HasConstraintName("FK__ReportedMessages__Message");
 
                     b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Communication.Models.ChatGroup", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

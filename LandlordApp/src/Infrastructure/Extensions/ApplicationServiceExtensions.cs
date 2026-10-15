@@ -57,6 +57,9 @@ public static class ApplicationServiceExtensions
 
         // --- User sub-services (registered before UserService facade) ---
         services.AddScoped<IUserRoleUpgradeService, UserRoleUpgradeService>();
+        services.AddScoped<IProfilePictureService, ProfilePictureService>();
+        services.AddScoped<ITwoFactorService, TwoFactorService>();
+        services.AddScoped<Lander.src.Modules.Users.Services.ProfilePictureMigrationService>();
         services.AddScoped<IPasswordService, PasswordService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
@@ -70,6 +73,7 @@ public static class ApplicationServiceExtensions
 
         // --- Email template renderer + email service ---
         services.AddScoped<IEmailTemplateRenderer, EmailTemplateRenderer>();
+        services.AddSingleton<Lander.src.Modules.Communication.Services.IBrevoEmailClient, Lander.src.Modules.Communication.Services.BrevoEmailClient>();
         services.AddScoped<IEmailService, EmailService>();
 
         // --- Apartment notification service ---
@@ -94,11 +98,14 @@ public static class ApplicationServiceExtensions
         services.AddTransient<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>();
         services.AddTransient<Lander.src.Modules.Communication.Services.EmailLogCleanupService>();
         services.AddTransient<Lander.src.Modules.Listings.Services.ListingExpirationService>();
+        services.AddTransient<Lander.src.Modules.Listings.Services.ApartmentGeocodingBackfillService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IRoommateService, RoommateService>();
+        services.AddScoped<Lander.src.Modules.Roommates.Interfaces.IRoommatePairingService, Lander.src.Modules.Roommates.Implementation.RoommatePairingService>();
         services.AddScoped<ISearchRequestService, SearchRequestService>();
         services.AddScoped<ISavedSearchService, SavedSearchService>();
         services.AddScoped<IMessageService, MessageService>();
+        services.AddScoped<Lander.src.Modules.Communication.Interfaces.IChatGroupService, Lander.src.Modules.Communication.Implementation.ChatGroupService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService, Lander.src.Modules.Analytics.Implementation.AnalyticsService>();
         services.AddScoped<Lander.src.Modules.MachineLearning.Interfaces.IPricePredictionService, Lander.src.Modules.MachineLearning.Implementation.PricePredictionService>();
@@ -106,6 +113,17 @@ public static class ApplicationServiceExtensions
 
         // --- Neighbourhood Insights (Walk Score + OpenStreetMap Overpass) ---
         services.AddScoped<INeighbourhoodService, Lander.src.Modules.Listings.Services.NeighbourhoodService>();
+        // Address → map coordinates (OpenStreetMap Nominatim: free, no key, 1 request/second).
+        services.AddScoped<Lander.src.Modules.Listings.Interfaces.IGeocodingService,
+                           Lander.src.Modules.Listings.Services.NominatimGeocodingService>();
+        services.AddHttpClient(Lander.src.Modules.Listings.Services.NominatimGeocodingService.HttpClientName, c =>
+        {
+            c.BaseAddress = new Uri(configuration["Geocoding:BaseUrl"] ?? "https://nominatim.openstreetmap.org/");
+            c.Timeout     = TimeSpan.FromSeconds(5);
+            // Nominatim's policy requires an identifying User-Agent (set a contact in Geocoding:UserAgent).
+            c.DefaultRequestHeaders.UserAgent.ParseAdd(configuration["Geocoding:UserAgent"] ?? "TuRentaj/1.0");
+            c.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
         services.AddHttpClient("WalkScore", c =>
         {
             c.Timeout = TimeSpan.FromSeconds(5);

@@ -91,6 +91,114 @@ public class AuthE2eTests : E2eTestBase
         logoutResp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    // ── Sessions per device ───────────────────────────────────────────────────
+
+    /// <summary>A browser of its own: its own cookie jar, so its own session.</summary>
+    private HttpClient NewDevice() => Fixture.Factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+    {
+        AllowAutoRedirect = false,
+        HandleCookies     = true,
+        BaseAddress       = new Uri("https://localhost"), // the cookie is Secure
+    });
+
+    /// <summary>Signs in and returns the refresh token the server put in the cookie.</summary>
+    private static async Task<string> SignInAsync(HttpClient device, string email)
+    {
+        var response = await device.PostAsJsonAsync("/api/v1/auth/login", new { Email = email, Password = "Pass123!" });
+        response.EnsureSuccessStatusCode();
+        var access = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
+        device.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", access);
+        return RefreshCookieOf(response);
+    }
+
+    private static string RefreshCookieOf(HttpResponseMessage response) =>
+        response.Headers.GetValues("Set-Cookie")
+            .Single(c => c.StartsWith("refreshToken="))
+            .Split(';')[0]["refreshToken=".Length..];
+
+    private static Task<HttpResponseMessage> RefreshAsync(HttpClient device) =>
+        device.PostAsync("/api/v1/auth/token/refresh", null);
+
+    /// <summary>Presents a refresh token the way a copied cookie would be, from somewhere else.</summary>
+    private async Task<HttpStatusCode> RefreshWithAsync(string rawToken) =>
+        (await NewDevice().PostAsJsonAsync("/api/v1/auth/token/refresh", new { RefreshToken = rawToken })).StatusCode;
+
+    [Fact]
+    public async Task Sessions_SigningInOnASecondDevice_KeepsTheFirstOneSignedIn()
+    {
+        await Data.CreateUserAsync("two-devices@e2e.com", "Pass123!");
+        var laptop = NewDevice();
+        var phone  = NewDevice();
+        await SignInAsync(laptop, "two-devices@e2e.com");
+        await SignInAsync(phone, "two-devices@e2e.com");
+
+        (await RefreshAsync(laptop)).StatusCode.Should().Be(HttpStatusCode.OK, "signing in on the phone used to sign the laptop out");
+        (await RefreshAsync(phone)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Sessions_Refresh_ExchangesTheCookie_AndTheOldValueStopsWorking()
+    {
+        await Data.CreateUserAsync("rotate@e2e.com", "Pass123!");
+        var device = NewDevice();
+        var first  = await SignInAsync(device, "rotate@e2e.com");
+
+        var refresh = await RefreshAsync(device);
+
+        refresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        RefreshCookieOf(refresh).Should().NotBe(first).And.MatchRegex("^[0-9a-f]{64}$");
+        (await RefreshAsync(device)).StatusCode.Should().Be(HttpStatusCode.OK, "the browser keeps the new cookie");
+    }
+
+    [Fact]
+    public async Task Sessions_TwoTabsRefreshingAtTheSameMoment_BothStaySignedIn()
+    {
+        await Data.CreateUserAsync("two-tabs@e2e.com", "Pass123!");
+        var browser = NewDevice();
+        await SignInAsync(browser, "two-tabs@e2e.com");
+
+        var tabs = await Task.WhenAll(RefreshAsync(browser), RefreshAsync(browser));
+
+        tabs.Select(t => t.StatusCode).Should().AllBeEquivalentTo(HttpStatusCode.OK);
+        (await RefreshAsync(browser)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Logout_EndsOnlyThisDevicesSession()
+    {
+        await Data.CreateUserAsync("logout-one@e2e.com", "Pass123!");
+        var laptop = NewDevice();
+        var phone  = NewDevice();
+        await SignInAsync(laptop, "logout-one@e2e.com");
+        var phoneCookie = await SignInAsync(phone, "logout-one@e2e.com");
+
+        (await phone.PostAsync("/api/v1/auth/logout", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await RefreshWithAsync(phoneCookie)).Should().Be(HttpStatusCode.Unauthorized, "the phone's session is over on the server, not only its cookie");
+        (await RefreshAsync(laptop)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task LogoutEverywhere_EndsTheSessionsOfAllDevices()
+    {
+        await Data.CreateUserAsync("logout-all@e2e.com", "Pass123!");
+        var laptop = NewDevice();
+        var phone  = NewDevice();
+        await SignInAsync(laptop, "logout-all@e2e.com");
+        var phoneCookie = await SignInAsync(phone, "logout-all@e2e.com");
+
+        (await laptop.PostAsync("/api/v1/auth/logout-everywhere", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await RefreshWithAsync(phoneCookie)).Should().Be(HttpStatusCode.Unauthorized);
+        (await RefreshAsync(laptop)).StatusCode.Should().NotBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task LogoutEverywhere_WithoutAuth_Returns401()
+    {
+        (await HttpClient.PostAsync("/api/v1/auth/logout-everywhere", null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ── Protected endpoints ───────────────────────────────────────────────────
 
     [Fact]

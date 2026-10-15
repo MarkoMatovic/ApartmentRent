@@ -48,7 +48,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUserNotifications_ReturnsOk()
     {
-        _mockService.Setup(s => s.GetUserNotificationsAsync(5))
+        _mockService.Setup(s => s.GetUserNotificationsAsync(5, It.IsAny<int>()))
             .ReturnsAsync(new List<NotificationDto> { SampleNotification });
 
         var result = await _controller.GetUserNotifications(5);
@@ -62,7 +62,7 @@ public class NotificationsControllerTests
     {
         // Caller may only read their own notifications — authenticate as user 99
         _controller.ControllerContext = MakeAuthContext(99);
-        _mockService.Setup(s => s.GetUserNotificationsAsync(99))
+        _mockService.Setup(s => s.GetUserNotificationsAsync(99, It.IsAny<int>()))
             .ReturnsAsync(new List<NotificationDto>());
 
         var result = await _controller.GetUserNotifications(99);
@@ -81,7 +81,7 @@ public class NotificationsControllerTests
     [Fact]
     public async Task GetUserNotifications_ServiceThrows_PropagatesException()
     {
-        _mockService.Setup(s => s.GetUserNotificationsAsync(It.IsAny<int>()))
+        _mockService.Setup(s => s.GetUserNotificationsAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ThrowsAsync(new Exception("DB error"));
 
         Func<Task> act = async () => await _controller.GetUserNotifications(5);

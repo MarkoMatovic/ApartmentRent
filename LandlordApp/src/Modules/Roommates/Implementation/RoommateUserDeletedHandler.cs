@@ -6,6 +6,17 @@ namespace Lander.src.Modules.Roommates.Implementation;
 public class RoommateUserDeletedHandler : IUserDeletedHandler
 {
     private readonly IRoommateService _roommateService;
-    public RoommateUserDeletedHandler(IRoommateService roommateService) => _roommateService = roommateService;
-    public Task HandleAsync(int userId) => _roommateService.DeleteRoommateByUserIdAsync(userId);
+    private readonly IRoommatePairingService _pairingService;
+
+    public RoommateUserDeletedHandler(IRoommateService roommateService, IRoommatePairingService pairingService)
+    {
+        _roommateService = roommateService;
+        _pairingService = pairingService;
+    }
+
+    public async Task HandleAsync(int userId)
+    {
+        await _roommateService.DeleteRoommateByUserIdAsync(userId);
+        await _pairingService.EndAllForUserAsync(userId);
+    }
 }

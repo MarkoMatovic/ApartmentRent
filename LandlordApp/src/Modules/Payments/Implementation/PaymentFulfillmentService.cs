@@ -179,12 +179,15 @@ public class PaymentFulfillmentService : IPaymentFulfillmentService
     {
         try
         {
+            var purchase = DescribePurchase(planId);
             await _notifications.SendNotificationAsync(new CreateNotificationInputDto
             {
                 Title           = "Uspešna kupovina",
-                Message         = BuildPurchaseMessage(planId),
+                Message         = purchase.Message,
                 ActionType      = "purchase",
                 ActionTarget    = "/istorija-placanja",
+                Key             = purchase.Key,
+                Params          = purchase.Params,
                 CreatedByGuid   = Guid.Empty,
                 SenderUserId    = 0,
                 RecipientUserId = userId
@@ -196,21 +199,28 @@ public class PaymentFulfillmentService : IPaymentFulfillmentService
         }
     }
 
-    private string BuildPurchaseMessage(string planId)
+    /// <summary>
+    /// What the purchase granted: the Serbian text (stored, and the fallback) and the translation key with its
+    /// values, which the browser shows in the user's own language.
+    /// </summary>
+    private (string Message, string Key, Dictionary<string, string> Params) DescribePurchase(string planId)
     {
         if (TokenPlans.TryGetValue(planId, out var tokens))
-            return $"Uspešno ste kupili {tokens} tokena — dodati su na vaš nalog.";
+            return ($"Uspešno ste kupili {tokens} tokena — dodati su na vaš nalog.", "purchase_tokens",
+                new() { ["tokens"] = tokens.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         if (planId.StartsWith("analytics", StringComparison.OrdinalIgnoreCase))
-            return "Napredna analitika je aktivirana na vašem nalogu.";
+            return ("Napredna analitika je aktivirana na vašem nalogu.", "purchase_analytics", new());
         if (FeaturedDays.TryGetValue(planId, out var featuredDays))
-            return $"Vaš oglas je istaknut na vrhu pretrage narednih {featuredDays} dana.";
+            return ($"Vaš oglas je istaknut na vrhu pretrage narednih {featuredDays} dana.", "purchase_featured",
+                new() { ["days"] = featuredDays.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         if (ListingCreditPlans.TryGetValue(planId, out var credits))
-            return $"Dodato je {credits} kredita za objavu oglasa.";
+            return ($"Dodato je {credits} kredita za objavu oglasa.", "purchase_credits",
+                new() { ["credits"] = credits.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         if (planId == "boost-7")
-            return "Boost profila cimera je aktiviran na 7 dana.";
+            return ("Boost profila cimera je aktiviran na 7 dana.", "purchase_boost", new());
         if (planId == "priority-30")
-            return "Priority Inbox je aktiviran na 30 dana.";
-        return "Vaša kupovina je uspešno obrađena.";
+            return ("Priority Inbox je aktiviran na 30 dana.", "purchase_priority", new());
+        return ("Vaša kupovina je uspešno obrađena.", "purchase_generic", new());
     }
 
     private async Task SendConfirmationEmailAsync(int userId, string planId, string orderReference)

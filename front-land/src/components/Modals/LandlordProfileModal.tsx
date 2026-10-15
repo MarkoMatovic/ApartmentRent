@@ -60,9 +60,6 @@ const LandlordProfileModal: React.FC<LandlordProfileModalProps> = ({ open, onClo
                                 <Typography variant="h6">
                                     {profile.firstName} {profile.lastName}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {profile.roleName || 'Landlord'}
-                                </Typography>
                             </Box>
                         </Box>
 

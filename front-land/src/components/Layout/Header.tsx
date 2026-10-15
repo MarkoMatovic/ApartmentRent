@@ -25,12 +25,9 @@ import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   Menu as MenuIcon,
-  AccountCircle,
   MoreHoriz as MoreHorizIcon,
   Analytics as AnalyticsIcon,
-  Star as StarIcon,
   Report as ReportIcon,
-  Psychology as PsychologyIcon,
   Token as TokenIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -38,15 +35,19 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../shared/context/AuthContext';
 import { useTheme as useThemeContext } from '../../shared/context/ThemeContext';
 import { useNotifications } from '../../shared/context/NotificationContext';
+import { useMyPairing } from '../../hooks/useMyPairing';
 import LanguageSwitcher from './LanguageSwitcher';
+import UserAvatar from './UserAvatar';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat', 'payments']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat', 'payments', 'pairing', 'profile']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
   const { unreadCount, unreadMessagesCount } = useNotifications();
+  // Proposals to be roommates that wait for this user's answer: they show on "My roommate" like unread messages on Chat.
+  const { incoming: roommateProposals } = useMyPairing();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -76,13 +77,15 @@ const Header: React.FC = () => {
     navigate('/', { replace: true });
   };
 
-  const navItems = [
+  // `badge`: how many things wait for the user there (shown as a red number next to the name).
+  const navItems: Array<{ label: string; path: string; badge?: number }> = [
     { label: t('apartments'), path: '/apartments' },
     ...(isAuthenticated ? [
       // /chat = real-time SignalR chat (typing indicators, read receipts)
       // /messages = REST-based message history (archive, mute, block, file upload)
-      { label: t('chat:chat', 'Chat'), path: '/chat' },
+      { label: t('chat:chat', 'Chat'), path: '/chat', badge: unreadMessagesCount },
       { label: t('roommates'), path: '/roommates' },
+      { label: t('pairing:pageTitle'), path: '/my-roommate', badge: roommateProposals.length },
     ] : []),
   ];
 
@@ -122,7 +125,8 @@ const Header: React.FC = () => {
         {!isMobile && (
           <Box sx={{ display: 'flex', gap: 1, flexGrow: 1 }}>
             {navItems.map((item) => {
-              const showBadge = (item.path === '/messages' || item.path === '/chat') && unreadMessagesCount > 0;
+              const badge = item.badge ?? 0;
+              const showBadge = badge > 0;
               return (
                 <Box
                   key={item.path}
@@ -165,25 +169,31 @@ const Header: React.FC = () => {
                     }}
                   >
                     {item.label}
-                  </Button>
-                  {showBadge && (
-                    <Badge
-                      badgeContent={unreadMessagesCount}
-                      color="error"
-                      sx={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        pointerEvents: 'none',
-                        '& .MuiBadge-badge': {
+                    {showBadge && (
+                      // Sits right after the word, inside the button, so it reads as part of "Chat".
+                      <Box
+                        component="span"
+                        aria-label={`${badge}`}
+                        sx={{
+                          ml: 0.75,
+                          minWidth: 18,
+                          height: 18,
+                          px: 0.5,
+                          borderRadius: '9px',
+                          bgcolor: 'error.main',
+                          color: '#fff',
                           fontSize: '0.7rem',
-                          minWidth: '18px',
-                          height: '18px',
-                          padding: '0 4px',
-                        },
-                      }}
-                    />
-                  )}
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {badge > 99 ? '99+' : badge}
+                      </Box>
+                    )}
+                  </Button>
                 </Box>
               );
             })}
@@ -221,10 +231,10 @@ const Header: React.FC = () => {
                       title={t('common:tokensBuyTooltip')}
                     />
                   )}
-                  <IconButton color="inherit" onClick={() => navigate('/profile')} size="medium">
-                    <AccountCircle />
+                  <IconButton color="inherit" onClick={() => navigate('/profile')} size="medium" aria-label={t('common:profile')}>
+                    <UserAvatar firstName={user?.firstName} lastName={user?.lastName} src={user?.profilePicture} size={30} />
                   </IconButton>
-                  <IconButton color="inherit" onClick={handleMenuOpen} size="medium">
+                  <IconButton color="inherit" onClick={handleMenuOpen} size="medium" aria-label={t('common:moreOptions')}>
                     <MoreHorizIcon />
                   </IconButton>
                 </>
@@ -253,7 +263,6 @@ const Header: React.FC = () => {
                   {t('receivedApplications')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/analytics/roommate'); handleMenuClose(); }}>
-                  <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                   {t('common:personalAnalytics')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/saved-searches'); handleMenuClose(); }}>
@@ -266,7 +275,6 @@ const Header: React.FC = () => {
                   {t('machineLearning:pricePredictor.title')}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/roommates/matches'); handleMenuClose(); }}>
-                  <PsychologyIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                   {t('roommates:matches', { defaultValue: 'Roommate Matches' })}
                 </MenuItem>
                 <MenuItem onClick={() => { navigate('/moje-pretplate'); handleMenuClose(); }}>
@@ -280,11 +288,10 @@ const Header: React.FC = () => {
                     onClick={() => { navigate('/pricing'); handleMenuClose(); }}
                     sx={{ color: 'warning.main', fontWeight: 'bold' }}
                   >
-                    <StarIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
                     {t('premium:upgradeToPremium')}
                   </MenuItem>
                 )}
-                {user?.roleName === 'Admin' && (
+                {user?.roleName === 'Admin' && user.twoFactorVerified && (
                   <>
                     <MenuItem onClick={() => { navigate('/admin/analytics'); handleMenuClose(); }}>
                       <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -295,6 +302,12 @@ const Header: React.FC = () => {
                       {t('chat:abuseReports')}
                     </MenuItem>
                   </>
+                )}
+                {/* Administration works only in a session confirmed with the authenticator app. */}
+                {user?.roleName === 'Admin' && !user.twoFactorVerified && (
+                  <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }} sx={{ color: 'warning.main' }}>
+                    {t('profile:twoFactorMenu')}
+                  </MenuItem>
                 )}
                 <MenuItem onClick={handleLogout}>{t('logout')}</MenuItem>
               </Menu>
@@ -331,7 +344,7 @@ const Header: React.FC = () => {
           {isAuthenticated ? (
             <Box sx={{ px: 2, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <AccountCircle sx={{ fontSize: 40 }} />
+                <UserAvatar firstName={user?.firstName} lastName={user?.lastName} src={user?.profilePicture} size={40} />
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
                     {user?.firstName} {user?.lastName}
@@ -364,13 +377,14 @@ const Header: React.FC = () => {
           {/* Navigation Items */}
           <List>
             {navItems.map((item) => {
-              const showBadge = (item.path === '/messages' || item.path === '/chat') && unreadMessagesCount > 0;
+              const badge = item.badge ?? 0;
+              const showBadge = badge > 0;
               return (
                 <ListItem key={item.path} disablePadding>
                   <ListItemButton onClick={() => { navigate(item.path); setMobileOpen(false); }}>
                     <ListItemText primary={item.label} />
                     {showBadge && (
-                      <Badge badgeContent={unreadMessagesCount} color="error" sx={{ ml: 2 }} />
+                      <Badge badgeContent={badge} color="error" sx={{ ml: 2 }} />
                     )}
                   </ListItemButton>
                 </ListItem>
@@ -420,10 +434,7 @@ const Header: React.FC = () => {
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/analytics/roommate'); setMobileOpen(false); }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AnalyticsIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                      <ListItemText primary={t('common:personalAnalytics')} />
-                    </Box>
+                    <ListItemText primary={t('common:personalAnalytics')} />
                   </ListItemButton>
                 </ListItem>
                 <ListItem disablePadding>
@@ -443,11 +454,9 @@ const Header: React.FC = () => {
                 </ListItem>
                 <ListItem disablePadding>
                   <ListItemButton onClick={() => { navigate('/roommates/matches'); setMobileOpen(false); }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PsychologyIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                      <ListItemText primary={t('roommates:matches', { defaultValue: 'Roommate Matches' })} />
-                    </Box>
+                    <ListItemText primary={t('roommates:matches', { defaultValue: 'Roommate Matches' })} />
                   </ListItemButton>
+
                 </ListItem>
                 {!user?.roleName?.includes('Premium') && (
                   <ListItem disablePadding>
@@ -455,17 +464,14 @@ const Header: React.FC = () => {
                       onClick={() => { navigate('/pricing'); setMobileOpen(false); }}
                       sx={{ bgcolor: 'warning.light' }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <StarIcon sx={{ mr: 1, fontSize: '1.2rem', color: 'warning.main' }} />
-                        <ListItemText
-                          primary={t('premium:upgradeToPremium')}
-                          sx={{ color: 'warning.main', fontWeight: 'bold' }}
-                        />
-                      </Box>
+                      <ListItemText
+                        primary={t('premium:upgradeToPremium')}
+                        sx={{ color: 'warning.main', fontWeight: 'bold' }}
+                      />
                     </ListItemButton>
                   </ListItem>
                 )}
-                {user?.roleName === 'Admin' && (
+                {user?.roleName === 'Admin' && user.twoFactorVerified && (
                   <>
                     <ListItem disablePadding>
                       <ListItemButton onClick={() => { navigate('/admin/analytics'); setMobileOpen(false); }}>
@@ -484,6 +490,13 @@ const Header: React.FC = () => {
                       </ListItemButton>
                     </ListItem>
                   </>
+                )}
+                {user?.roleName === 'Admin' && !user.twoFactorVerified && (
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={() => { navigate('/profile'); setMobileOpen(false); }}>
+                      <ListItemText primary={t('profile:twoFactorMenu')} sx={{ color: 'warning.main' }} />
+                    </ListItemButton>
+                  </ListItem>
                 )}
                 <Divider sx={{ my: 1 }} />
                 <ListItem disablePadding>

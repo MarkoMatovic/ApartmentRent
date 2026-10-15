@@ -69,6 +69,31 @@ public class ChatHubTests
             ReceiverName      = "Receiver One"
         };
 
+    // ─── OnConnectedAsync ────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task OnConnectedAsync_PutsTheConnectionInTheOwnersRoom_WithoutTheClientAskingToJoin()
+    {
+        // A message that arrives before the client has joined, or after an automatic reconnect, must not be lost.
+        await _hub.OnConnectedAsync();
+
+        _mockGroups.Verify(
+            g => g.AddToGroupAsync("conn-1", "user_1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_WithoutAUserClaim_JoinsNothing()
+    {
+        _mockContext.Setup(c => c.User).Returns(new System.Security.Claims.ClaimsPrincipal());
+
+        await _hub.OnConnectedAsync();
+
+        _mockGroups.Verify(
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ─── JoinChatRoom ────────────────────────────────────────────────────────
 
     [Fact]
@@ -96,7 +121,7 @@ public class ChatHubTests
     // ─── SendMessage ─────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task SendMessage_CallsMessageServiceAndBroadcastsToBothGroups()
+    public async Task SendMessage_SendsThroughTheMessageService()
     {
         var dto = MakeMessageDto(senderId: 1, receiverId: 2, text: "Hello");
         _mockMessageService.Setup(s => s.SendMessageAsync(1, 2, "Hello", false))
@@ -105,16 +130,12 @@ public class ChatHubTests
         await _hub.SendMessage(2, "Hello");
 
         _mockMessageService.Verify(s => s.SendMessageAsync(1, 2, "Hello", false), Times.Once);
-
-        // ReceiveMessage to receiver group
-        _mockClients.Verify(c => c.Group("user_2"), Times.AtLeastOnce);
-        // MessageSent to sender group
-        _mockClients.Verify(c => c.Group("user_1"), Times.AtLeastOnce);
     }
 
     [Fact]
-    public async Task SendMessage_SendsReceiveMessageEventToReceiverGroup()
+    public async Task SendMessage_LeavesTheLiveEventsToTheService_SoNobodyGetsTheMessageTwice()
     {
+        // MessageService.SendMessageAsync already pushes "ReceiveMessage" and "MessageSent".
         var dto = MakeMessageDto(senderId: 1, receiverId: 7);
         _mockMessageService.Setup(s => s.SendMessageAsync(1, 7, "Test", false))
             .ReturnsAsync(dto);
@@ -122,22 +143,8 @@ public class ChatHubTests
         await _hub.SendMessage(7, "Test");
 
         _mockClientProxy.Verify(
-            c => c.SendCoreAsync("ReceiveMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task SendMessage_SendsMessageSentEventToSenderGroup()
-    {
-        var dto = MakeMessageDto(senderId: 1, receiverId: 7);
-        _mockMessageService.Setup(s => s.SendMessageAsync(1, 7, "Test", false))
-            .ReturnsAsync(dto);
-
-        await _hub.SendMessage(7, "Test");
-
-        _mockClientProxy.Verify(
-            c => c.SendCoreAsync("MessageSent", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+            c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ─── MarkMessageAsRead ───────────────────────────────────────────────────
@@ -156,8 +163,10 @@ public class ChatHubTests
     }
 
     [Fact]
-    public async Task MarkMessageAsRead_MessageFound_BroadcastsMessageReadEvent()
+    public async Task MarkMessageAsRead_LeavesTheMessageReadEventToTheService_SoItIsNotSentTwice()
     {
+        // MessageService.MarkAsReadAsync pushes "MessageRead" to the sender itself because the REST
+        // path (opening a conversation) shares it; the hub must not send a second copy.
         var dto = MakeMessageDto(senderId: 5, receiverId: 2);
         _mockMessageService.Setup(s => s.IsMessageRecipientAsync(10, 1)).ReturnsAsync(true);
         _mockMessageService.Setup(s => s.MarkAsReadAsync(10)).Returns(Task.CompletedTask);
@@ -165,10 +174,10 @@ public class ChatHubTests
 
         await _hub.MarkMessageAsRead(10);
 
-        _mockClients.Verify(c => c.Group("user_5"), Times.Once);
+        _mockMessageService.Verify(s => s.MarkAsReadAsync(10), Times.Once);
         _mockClientProxy.Verify(
             c => c.SendCoreAsync("MessageRead", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Never);
     }
 
     [Fact]

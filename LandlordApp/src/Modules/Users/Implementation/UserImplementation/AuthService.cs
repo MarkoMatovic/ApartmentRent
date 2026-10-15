@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using Lander.Helpers;
 using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
@@ -26,6 +27,8 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly IJwtBlacklistService _jwtBlacklist;
+    private readonly IProfilePictureService _profilePictures;
+    private readonly ITwoFactorService _twoFactor;
 
     public AuthService(
         UsersContext context,
@@ -38,7 +41,9 @@ public class AuthService : IAuthService
         IConfiguration configuration,
         ILogger<AuthService> logger,
         TimeProvider timeProvider,
-        IJwtBlacklistService jwtBlacklist)
+        IJwtBlacklistService jwtBlacklist,
+        IProfilePictureService profilePictures,
+        ITwoFactorService twoFactor)
     {
         _context = context;
         _passwordHashingService = passwordHashingService;
@@ -51,6 +56,8 @@ public class AuthService : IAuthService
         _logger = logger;
         _timeProvider = timeProvider;
         _jwtBlacklist = jwtBlacklist;
+        _profilePictures = profilePictures;
+        _twoFactor = twoFactor;
     }
 
     public async Task<AuthTokenDto?> LoginUserAsync(LoginUserInputDto dto)
@@ -76,38 +83,14 @@ public class AuthService : IAuthService
 
         if (!_passwordHashingService.Verify(dto.Password, user.Password))
         {
-            if (_context.Database.IsRelational())
-            {
-                // Atomic increment to avoid lost-update race on concurrent login attempts
-                await _context.Database.ExecuteSqlRawAsync(
-                    "UPDATE [UsersRoles].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
-                    user.UserId);
-                await _context.Entry(user).ReloadAsync();
-            }
-            else
-            {
-                // Non-relational provider (InMemory in tests) — plain increment
-                user.FailedLoginAttempts += 1;
-                await _context.SaveEntitiesAsync();
-            }
-            var maxAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);
-            var lockoutMinutes = _configuration.GetValue<int>("Security:LockoutMinutes", 15);
-            if (user.FailedLoginAttempts >= maxAttempts)
-            {
-                user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(lockoutMinutes);
-                await _context.SaveEntitiesAsync();
-                _logger.LogWarning("Account locked: {UserId} after {Attempts} failed attempts",
-                    user.UserId, user.FailedLoginAttempts);
-            }
+            await RegisterFailedAttemptAsync(user);
             return null;
         }
 
-        if (user.FailedLoginAttempts > 0)
-        {
-            user.FailedLoginAttempts = 0;
-            user.LockoutUntil = null;
-            await _context.SaveEntitiesAsync();
-        }
+        // With two-step sign-in the counter is reset only after the code: otherwise signing in
+        // again with the password would allow guessing codes without ever being locked out.
+        if (user.FailedLoginAttempts > 0 && !user.TwoFactorEnabled)
+            await ResetFailedAttemptsAsync(user);
 
         // Gradual migration: re-hash with BCrypt if stored as legacy SHA-256
         if (_passwordHashingService.NeedsRehash(user.Password))
@@ -130,9 +113,78 @@ public class AuthService : IAuthService
         if (!user.IsActive)
             throw new ForbiddenException("EMAIL_NOT_VERIFIED");
 
+        if (user.TwoFactorEnabled)
+            return new AuthTokenDto { RequiresTwoFactor = true, TwoFactorToken = _twoFactor.CreateLoginChallenge(user.UserId) };
+
         var accessToken = await _tokenProvider.CreateAsync(user);
         var refreshToken = await _refreshTokenService.CreateAsync(user.UserId);
         return new AuthTokenDto { AccessToken = accessToken, RefreshToken = refreshToken };
+    }
+
+    public async Task<AuthTokenDto> CompleteTwoFactorLoginAsync(string twoFactorToken, string code)
+    {
+        var userId = _twoFactor.ReadLoginChallenge(twoFactorToken)
+            ?? throw new BusinessRuleException(BusinessErrorCodes.TwoFactorExpired);
+        var user = await _context.Users
+            .Include(u => u.UserRole)
+            .FirstOrDefaultAsync(u => u.UserId == userId)
+            ?? throw new BusinessRuleException(BusinessErrorCodes.TwoFactorExpired);
+
+        // Locked, deactivated meanwhile, or two-step sign-in turned off meanwhile: start again.
+        var locked = user.LockoutUntil.HasValue && user.LockoutUntil.Value > _timeProvider.GetUtcNow().UtcDateTime;
+        if (locked || !user.IsActive || !user.TwoFactorEnabled)
+        {
+            _logger.LogWarning("Two-step sign-in refused for user {UserId} (locked: {Locked})", user.UserId, locked);
+            throw new BusinessRuleException(BusinessErrorCodes.InvalidTwoFactorCode);
+        }
+
+        if (!await _twoFactor.VerifyAsync(user, code))
+        {
+            await RegisterFailedAttemptAsync(user);
+            throw new BusinessRuleException(BusinessErrorCodes.InvalidTwoFactorCode);
+        }
+
+        if (user.FailedLoginAttempts > 0)
+            await ResetFailedAttemptsAsync(user);
+
+        var accessToken = await _tokenProvider.CreateAsync(user, twoFactorVerified: true);
+        var refreshToken = await _refreshTokenService.CreateAsync(user.UserId, twoFactorVerified: true);
+        return new AuthTokenDto { AccessToken = accessToken, RefreshToken = refreshToken };
+    }
+
+    /// <summary>A wrong password or code; enough of them in a row lock the account for a while.</summary>
+    private async Task RegisterFailedAttemptAsync(User user)
+    {
+        if (_context.Database.IsRelational())
+        {
+            // Atomic increment to avoid lost-update race on concurrent login attempts
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE [UsersRoles].[Users] SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE UserId = {0}",
+                user.UserId);
+            await _context.Entry(user).ReloadAsync();
+        }
+        else
+        {
+            // Non-relational provider (InMemory in tests) — plain increment
+            user.FailedLoginAttempts += 1;
+            await _context.SaveEntitiesAsync();
+        }
+        var maxAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);
+        var lockoutMinutes = _configuration.GetValue<int>("Security:LockoutMinutes", 15);
+        if (user.FailedLoginAttempts >= maxAttempts)
+        {
+            user.LockoutUntil = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(lockoutMinutes);
+            await _context.SaveEntitiesAsync();
+            _logger.LogWarning("Account locked: {UserId} after {Attempts} failed attempts",
+                user.UserId, user.FailedLoginAttempts);
+        }
+    }
+
+    private async Task ResetFailedAttemptsAsync(User user)
+    {
+        user.FailedLoginAttempts = 0;
+        user.LockoutUntil = null;
+        await _context.SaveEntitiesAsync();
     }
 
     public async Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto dto)
@@ -147,6 +199,12 @@ public class AuthService : IAuthService
         Guid? callerGuid = Guid.TryParse(currentUserGuid, out var authCg) ? authCg : null;
 
         var tenantRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Tenant");
+
+        // The picture is stored under the user's id, so the id is chosen here instead of by the database.
+        var userGuid = Guid.NewGuid();
+        var profilePicture = string.IsNullOrEmpty(dto.ProfilePicture)
+            ? null
+            : await _profilePictures.ResolveAsync(userGuid, null, dto.ProfilePicture);
 
         User registeredUser;
         try
@@ -169,13 +227,14 @@ public class AuthService : IAuthService
                 var now = _timeProvider.GetUtcNow().UtcDateTime;
                 var user = new User
                 {
+                    UserGuid = userGuid,
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
                     Email = dto.Email,
                     Password = _passwordHashingService.Hash(dto.Password),
                     DateOfBirth = dto.DateOfBirth,
                     PhoneNumber = dto.PhoneNumber,
-                    ProfilePicture = dto.ProfilePicture,
+                    ProfilePicture = profilePicture,
                     CreatedDate = now,
                     CreatedByGuid = callerGuid,
                     ModifiedByGuid = callerGuid,
@@ -190,12 +249,23 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in RegisterUserAsync");
+            await _profilePictures.DeleteAsync(profilePicture);
             throw;
         }
 
         var userName = $"{registeredUser.FirstName} {registeredUser.LastName}";
         FireAndForget(_emailService.SendWelcomeEmailAsync(registeredUser.Email, userName), "SendWelcomeEmail");
-        FireAndForget(_passwordService.SendVerificationEmailAsync(registeredUser.UserId), "SendVerificationEmail");
+        // Awaited (not fire-and-forget): it reads and updates the user through the request-scoped
+        // DbContext, which is disposed once the response is sent. The actual e-mail send inside
+        // is still dispatched in the background.
+        try
+        {
+            await _passwordService.SendVerificationEmailAsync(registeredUser.UserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Background task failed: SendVerificationEmail");
+        }
 
         return new UserRegistrationDto
         {
@@ -215,28 +285,38 @@ public class AuthService : IAuthService
 
     public async Task LogoutUserAsync(string? rawRefreshToken = null)
     {
-        var httpCtx = _httpContextAccessor.HttpContext;
+        await BlacklistCurrentAccessTokenAsync();
 
-        // Blacklist the current access token so it cannot be reused until it naturally expires.
-        var jti = httpCtx?.User?.FindFirstValue(JwtRegisteredClaimNames.Jti);
-        if (!string.IsNullOrEmpty(jti))
-        {
-            var expClaim = httpCtx!.User.FindFirstValue(JwtRegisteredClaimNames.Exp);
-            if (long.TryParse(expClaim, out var expUnix))
-            {
-                var expiry = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-                await _jwtBlacklist.BlacklistAsync(jti, expiry);
-            }
-        }
-
-        // Revoke ALL active refresh tokens for this user so every device is logged out.
-        var userId = httpCtx?.User?.FindFirstValue("userId");
-        if (int.TryParse(userId, out var parsedId))
-            await _refreshTokenService.RevokeAllByUserIdAsync(parsedId);
-        else if (!string.IsNullOrEmpty(rawRefreshToken))
+        // Only this device: the session the cookie belongs to. Other devices stay signed in
+        // (signing out everywhere is LogoutEverywhereAsync; a password change does it too).
+        if (!string.IsNullOrEmpty(rawRefreshToken))
             await _refreshTokenService.RevokeAsync(rawRefreshToken);
 
-        httpCtx?.SignOutAsync();
+        _httpContextAccessor.HttpContext?.SignOutAsync();
+    }
+
+    public async Task LogoutEverywhereAsync()
+    {
+        var httpCtx = _httpContextAccessor.HttpContext;
+        if (!int.TryParse(httpCtx?.User?.FindFirstValue("userId"), out var userId))
+            throw new UnauthorizedAccessException();
+
+        await BlacklistCurrentAccessTokenAsync();
+        // Access tokens already issued to the other devices run out within their 15 minutes;
+        // none of them can be refreshed any more.
+        await _refreshTokenService.RevokeAllByUserIdAsync(userId);
+        _logger.LogInformation("User {UserId} signed out of every device", userId);
+    }
+
+    /// <summary>The access token of this request cannot be used again until it would have expired.</summary>
+    private async Task BlacklistCurrentAccessTokenAsync()
+    {
+        var principal = _httpContextAccessor.HttpContext?.User;
+        var jti = principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        if (string.IsNullOrEmpty(jti)) return;
+
+        if (long.TryParse(principal!.FindFirstValue(JwtRegisteredClaimNames.Exp), out var expUnix))
+            await _jwtBlacklist.BlacklistAsync(jti, DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime);
     }
 
     private void FireAndForget(Task task, string operation)

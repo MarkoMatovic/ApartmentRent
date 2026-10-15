@@ -8,6 +8,19 @@ namespace Lander.src.Notifications.NotificationsHub;
 public class NotificationHub : Hub
 {
     /// <summary>
+    /// Every connection is put into its owner's group as soon as it opens (the user id comes from the token).
+    /// Groups belong to a connection, so after an automatic reconnect the client would otherwise get nothing
+    /// until it asked to join again.
+    /// </summary>
+    public override async Task OnConnectedAsync()
+    {
+        if (int.TryParse(Context.User?.FindFirstValue("userId"), out var userId))
+            await Groups.AddToGroupAsync(Context.ConnectionId, userId.ToString());
+
+        await base.OnConnectedAsync();
+    }
+
+    /// <summary>
     /// Joins the caller to their own notification group.
     /// The userId is taken from the JWT claim — the client-supplied parameter
     /// is ignored to prevent a user from subscribing to another user's stream.

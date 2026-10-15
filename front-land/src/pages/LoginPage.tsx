@@ -11,16 +11,48 @@ import {
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage, isApiErrorCode } from '../shared/utils/apiError';
 import { useAuth } from '../shared/context/AuthContext';
 
 const LoginPage: React.FC = () => {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, completeTwoFactorLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Set once the password was right and the account wants the code from the authenticator app.
+  const [twoFactorToken, setTwoFactorToken] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorToken) return;
+    setError('');
+    setLoading(true);
+    try {
+      await completeTwoFactorLogin(twoFactorToken, code.trim());
+      navigate('/');
+    } catch (err: unknown) {
+      const message = getApiErrorMessage(err, t);
+      if (isApiErrorCode(err, 'TWO_FACTOR_EXPIRED')) {
+        // Too late for this code: back to the password, with the reason.
+        setTwoFactorToken(null);
+        setPassword('');
+      }
+      setCode('');
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const backToPassword = () => {
+    setTwoFactorToken(null);
+    setCode('');
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,22 +70,17 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/');
-    } catch (err: any) {
-      if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
-        setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
-      } else {
-        const responseData = err.response?.data;
-        const message = typeof responseData === 'string' ? responseData : responseData?.message;
-        if (message === 'EMAIL_NOT_VERIFIED' || err.response?.status === 403) {
-          setError(t('emailNotVerified', { defaultValue: 'Please verify your email address before logging in. Check your inbox for the verification link.' }));
-        } else if (typeof message === 'string') {
-          setError(message);
-        } else {
-          setError(t('invalidCredentials'));
-        }
+      const outcome = await login(email, password);
+      if (outcome.twoFactorToken) {
+        setTwoFactorToken(outcome.twoFactorToken);
+        return;
       }
+      navigate('/');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, t, {
+        401: t('invalidCredentials'),
+        403: t('emailNotVerified'),
+      }));
     } finally {
       setLoading(false);
     }
@@ -72,6 +99,42 @@ const LoginPage: React.FC = () => {
           </Alert>
         )}
 
+        {twoFactorToken ? (
+          <Box component="form" onSubmit={handleCodeSubmit} sx={{ mt: 3 }}>
+            <Typography variant="h6" gutterBottom>{t('twoFactorStepTitle')}</Typography>
+            <Typography variant="body2" color="text.secondary">{t('twoFactorStepHint')}</Typography>
+            <TextField
+              fullWidth
+              autoFocus
+              label={t('twoFactorCode')}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              margin="normal"
+              autoComplete="one-time-code"
+              inputProps={{ inputMode: 'text', maxLength: 20, 'aria-describedby': 'two-factor-recovery-hint' }}
+            />
+            <Typography id="two-factor-recovery-hint" variant="caption" color="text.secondary">
+              {t('twoFactorRecoveryHint')}
+            </Typography>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="secondary"
+              size="large"
+              disabled={loading || code.trim().length === 0}
+              sx={{ mt: 3 }}
+            >
+              {t('twoFactorVerify')}
+            </Button>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Link component="button" type="button" variant="body2" onClick={backToPassword}>
+                {t('backToLogin')}
+              </Link>
+            </Box>
+          </Box>
+        ) : (
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
           <TextField
             fullWidth
@@ -118,6 +181,7 @@ const LoginPage: React.FC = () => {
             </Typography>
           </Box>
         </Box>
+        )}
       </Paper>
     </Container>
   );

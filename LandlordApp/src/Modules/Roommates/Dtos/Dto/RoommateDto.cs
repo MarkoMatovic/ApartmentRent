@@ -35,4 +35,6 @@ public class RoommateDto
     public string? Languages { get; set; }
     public WorkSchedule WorkSchedule { get; set; }
     public bool? MusicFriendly { get; set; }
+    /// <summary>The person agreed to be roommates with someone: no longer available to others.</summary>
+    public bool IsTaken { get; set; }
 }

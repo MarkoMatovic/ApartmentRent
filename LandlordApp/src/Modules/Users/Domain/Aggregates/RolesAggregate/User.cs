@@ -18,6 +18,15 @@ namespace Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate
         public DateTime? DateOfBirth { get; set; }
         public string? PhoneNumber { get; set; }
         public string? ProfilePicture { get; set; }
+
+        // Two-step sign-in (authenticator app); required for the admin powers of an Admin.
+        public bool TwoFactorEnabled { get; set; }
+        /// <summary>Base32 secret, encrypted with Data Protection. Set during setup, used once enabled.</summary>
+        public string? TwoFactorSecret { get; set; }
+        /// <summary>JSON list of hashes of the unused recovery codes.</summary>
+        public string? TwoFactorRecoveryCodes { get; set; }
+        /// <summary>Time step of the last accepted code: a code is never accepted twice.</summary>
+        public long? TwoFactorLastStep { get; set; }
         public bool IsLookingForRoommate { get; set; } = false;
 
         // Privacy Settings

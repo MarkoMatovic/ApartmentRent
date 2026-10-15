@@ -23,6 +23,38 @@ namespace Lander.Migrations.Roommates
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Lander.src.Modules.Roommates.Models.PairingApartment", b =>
+                {
+                    b.Property<int>("PairingApartmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PairingApartmentId"));
+
+                    b.Property<int>("AddedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AddedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("ApartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PairingId")
+                        .HasColumnType("int");
+
+                    b.HasKey("PairingApartmentId");
+
+                    b.HasIndex("PairingId", "ApartmentId")
+                        .IsUnique();
+
+                    b.ToTable("PairingApartments", "Roommates");
+                });
+
             modelBuilder.Entity("Lander.src.Modules.Roommates.Models.Roommate", b =>
                 {
                     b.Property<int>("RoommateId")
@@ -147,6 +179,57 @@ namespace Lander.Migrations.Roommates
                     b.HasIndex("UserId");
 
                     b.ToTable("Roommates", "Roommates");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Roommates.Models.RoommatePairing", b =>
+                {
+                    b.Property<int>("PairingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PairingId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("EndedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("PartnerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RequesterUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RespondedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("PairingId");
+
+                    b.HasIndex("PartnerUserId", "Status");
+
+                    b.HasIndex("RequesterUserId", "Status");
+
+                    b.ToTable("Pairings", "Roommates");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Roommates.Models.PairingApartment", b =>
+                {
+                    b.HasOne("Lander.src.Modules.Roommates.Models.RoommatePairing", "Pairing")
+                        .WithMany("Apartments")
+                        .HasForeignKey("PairingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pairing");
+                });
+
+            modelBuilder.Entity("Lander.src.Modules.Roommates.Models.RoommatePairing", b =>
+                {
+                    b.Navigation("Apartments");
                 });
 #pragma warning restore 612, 618
         }

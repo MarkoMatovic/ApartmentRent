@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bs">
+<html lang="sr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,26 +21,26 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Razgledanje zakazano</h1>
+            <h1>Razgledanje je zakazano</h1>
         </div>
         <div class="content">
             <p>Zdravo <strong>{{UserName}}</strong>,</p>
-            <p>Vase razgledanje stana je uspjesno zakazano. Evo detalja:</p>
+            <p>Vaše razgledanje stana je uspešno zakazano. Evo detalja:</p>
             <div class="details-box">
                 <p><strong>Stan:</strong> {{ApartmentTitle}}</p>
-                <p><strong>Datum i vrijeme:</strong> {{AppointmentDate}}</p>
+                <p><strong>Datum i vreme:</strong> {{AppointmentDate}}</p>
                 <p><strong>Trajanje:</strong> 30 minuta</p>
             </div>
             <div class="note">
-                Molimo budite tacni. Ukoliko trebate otkazati ili prebaciti termin, uradite to najmanje <strong>24 sata unaprijed</strong> putem platforme.
+                Molimo vas da budete tačni. Ako treba da otkažete ili pomerite termin, uradite to najmanje <strong>24 sata unapred</strong> putem platforme.
             </div>
             <div class="button-wrap">
-                <a href="https://turentaj.com/appointments" class="button">Pogledaj termin</a>
+                <a href="{{BaseUrl}}/appointments/my" class="button">Pogledaj termin</a>
             </div>
         </div>
         <div class="footer">
-            <p>&copy; 2026 TuRentaj. Sva prava zadrzana.</p>
-            <p>Pitanja? Pisite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
+            <p>&copy; 2026 TuRentaj. Sva prava zadržana.</p>
+            <p>Pitanja? Pišite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
         </div>
     </div>
 </body>

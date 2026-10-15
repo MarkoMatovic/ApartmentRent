@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { authApi } from '../shared/api/auth';
 
 const ForgotPasswordPage: React.FC = () => {
@@ -28,8 +29,8 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       await authApi.forgotPassword({ email });
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.response?.data || 'Failed to send reset link');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, t));
     } finally {
       setLoading(false);
     }

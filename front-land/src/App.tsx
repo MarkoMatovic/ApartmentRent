@@ -22,6 +22,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const RoommateListPage = lazy(() => import('./pages/RoommateListPage'));
 const RoommateDetailPage = lazy(() => import('./pages/RoommateDetailPage'));
@@ -45,6 +46,7 @@ const LandlordAvailabilityPage = lazy(() => import('./pages/LandlordAvailability
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const RoommateMatchesPage = lazy(() => import('./pages/RoommateMatchesPage'));
+const MyRoommatePage = lazy(() => import('./pages/MyRoommatePage'));
 
 // These modules expose named exports only, so map them onto `default` for lazy().
 const SavedSearchesPage = lazy(() =>
@@ -94,11 +96,14 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
                 <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
                 <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
                 <Route path="/roommates" element={<RoommateListPage />} />
                 <Route path="/roommates/create" element={<ProtectedRoute><CreateRoommatePage /></ProtectedRoute>} />
                 <Route path="/roommates/matches" element={<ProtectedRoute><RoommateMatchesPage /></ProtectedRoute>} />
+                <Route path="/my-roommate" element={<ProtectedRoute><MyRoommatePage /></ProtectedRoute>} />
                 <Route path="/roommates/:id" element={<RoommateDetailPage />} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                 <Route path="/my-apartments" element={<ProtectedRoute><MyApartmentsPage /></ProtectedRoute>} />

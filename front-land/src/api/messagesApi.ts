@@ -56,6 +56,12 @@ export const messagesApi = {
     await apiClient.put(`/api/v1/messages/mark-read/${messageId}`, null);
   },
 
+  /** Everything the other person sent me becomes read, in one request; resolves to how many changed. */
+  markConversationRead: async (otherUserId: number): Promise<number> => {
+    const response = await apiClient.put(`/api/v1/messages/conversation/${otherUserId}/read`, null);
+    return response.data;
+  },
+
   getUnreadCount: async (userId: number): Promise<number> => {
     const response = await apiClient.get(`/api/v1/messages/unread-count/${userId}`);
     return response.data;

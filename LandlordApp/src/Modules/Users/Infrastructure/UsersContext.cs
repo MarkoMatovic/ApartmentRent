@@ -96,7 +96,9 @@ public class UsersContext : DbContext, IUnitOfWork
             entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.ModifiedDate).HasColumnType("datetime");
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-            entity.Property(e => e.ProfilePicture).HasMaxLength(255);
+            entity.Property(e => e.ProfilePicture);
+            entity.Property(e => e.TwoFactorSecret).HasMaxLength(1000);
+            entity.Property(e => e.TwoFactorRecoveryCodes).HasMaxLength(2000);
             entity.Property(e => e.UserGuid).HasDefaultValueSql("(newid())");
             entity.Property(e => e.TokenBalance).HasDefaultValue(3);
             entity.Property(e => e.IsIncognito).HasDefaultValue(false);
@@ -173,6 +175,14 @@ public class UsersContext : DbContext, IUnitOfWork
             entity.HasKey(e => e.Id);
             entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
             entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.FamilyId);
+            entity.HasIndex(e => new { e.UserId, e.IsRevoked });
+            // Rows that existed before sessions: each one becomes a session of its own.
+            entity.Property(e => e.FamilyId).HasDefaultValueSql("(newid())");
+            // Exchanging or revoking a token only succeeds if nobody else did it in the meantime
+            // (two tabs refreshing at once, a sign-out during a refresh).
+            entity.Property(e => e.IsRevoked).IsConcurrencyToken();
+            entity.Property(e => e.RotatedAt).HasColumnType("datetime2").IsConcurrencyToken();
             entity.Property(e => e.ExpiresAt).HasColumnType("datetime2");
             entity.Property(e => e.CreatedAt)
                 .HasColumnType("datetime2")

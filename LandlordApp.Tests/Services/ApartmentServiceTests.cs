@@ -34,6 +34,7 @@ public class ApartmentServiceTests : IDisposable
     private readonly Mock<ILogger<ApartmentService>> _mockLogger;
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<Microsoft.AspNetCore.Authorization.IAuthorizationService> _mockAuthService;
+    private readonly Mock<IGeocodingService> _mockGeocoding = new();
     private readonly ApartmentService _apartmentService;
     private readonly int _testLandlordId = 1;
     private readonly Guid _testLandlordGuid = Guid.NewGuid();
@@ -151,7 +152,8 @@ public class ApartmentServiceTests : IDisposable
             new Mock<Lander.src.Modules.Analytics.Interfaces.IAnalyticsService>().Object,
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
             new ConfigurationBuilder().Build(),
-            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object
+            new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object,
+            _mockGeocoding.Object
         );
     }
 
@@ -665,6 +667,164 @@ public class ApartmentServiceTests : IDisposable
 
         // Assert
         result.Should().BeNull(); // Deleted apartments should not be returned
+    }
+
+    #endregion
+
+    #region Geocoding (address -> map coordinates)
+
+    private static ApartmentInputDto NewListing(decimal? latitude = null, decimal? longitude = null) => new()
+    {
+        Title = "Stan na Vracaru",
+        Description = "Svetao stan",
+        Rent = 500,
+        Address = "Valjevska",
+        City = "Beograd",
+        Latitude = latitude,
+        Longitude = longitude,
+    };
+
+    [Fact]
+    public async Task CreateApartmentAsync_WithoutCoordinates_GeocodesTheAddress()
+    {
+        _mockGeocoding.Setup(g => g.GeocodeAsync("Valjevska", "Beograd", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeoPoint(44.804082m, 20.465123m));
+
+        await _apartmentService.CreateApartmentAsync(NewListing());
+
+        var saved = await _context.Apartments.SingleAsync(a => a.Title == "Stan na Vracaru");
+        saved.Latitude.Should().Be(44.804082m);
+        saved.Longitude.Should().Be(20.465123m);
+    }
+
+    [Fact]
+    public async Task CreateApartmentAsync_WithCoordinates_KeepsThemAndDoesNotGeocode()
+    {
+        await _apartmentService.CreateApartmentAsync(NewListing(45.1m, 19.8m));
+
+        var saved = await _context.Apartments.SingleAsync(a => a.Title == "Stan na Vracaru");
+        (saved.Latitude, saved.Longitude).Should().Be((45.1m, 19.8m));
+        _mockGeocoding.Verify(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateApartmentAsync_WhenTheAddressIsNotFound_StillCreatesTheListingWithoutAMap()
+    {
+        _mockGeocoding.Setup(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>())).ReturnsAsync((GeoPoint?)null);
+
+        await _apartmentService.CreateApartmentAsync(NewListing());
+
+        var saved = await _context.Apartments.SingleAsync(a => a.Title == "Stan na Vracaru");
+        saved.Latitude.Should().BeNull();
+        saved.Longitude.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateApartmentAsync_WhenTheGeocoderThrows_StillCreatesTheListing()
+    {
+        _mockGeocoding.Setup(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>())).ThrowsAsync(new HttpRequestException("down"));
+
+        var act = async () => await _apartmentService.CreateApartmentAsync(NewListing());
+
+        await act.Should().NotThrowAsync("a map is a nice-to-have, never a reason to lose a listing");
+        (await _context.Apartments.CountAsync(a => a.Title == "Stan na Vracaru")).Should().Be(1);
+    }
+
+    private async Task<Apartment> ApartmentWithPin(decimal lat, decimal lng)
+    {
+        var apartment = await CreateTestApartment("Sa pinom", 400);
+        apartment.Latitude = lat;
+        apartment.Longitude = lng;
+        await _context.SaveChangesAsync();
+        return apartment;
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_AddressChanged_MovesThePin()
+    {
+        var apartment = await ApartmentWithPin(44.0m, 20.0m);
+        _mockGeocoding.Setup(g => g.GeocodeAsync("Nova ulica 5", "Beograd", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeoPoint(44.9m, 20.9m));
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId,
+            new ApartmentUpdateInputDto { Address = "Nova ulica 5" });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        (saved.Latitude, saved.Longitude).Should().Be((44.9m, 20.9m));
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_AddressChangedButNotFound_DropsThePinOfTheOldAddress()
+    {
+        var apartment = await ApartmentWithPin(44.0m, 20.0m);
+        _mockGeocoding.Setup(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>())).ReturnsAsync((GeoPoint?)null);
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId,
+            new ApartmentUpdateInputDto { Address = "Nepoznata 1" });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        saved.Latitude.Should().BeNull("a pin that belongs to the old address is worse than no pin");
+        saved.Longitude.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_TheEditFormResendsOldCoordinatesWithANewAddress_StillMovesThePin()
+    {
+        // The edit form posts every field, including the coordinates it loaded.
+        var apartment = await ApartmentWithPin(44.0m, 20.0m);
+        _mockGeocoding.Setup(g => g.GeocodeAsync("Nova ulica 5", "Beograd", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeoPoint(44.9m, 20.9m));
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId,
+            new ApartmentUpdateInputDto { Address = "Nova ulica 5", Latitude = 44.0m, Longitude = 20.0m });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        (saved.Latitude, saved.Longitude).Should().Be((44.9m, 20.9m));
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_NewCoordinatesFromTheCaller_AreKept()
+    {
+        var apartment = await ApartmentWithPin(44.0m, 20.0m);
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId,
+            new ApartmentUpdateInputDto { Address = "Nova ulica 5", Latitude = 45.5m, Longitude = 19.5m });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        (saved.Latitude, saved.Longitude).Should().Be((45.5m, 19.5m));
+        _mockGeocoding.Verify(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_UnrelatedChange_LeavesThePinAloneAndDoesNotGeocode()
+    {
+        var apartment = await ApartmentWithPin(44.0m, 20.0m);
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId, new ApartmentUpdateInputDto { Rent = 650 });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        (saved.Latitude, saved.Longitude).Should().Be((44.0m, 20.0m));
+        _mockGeocoding.Verify(g => g.GeocodeAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateApartmentAsync_ListingWithoutAPin_GetsOneOnTheNextSave()
+    {
+        // The case of the listing created before geocoding existed: any edit gives it a map.
+        var apartment = await CreateTestApartment("Bez pina", 400);
+        _mockGeocoding.Setup(g => g.GeocodeAsync("Test adresa 123", "Beograd", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GeoPoint(44.8m, 20.4m));
+
+        await _apartmentService.UpdateApartmentAsync(apartment.ApartmentId, new ApartmentUpdateInputDto { Rent = 410 });
+
+        var saved = await _context.Apartments.SingleAsync(a => a.ApartmentId == apartment.ApartmentId);
+        (saved.Latitude, saved.Longitude).Should().Be((44.8m, 20.4m));
     }
 
     #endregion

@@ -13,9 +13,13 @@ public static class FileStorageContainers
     /// <summary>Chat attachments — private (authorized download / SAS only).</summary>
     public const string ChatFiles = "chat-files";
 
+    /// <summary>Profile pictures (320×320 WebP, metadata removed) — public, shown next to names everywhere.</summary>
+    public const string Avatars = "avatars";
+
     private static readonly HashSet<string> PublicContainers = new(StringComparer.OrdinalIgnoreCase)
     {
         ApartmentImages,
+        Avatars,
     };
 
     public static bool IsPublic(string containerName) => PublicContainers.Contains(containerName);

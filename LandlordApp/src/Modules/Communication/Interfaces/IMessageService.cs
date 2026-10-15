@@ -12,6 +12,11 @@ public interface IMessageService
     Task<ConversationMessagesDto> GetConversationAsync(int userId1, int userId2, int page = 1, int pageSize = 50);
     Task<List<ConversationDto>> GetUserConversationsAsync(int userId);
     Task MarkAsReadAsync(int messageId);
+    /// <summary>
+    /// Marks everything <paramref name="otherUserId"/> sent to <paramref name="userId"/> as read, in one
+    /// update and with one live "MessagesRead" push to the sender. Returns how many messages changed.
+    /// </summary>
+    Task<int> MarkConversationAsReadAsync(int userId, int otherUserId);
     Task<bool> IsMessageRecipientAsync(int messageId, int userId);
     Task<int> GetUnreadCountAsync(int userId);
     Task<MessageDto?> GetMessageByIdAsync(int messageId);

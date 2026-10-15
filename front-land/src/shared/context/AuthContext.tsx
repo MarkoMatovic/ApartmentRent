@@ -1,16 +1,29 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User, RegisterRequest } from '../types/user';
 import { authApi } from '../api/auth';
-import { apiClient } from '../api/client';
+import { refreshAccessToken } from '../api/client';
 import { setAccessToken } from '../api/tokenStore';
 import { decodeToken } from '../auth/decodeToken';
+import { forStorage, mergeProfile } from '../auth/userProfile';
+import { usersApi } from '../api/usersApi';
+
+/** With two-step sign-in the password only opens the code step; the session starts after the code. */
+export interface LoginOutcome {
+  twoFactorToken?: string;
+}
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginOutcome>;
+  /** The code step after login() asked for it. */
+  completeTwoFactorLogin: (twoFactorToken: string, code: string) => Promise<void>;
+  /** A new access token for this session (two-step sign-in turned on or off). */
+  adoptAccessToken: (accessToken: string) => void;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  /** Signs out every device (a lost phone); this one too. */
+  logoutEverywhere: () => Promise<void>;
   updateUser: (updatedUser: User) => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -31,6 +44,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const profileLoadedFor = useRef<number | null>(null);
+
+  // The token has no picture, birth date or privacy settings: load the stored profile once per
+  // signed-in user so the header and the chat can show the real avatar.
+  useEffect(() => {
+    const userId = user?.userId;
+    if (!token || !userId || profileLoadedFor.current === userId) return;
+    profileLoadedFor.current = userId;
+
+    usersApi
+      .getProfile(userId)
+      .then((profile) => setUser((prev) => (prev && prev.userId === userId ? mergeProfile(prev, profile) : prev)))
+      .catch(() => {
+        // The avatar falls back to the initials; try again on the next sign-in.
+        profileLoadedFor.current = null;
+      });
+  }, [token, user?.userId]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -40,10 +70,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const storedUser = sessionStorage.getItem('user');
 
       try {
-        const { data } = await apiClient.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
-
-        const newToken = data.accessToken;
-        setAccessToken(newToken);
+        const newToken = await refreshAccessToken();
         setToken(newToken);
 
         if (storedUser) {
@@ -56,14 +83,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const decoded = decodeToken(newToken);
             if (decoded) {
               setUser(decoded);
-              sessionStorage.setItem('user', JSON.stringify(decoded));
+              sessionStorage.setItem('user', JSON.stringify(forStorage(decoded)));
             }
           }
         } else {
           const decoded = decodeToken(newToken);
           if (decoded) {
             setUser(decoded);
-            sessionStorage.setItem('user', JSON.stringify(decoded));
+            sessionStorage.setItem('user', JSON.stringify(forStorage(decoded)));
           }
         }
 
@@ -80,27 +107,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const tokenResult = await authApi.login({ email, password });
-
-    if (!tokenResult?.accessToken || tokenResult.accessToken.split('.').length !== 3) {
+  const startSession = (accessToken: string | undefined) => {
+    if (!accessToken || accessToken.split('.').length !== 3) {
       throw new Error('Neispravan format tokena sa servera');
     }
 
     // Token čuvamo samo u memoriji — ne u sessionStorage (S-6 fix)
-    setAccessToken(tokenResult.accessToken);
-    setToken(tokenResult.accessToken);
+    setAccessToken(accessToken);
+    setToken(accessToken);
     // Note: refresh token je httpOnly cookie, server ga postavlja automatski
 
     window.dispatchEvent(new Event('authTokenChanged'));
 
-    const decodedUser = decodeToken(tokenResult.accessToken);
+    const decodedUser = decodeToken(accessToken);
     if (decodedUser) {
       setUser(decodedUser);
-      sessionStorage.setItem('user', JSON.stringify(decodedUser));
+      sessionStorage.setItem('user', JSON.stringify(forStorage(decodedUser)));
     } else {
       throw new Error('Problem sa dekodiranjem korisničkih podataka');
     }
+  };
+
+  const login = async (email: string, password: string): Promise<LoginOutcome> => {
+    const tokenResult = await authApi.login({ email, password });
+    if (tokenResult?.requiresTwoFactor && tokenResult.twoFactorToken) {
+      return { twoFactorToken: tokenResult.twoFactorToken };
+    }
+    startSession(tokenResult?.accessToken);
+    return {};
+  };
+
+  const completeTwoFactorLogin = async (twoFactorToken: string, code: string) => {
+    const tokenResult = await authApi.loginTwoFactor(twoFactorToken, code);
+    startSession(tokenResult.accessToken);
+  };
+
+  const adoptAccessToken = (accessToken: string) => {
+    setAccessToken(accessToken);
+    setToken(accessToken);
+    window.dispatchEvent(new Event('authTokenChanged'));
+    const decoded = decodeToken(accessToken);
+    if (!decoded) return;
+    // Only what the token decides; the profile fields (picture, birth date...) stay as they are.
+    setUser(prev => {
+      const next = prev
+        ? { ...prev, roleName: decoded.roleName, permissions: decoded.permissions, twoFactorVerified: decoded.twoFactorVerified }
+        : decoded;
+      sessionStorage.setItem('user', JSON.stringify(forStorage(next)));
+      return next;
+    });
   };
 
   const register = async (data: RegisterRequest) => {
@@ -109,30 +164,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // User must verify email before they can log in.
   };
 
+  const clearSession = () => {
+    setUser(null);
+    setToken(null);
+    setAccessToken(null);
+    profileLoadedFor.current = null;
+    sessionStorage.removeItem('user');
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
     } catch {
       // Ignore logout errors — always clear local state
     } finally {
-      setUser(null);
-      setToken(null);
-      setAccessToken(null);
-      sessionStorage.removeItem('user');
+      clearSession();
     }
+  };
+
+  const logoutEverywhere = async () => {
+    // Unlike logout, a failure is reported: the user must know the other devices may still be signed in.
+    await authApi.logoutEverywhere();
+    clearSession();
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
-    sessionStorage.setItem('user', JSON.stringify(updatedUser));
+    sessionStorage.setItem('user', JSON.stringify(forStorage(updatedUser)));
   };
 
   const value: AuthContextType = {
     user,
     token,
     login,
+    completeTwoFactorLogin,
+    adoptAccessToken,
     register,
     logout,
+    logoutEverywhere,
     updateUser,
     isAuthenticated: !!token && !isTokenExpired(token),
     loading,

@@ -22,7 +22,7 @@
   "loading": "Laden...",
   "error": "Fehler",
   "success": "Erfolgreich",
-  "apply": "Anwenden",
+  "apply": "Bewerben",
   "clearAll": "Alles löschen",
   "save": "Speichern",
   "cancel": "Abbrechen",
@@ -30,7 +30,6 @@
   "edit": "Bearbeiten",
   "view": "Ansehen",
   "contact": "Kontakt",
-  "apply": "Bewerben",
   "favorites": "Favoriten",
   "notifications": "Benachrichtigungen",
   "noNotifications": "Sie haben keine neuen Benachrichtigungen",
@@ -93,5 +92,6 @@
   "footerRefund": "Rückerstattungsrichtlinie",
   "footerCopyright": "Alle Rechte vorbehalten.",
   "footerDisclaimer": "TuRentaj ist eine Werbeplattform und fungiert <strong>nicht als Vermittler</strong> bei Immobilientransaktionen oder -vermietungen. Kontakt:",
-  "tokensBuyTooltip": "Tokens — zum Kauf klicken"
+  "tokensBuyTooltip": "Tokens — zum Kauf klicken",
+  "moreOptions": "Weitere Optionen"
 }

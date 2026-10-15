@@ -54,9 +54,16 @@ namespace Lander.Migrations.Notification
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("ParamsJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RecipientUserId")
                         .HasColumnType("int");
@@ -112,9 +119,16 @@ namespace Lander.Migrations.Notification
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("ParamsJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RecipientUserId")
                         .HasColumnType("int");

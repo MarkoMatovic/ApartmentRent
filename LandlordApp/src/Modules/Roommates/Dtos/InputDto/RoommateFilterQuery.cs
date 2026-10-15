@@ -20,6 +20,8 @@ public class RoommateFilterQuery
     public int? ApartmentId { get; set; }
     public RoommateGender? Gender { get; set; }
     public WorkSchedule? WorkSchedule { get; set; }
+    /// <summary>People who already agreed to be roommates are left out unless this is set.</summary>
+    public bool IncludeTaken { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }

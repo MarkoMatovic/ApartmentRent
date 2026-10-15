@@ -1,3 +1,5 @@
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using Lander.src.Modules.Appointments.Dtos;
 using Lander.Helpers;
 using Lander.src.Modules.Appointments.Interfaces;
@@ -5,6 +7,8 @@ using Lander.src.Modules.Appointments.Models;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Listings;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
+using Lander.src.Notifications.Dtos.InputDto;
+using Lander.src.Notifications.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Security.Claims;
@@ -21,6 +25,7 @@ namespace Lander.src.Modules.Appointments.Implementation
         private readonly ILogger<AppointmentService> _logger;
         private readonly Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService _approvalService;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notifications;
 
         public AppointmentService(
             AppointmentsContext context,
@@ -30,7 +35,8 @@ namespace Lander.src.Modules.Appointments.Implementation
             IHttpContextAccessor httpContextAccessor,
             ILogger<AppointmentService> logger,
             Lander.src.Modules.ApartmentApplications.Interfaces.IApplicationApprovalService approvalService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            INotificationService notifications)
         {
             _context = context;
             _listingsContext = listingsContext;
@@ -40,6 +46,7 @@ namespace Lander.src.Modules.Appointments.Implementation
             _logger = logger;
             _approvalService = approvalService;
             _configuration = configuration;
+            _notifications = notifications;
         }
 
         private int GetCurrentUserId()
@@ -111,7 +118,7 @@ namespace Lander.src.Modules.Appointments.Implementation
                                   a.AppointmentDate == dto.AppointmentDate);
 
                 if (hasConflict)
-                    throw new InvalidOperationException("This time slot is already booked");
+                    throw new BusinessRuleException(BusinessErrorCodes.TimeSlotTaken);
 
                 appointment = new Appointment
                 {
@@ -139,6 +146,36 @@ namespace Lander.src.Modules.Appointments.Implementation
                 .ToDictionaryAsync(u => u.UserId);
             userMap.TryGetValue(tenantId, out var tenant);
             userMap.TryGetValue(apartment.LandlordId.Value, out var landlord);
+
+            // Bell + live push so the landlord sees at once that someone wants to view the apartment.
+            if (landlord != null && tenant != null)
+            {
+                try
+                {
+                    await _notifications.SendNotificationAsync(new CreateNotificationInputDto
+                    {
+                        Title = "Novi zahtev za razgledanje",
+                        Message = $"{tenant.FirstName} {tenant.LastName} želi da razgleda „{apartment.Title}“ " +
+                                  $"({appointment.AppointmentDate:dd.MM.yyyy. 'u' HH:mm}).",
+                        ActionType = "appointment_new",
+                        ActionTarget = "/appointments/manage",
+                        Key = "appointment_new",
+                        Params = new Dictionary<string, string>
+                        {
+                            ["name"] = $"{tenant.FirstName} {tenant.LastName}".Trim(),
+                            ["title"] = apartment.Title,
+                            // the same wall-clock time the landlord set, formatted by the browser in its language
+                            ["when"] = appointment.AppointmentDate.ToString("yyyy-MM-dd'T'HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture),
+                        },
+                        SenderUserId = tenantId,
+                        RecipientUserId = landlord.UserId,
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not notify landlord {LandlordId} about a viewing request", landlord.UserId);
+                }
+            }
 
             // Send email to landlord (awaited so errors are surfaced; non-fatal)
             if (landlord != null && tenant != null)

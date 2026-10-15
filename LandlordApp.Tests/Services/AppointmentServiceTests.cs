@@ -1,3 +1,5 @@
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -27,6 +29,7 @@ public class AppointmentServiceTests : IDisposable
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<ILogger<AppointmentService>> _mockLogger;
     private readonly Mock<IApplicationApprovalService> _mockApprovalService;
+    private readonly Mock<Lander.src.Notifications.Interfaces.INotificationService> _mockNotifications;
     private readonly AppointmentService _appointmentService;
     
     private readonly int _testTenantId = 1;
@@ -62,6 +65,7 @@ public class AppointmentServiceTests : IDisposable
         _mockEmailService = new Mock<IEmailService>();
         _mockLogger = new Mock<ILogger<AppointmentService>>();
         _mockApprovalService = new Mock<IApplicationApprovalService>();
+        _mockNotifications = new Mock<Lander.src.Notifications.Interfaces.INotificationService>();
 
         // Default: approval check passes (tenant has approved application)
         _mockApprovalService
@@ -83,7 +87,8 @@ public class AppointmentServiceTests : IDisposable
             _mockHttpContextAccessor.Object,
             _mockLogger.Object,
             _mockApprovalService.Object,
-            config
+            config,
+            _mockNotifications.Object
         );
 
         // Seed test data
@@ -197,6 +202,50 @@ public class AppointmentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAppointmentAsync_NotifiesTheLandlordThatSomeoneWantsToView()
+    {
+        var dto = new CreateAppointmentDto { ApartmentId = _testApartmentId, AppointmentDate = DateTime.Now.AddDays(2) };
+
+        await _appointmentService.CreateAppointmentAsync(dto);
+
+        _mockNotifications.Verify(n => n.SendNotificationAsync(It.Is<Lander.src.Notifications.Dtos.InputDto.CreateNotificationInputDto>(d =>
+            d.RecipientUserId == _testLandlordId &&
+            d.SenderUserId == _testTenantId &&
+            d.Title == "Novi zahtev za razgledanje" &&
+            d.ActionTarget == "/appointments/manage")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_NotificationIsTranslatable_WithTheTenantTheApartmentAndTheTime()
+    {
+        var when = new DateTime(2026, 10, 20, 14, 30, 0);
+        var dto = new CreateAppointmentDto { ApartmentId = _testApartmentId, AppointmentDate = when };
+
+        await _appointmentService.CreateAppointmentAsync(dto);
+
+        _mockNotifications.Verify(n => n.SendNotificationAsync(It.Is<Lander.src.Notifications.Dtos.InputDto.CreateNotificationInputDto>(d =>
+            d.Key == "appointment_new" &&
+            d.Params != null &&
+            d.Params["name"].Length > 0 &&
+            d.Params["title"].Length > 0 &&
+            d.Params["when"] == "2026-10-20T14:30:00")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAppointmentAsync_WhenTheNotificationFails_TheAppointmentIsStillCreated()
+    {
+        _mockNotifications
+            .Setup(n => n.SendNotificationAsync(It.IsAny<Lander.src.Notifications.Dtos.InputDto.CreateNotificationInputDto>()))
+            .ThrowsAsync(new InvalidOperationException("hub down"));
+        var dto = new CreateAppointmentDto { ApartmentId = _testApartmentId, AppointmentDate = DateTime.Now.AddDays(2) };
+
+        var result = await _appointmentService.CreateAppointmentAsync(dto);
+
+        result.Should().NotBeNull();
+        (await _appointmentsContext.Appointments.CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
     public async Task CreateAppointmentAsync_PastDate_ShouldThrowException()
     {
         // Arrange
@@ -264,8 +313,8 @@ public class AppointmentServiceTests : IDisposable
         var act = async () => await _appointmentService.CreateAppointmentAsync(dto);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("This time slot is already booked");
+        await act.Should().ThrowAsync<BusinessRuleException>()
+            .WithMessage(BusinessErrorCodes.TimeSlotTaken);
     }
 
     [Fact]

@@ -36,6 +36,28 @@ function isTokenExpiringSoon(token: string, thresholdSeconds = 30): boolean {
   }
 }
 
+let refreshInFlight: Promise<string> | null = null;
+
+/**
+ * Gets a new access token with the refresh cookie. One refresh at a time per tab: every caller that
+ * asks while one is running shares it. The server exchanges the cookie on every refresh, so a
+ * second parallel refresh would present a cookie that was just replaced.
+ */
+export const refreshAccessToken = (): Promise<string> => {
+  if (!refreshInFlight) {
+    refreshInFlight = apiClient
+      .post<{ accessToken: string }>('/api/v1/auth/token/refresh')
+      .then(({ data }) => {
+        setAccessToken(data.accessToken);
+        return data.accessToken;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+};
+
 // Request interceptor — attaches token and proactively refreshes if expiring soon
 apiClient.interceptors.request.use(
   async (config) => {
@@ -45,9 +67,8 @@ apiClient.interceptors.request.use(
     // Proactively refresh if token expires within 30s (skip for refresh endpoint itself)
     if (isTokenExpiringSoon(token) && !config.url?.includes('token/refresh')) {
       try {
-        const { data } = await apiClient.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
-        setAccessToken(data.accessToken);
-        config.headers.Authorization = `Bearer ${data.accessToken}`;
+        const fresh = await refreshAccessToken();
+        config.headers.Authorization = `Bearer ${fresh}`;
         return config;
       } catch {
         // Proactive refresh failed — let the request proceed with the old token;
@@ -60,21 +81,6 @@ apiClient.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
-
-// Queue za zahteve koji čekaju na refresh tokena
-let isRefreshing = false;
-let failedQueue: Array<{ resolve: (token: string) => void; reject: (err: unknown) => void }> = [];
-
-const processQueue = (error: unknown, token: string | null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token!);
-    }
-  });
-  failedQueue = [];
-};
 
 // Response interceptor — automatski refresh access tokena na 401
 apiClient.interceptors.response.use(
@@ -99,38 +105,18 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
-        });
-      }
-
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        // Refresh token is sent automatically via httpOnly cookie — no body needed
-        const { data } = await apiClient.post<{ accessToken: string }>(
-          '/api/v1/auth/token/refresh'
-        );
-
-        setAccessToken(data.accessToken);
-        apiClient.defaults.headers.common.Authorization = `Bearer ${data.accessToken}`;
-        processQueue(null, data.accessToken);
-
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        // Requests that fail together wait for the same refresh (the cookie goes automatically).
+        const fresh = await refreshAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${fresh}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
         setAccessToken(null);
         sessionStorage.removeItem('user');
         window.location.href = '/login';
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
 

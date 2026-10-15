@@ -109,6 +109,51 @@ public class PaymentFulfillmentE2eTests : E2eTestBase
         (await TokenBalanceAsync(user.UserId)).Should().Be(0);
     }
 
+    private async Task<List<Lander.src.Notifications.Models.Notification>> NotificationsOfAsync(int userId)
+    {
+        using var scope = NewScope();
+        return await scope.ServiceProvider.GetRequiredService<NotificationContext>().Notifications
+            .AsNoTracking().Where(n => n.RecipientUserId == userId).ToListAsync();
+    }
+
+    [Theory]
+    [InlineData("tokens-50", "purchase_tokens", "tokens", "50")]
+    [InlineData("listing-3", "purchase_credits", "credits", "3")]
+    [InlineData("featured-7", "purchase_featured", "days", "7")]
+    public async Task Fulfill_StoresATranslatableNotificationAboutWhatWasBought(string planId, string key, string param, string value)
+    {
+        var user = await Data.CreateUserAsync($"notify-{planId}@test.com");
+        var apartment = await Data.CreateApartmentAsync(user.UserId);
+        using var scope = NewScope();
+
+        await scope.ServiceProvider.GetRequiredService<IPaymentFulfillmentService>()
+            .FulfillAsync($"txn_notify_{planId}", user.UserId, planId, apartment.ApartmentId);
+
+        var notification = (await NotificationsOfAsync(user.UserId)).Single();
+        notification.Key.Should().Be(key);
+        notification.ParamsJson.Should().Contain($"\"{param}\":\"{value}\"");
+        notification.ActionTarget.Should().Be("/istorija-placanja");
+        notification.Message.Should().NotBeNullOrWhiteSpace("the Serbian text stays as the fallback");
+    }
+
+    [Theory]
+    [InlineData(false, "purchase_refunded")]
+    [InlineData(true, "purchase_chargeback")]
+    public async Task Reverse_StoresATranslatableNotification(bool isChargeback, string key)
+    {
+        var user = await Data.CreateUserAsync($"reversal-{key}@test.com");
+        using (var s = NewScope())
+            await s.ServiceProvider.GetRequiredService<IPaymentFulfillmentService>()
+                .FulfillAsync($"txn_{key}", user.UserId, "tokens-10");
+
+        using var scope = NewScope();
+        await scope.ServiceProvider.GetRequiredService<IPaymentReversalService>()
+            .ReverseAsync($"txn_{key}", $"adj_{key}", isChargeback);
+
+        var notifications = await NotificationsOfAsync(user.UserId);
+        notifications.Should().Contain(n => n.ActionType == "purchase_reversed" && n.Key == key);
+    }
+
     [Fact]
     public async Task Reverse_ConcurrentDuplicateAdjustments_TakesBackOnce()
     {

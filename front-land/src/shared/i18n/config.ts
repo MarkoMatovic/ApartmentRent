@@ -24,6 +24,8 @@ import srAppointments from '../../locales/sr/appointments.json';
 import srPayments from '../../locales/sr/payments.json';
 import srSubscriptions from '../../locales/sr/subscriptions.json';
 import srApplications from '../../locales/sr/applications.json';
+import srValidation from '../../locales/sr/validation.json';
+import srPairing from '../../locales/sr/pairing.json';
 
 import enCommon from '../../locales/en/common.json';
 import enProfile from '../../locales/en/profile.json';
@@ -47,6 +49,8 @@ import enAppointments from '../../locales/en/appointments.json';
 import enPayments from '../../locales/en/payments.json';
 import enSubscriptions from '../../locales/en/subscriptions.json';
 import enApplications from '../../locales/en/applications.json';
+import enValidation from '../../locales/en/validation.json';
+import enPairing from '../../locales/en/pairing.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruProfile from '../../locales/ru/profile.json';
@@ -70,6 +74,8 @@ import ruAppointments from '../../locales/ru/appointments.json';
 import ruPayments from '../../locales/ru/payments.json';
 import ruSubscriptions from '../../locales/ru/subscriptions.json';
 import ruApplications from '../../locales/ru/applications.json';
+import ruValidation from '../../locales/ru/validation.json';
+import ruPairing from '../../locales/ru/pairing.json';
 
 import deCommon from '../../locales/de/common.json';
 import deProfile from '../../locales/de/profile.json';
@@ -93,6 +99,8 @@ import deAppointments from '../../locales/de/appointments.json';
 import dePayments from '../../locales/de/payments.json';
 import deSubscriptions from '../../locales/de/subscriptions.json';
 import deApplications from '../../locales/de/applications.json';
+import deValidation from '../../locales/de/validation.json';
+import dePairing from '../../locales/de/pairing.json';
 
 i18n
   .use(LanguageDetector)
@@ -122,6 +130,8 @@ i18n
         payments: srPayments,
         subscriptions: srSubscriptions,
         applications: srApplications,
+        validation: srValidation,
+        pairing: srPairing,
       },
       en: {
         common: enCommon,
@@ -146,6 +156,8 @@ i18n
         payments: enPayments,
         subscriptions: enSubscriptions,
         applications: enApplications,
+        validation: enValidation,
+        pairing: enPairing,
       },
       ru: {
         common: ruCommon,
@@ -170,6 +182,8 @@ i18n
         payments: ruPayments,
         subscriptions: ruSubscriptions,
         applications: ruApplications,
+        validation: ruValidation,
+        pairing: ruPairing,
       },
       de: {
         common: deCommon,
@@ -194,11 +208,13 @@ i18n
         payments: dePayments,
         subscriptions: deSubscriptions,
         applications: deApplications,
+        validation: deValidation,
+        pairing: dePairing,
       },
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications', 'appointments', 'payments', 'subscriptions', 'applications'],
+    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications', 'appointments', 'payments', 'subscriptions', 'applications', 'validation', 'pairing'],
     interpolation: {
       escapeValue: false,
     },

@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import { Star as StarIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../../shared/utils/apiError';
 import { applicationsApi } from '../../shared/api/applicationsApi';
 import { useNotifications } from '../../shared/context/NotificationContext';
 
@@ -34,8 +35,11 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ open, onClose, apar
             });
             onClose();
             setIsPriority(false);
-        } catch (err: any) {
-            setError(err.response?.data || t('applicationError'));
+        } catch (err: unknown) {
+            // The server answers 400 (and 409 for a duplicate) when the application cannot be made,
+            // e.g. the user already applied; its text is English, so show the translated one.
+            setError(getApiErrorMessage(err, t,
+                { 400: t('applicationError'), 409: t('applicationError') }, t('applicationError')));
         } finally {
             setLoading(false);
         }

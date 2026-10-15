@@ -14,6 +14,9 @@ public partial class UserService
     public Task LogoutUserAsync(string? rawRefreshToken = null)
         => _authService.LogoutUserAsync(rawRefreshToken);
 
+    public Task LogoutEverywhereAsync()
+        => _authService.LogoutEverywhereAsync();
+
     public Task ChangePasswordAsync(ChangePasswordInputDto dto)
         => _passwordService.ChangePasswordAsync(dto);
 

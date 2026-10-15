@@ -34,6 +34,7 @@ import {
     Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../../shared/utils/apiError';
 import { useNavigate } from 'react-router-dom';
 import {
     searchRequestsApi,
@@ -87,9 +88,9 @@ export const SearchRequestsPage: React.FC = () => {
             setError('');
             const data = await searchRequestsApi.getAllSearchRequests();
             setRequests(Array.isArray(data) ? data : (data as PagedSearchRequests).items ?? []);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error loading search requests:', err);
-            setError(err.message || 'Failed to load search requests');
+            setError(getApiErrorMessage(err, t));
         } finally {
             setLoading(false);
         }
@@ -160,8 +161,8 @@ export const SearchRequestsPage: React.FC = () => {
             setRequests(prev => [created, ...prev]);
             setDialogOpen(false);
             setTabValue(1); // switch to My Requests so user sees it immediately
-        } catch (err: any) {
-            setSubmitError(err?.response?.data?.message || err.message || 'Failed to create request.');
+        } catch (err: unknown) {
+            setSubmitError(getApiErrorMessage(err, t));
         } finally {
             setSubmitting(false);
         }

@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { RateReview as ReviewIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../../shared/utils/apiError';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { reviewsApi } from '../../shared/api/reviews';
 import { CreateReviewRequest } from '../../shared/types/review';
@@ -49,8 +50,8 @@ const CreateReviewForm: React.FC<CreateReviewFormProps> = ({
       setIsOpen(false);
       onSuccess?.();
     },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || t('reviews:createError', { defaultValue: 'Failed to submit review' }));
+    onError: (err: unknown) => {
+      setError(getApiErrorMessage(err, t, {}, t('reviews:createError', { defaultValue: 'Failed to submit review' })));
     },
   });
 

@@ -197,6 +197,51 @@ public class MessageE2eTests : E2eTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    // ── MarkConversationAsRead ────────────────────────────────────────────────
+
+    private async Task<int> UnreadCountAsync(HttpClient client, int userId) =>
+        await client.GetFromJsonAsync<int>($"/api/v1/messages/unread-count/{userId}");
+
+    [Fact]
+    public async Task MarkConversationAsRead_AsRecipient_ReadsTheWholeConversationInOneRequest()
+    {
+        var sender   = await Data.CreateUserAsync("conv-read-snd@e2e.com");
+        var receiver = await Data.CreateUserAsync("conv-read-rcv@e2e.com");
+        var other    = await Data.CreateUserAsync("conv-read-oth@e2e.com");
+        for (var i = 0; i < 3; i++) await Data.CreateMessageAsync(sender.UserId, receiver.UserId, $"Poruka {i}");
+        await Data.CreateMessageAsync(other.UserId, receiver.UserId, "Drugi razgovor");
+        var client = CreateAuthenticatedClient(receiver.UserId, receiver.UserGuid);
+
+        var response = await client.PutAsync($"/api/v1/messages/conversation/{sender.UserId}/read", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<int>()).Should().Be(3);
+        (await UnreadCountAsync(client, receiver.UserId)).Should().Be(1, "only the other conversation stays unread");
+    }
+
+    [Fact]
+    public async Task MarkConversationAsRead_FromTheSendersSide_DoesNotTouchTheRecipientsInbox()
+    {
+        var sender   = await Data.CreateUserAsync("conv-read-snd2@e2e.com");
+        var receiver = await Data.CreateUserAsync("conv-read-rcv2@e2e.com");
+        await Data.CreateMessageAsync(sender.UserId, receiver.UserId, "Nepročitano");
+
+        var senderClient = CreateAuthenticatedClient(sender.UserId, sender.UserGuid);
+        var response = await senderClient.PutAsync($"/api/v1/messages/conversation/{receiver.UserId}/read", null);
+
+        (await response.Content.ReadFromJsonAsync<int>()).Should().Be(0);
+        var receiverClient = CreateAuthenticatedClient(receiver.UserId, receiver.UserGuid);
+        (await UnreadCountAsync(receiverClient, receiver.UserId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task MarkConversationAsRead_WithoutAuth_Returns401()
+    {
+        var response = await HttpClient.PutAsync("/api/v1/messages/conversation/1/read", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ── Archive ───────────────────────────────────────────────────────────────
 
     [Fact]

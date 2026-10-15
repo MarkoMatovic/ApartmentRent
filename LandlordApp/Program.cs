@@ -11,6 +11,7 @@ using Lander.src.Infrastructure.Hangfire;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
@@ -31,6 +32,19 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     Args = args,
     WebRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
 });
+
+// Azure App Service rejects the app setting name "AzureBlobStorage__ConnectionString", so the
+// connection string can also be supplied as "BlobStorageConnection" and is mapped onto the
+// regular configuration key here (before anything reads it).
+// It is also accepted from the "Connection strings" tab (type Custom, name BlobStorageConnection).
+var blobConnectionFallback = builder.Configuration["FileStorageConnection"]
+    ?? builder.Configuration["BlobStorageConnection"]
+    ?? builder.Configuration.GetConnectionString("BlobStorageConnection");
+if (!string.IsNullOrWhiteSpace(blobConnectionFallback) &&
+    string.IsNullOrWhiteSpace(builder.Configuration["AzureBlobStorage:ConnectionString"]))
+{
+    builder.Configuration["AzureBlobStorage:ConnectionString"] = blobConnectionFallback;
+}
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -242,6 +256,13 @@ else
 }
 
 builder.Services.AddSingleton<IdempotencyService>();
+
+// Who is on the site right now (any open tab keeps a SignalR connection): used to skip e-mails for
+// things the user is already seeing live. The filter feeds the tracker from every hub.
+var presenceTracker = new Lander.src.Infrastructure.Services.PresenceTracker();
+builder.Services.AddSingleton<Lander.src.Infrastructure.Services.IPresenceTracker>(presenceTracker);
+builder.Services.Configure<HubOptions>(o =>
+    o.AddFilter(new Lander.src.Infrastructure.Services.PresenceHubFilter(presenceTracker)));
 builder.Services.AddOutputCache(options =>
 {
     // NOTE: no blanket AddBasePolicy(b => b.Cache()) — that cached EVERY anonymous GET
@@ -499,10 +520,23 @@ RecurringJob.AddOrUpdate<Lander.src.Modules.Listings.Services.ListingExpirationS
     "0 2 * * *",
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
+RecurringJob.AddOrUpdate<Lander.src.Modules.Listings.Services.ApartmentGeocodingBackfillService>(
+    "apartment-geocoding-backfill",
+    j => j.RunAsync(),
+    "0 5 * * *",
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
 RecurringJob.AddOrUpdate<Lander.src.Modules.Communication.Services.EmailLogCleanupService>(
     "email-log-cleanup",
     j => j.RunAsync(),
     "0 3 * * *",
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+// Moves profile pictures still stored inline in the database to file storage; a no-op once done.
+RecurringJob.AddOrUpdate<Lander.src.Modules.Users.Services.ProfilePictureMigrationService>(
+    "profile-picture-migration",
+    j => j.RunAsync(),
+    "20 * * * *",
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
 RecurringJob.AddOrUpdate<Lander.src.Modules.MachineLearning.Services.PriceModelTrainingService>(
@@ -527,8 +561,12 @@ app.MapMetrics("/metrics").AddEndpointFilter(async (efi, next) =>
 // SPA fallback: the React build is served from wwwroot, so client-side routes (/apartments/5, ...)
 // must resolve to index.html. Server paths are excluded so a mistyped API URL still returns 404
 // instead of HTML.
+// The catch-all pattern below never matches the empty path, so "/" is mapped explicitly.
+app.MapGet("/", () => Results.File(
+    Path.Combine(app.Environment.WebRootPath, "index.html"), "text/html"));
+
 app.MapFallbackToFile(
-    "{*path:regex(^(?!api/|notificationHub|chatHub|hangfire|health|metrics|swagger|uploads/).*$)}",
+    "{*path:nonfile:regex(^(?!api/|notificationHub|chatHub|hangfire|health|metrics|swagger|uploads/).*$)}",
     "index.html",
     staticFileOptions);
 

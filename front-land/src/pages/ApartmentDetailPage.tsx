@@ -41,6 +41,7 @@ import {
 import ApplicationModal from '../components/Applications/ApplicationModal';
 import AppointmentModal from '../components/Appointments/AppointmentModal';
 import LandlordProfileModal from '../components/Modals/LandlordProfileModal';
+import ShareWithRoommateButton from '../components/Apartment/ShareWithRoommateButton';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const ApartmentDetailPage: React.FC = () => {
@@ -363,7 +364,9 @@ const ApartmentDetailPage: React.FC = () => {
                       Number(id),
                       'Apartment'
                     );
-                    navigate(`/chat?userId=${apartment.landlordId}`);
+                    // The chat opens with a message about this listing already typed in, so the landlord
+                    // knows which apartment the question is about.
+                    navigate(`/chat?userId=${apartment.landlordId}&apartmentTitle=${encodeURIComponent(apartment.title ?? '')}`);
                   }
                 }}
                 disabled={!apartment.landlordId}
@@ -425,6 +428,9 @@ const ApartmentDetailPage: React.FC = () => {
                     : t('apartments:saveToFavorites', { defaultValue: 'Save to Favorites' })}
                 </Button>
               )}
+
+              {/* Send to roommate: only shown to someone who has a confirmed roommate */}
+              {user && <ShareWithRoommateButton apartmentId={Number(id)} />}
 
               <ApplicationModal
                 open={openApplyModal}

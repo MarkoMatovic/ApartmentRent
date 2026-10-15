@@ -86,6 +86,20 @@ public static class RateLimitingServiceExtensions
                     });
             });
 
+            // REFRESH: every tab refreshes on page load and every ~15 minutes, and a household shares
+            // one IP, so the strict "auth" limit signed people out. Guessing a 256-bit token is not
+            // possible anyway; this only stops floods.
+            options.AddPolicy<string>("refresh", httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 30,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0
+                    }));
+
             // AUTH (zadržan za ostale auth endpointe: forgot-password, reset-password, send-verification-email)
             options.AddPolicy<string>("auth", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(

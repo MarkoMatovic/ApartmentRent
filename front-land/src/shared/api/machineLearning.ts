@@ -27,18 +27,9 @@ export interface ModelMetrics {
     sampleCount?: number;
 }
 
-// Roommate Matching Types
-export interface RoommateMatchScore {
-    userId: number;
-    userName: string;
-    matchScore: number;
-    compatibilityFactors?: {
-        lifestyle?: number;
-        cleanliness?: number;
-        socialPreference?: number;
-        budget?: number;
-    };
-}
+// Roommate Matching Types (one definition, shared with the analytics API)
+export type { RoommateMatchScore } from '../types/analytics';
+import type { RoommateMatchScore } from '../types/analytics';
 
 export const machineLearningApi = {
     // Price Prediction

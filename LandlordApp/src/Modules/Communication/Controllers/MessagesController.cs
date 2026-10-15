@@ -126,6 +126,13 @@ public class MessagesController : ControllerBase
         return Ok();
     }
 
+    /// <summary>Opening a conversation: everything the other person sent is read, in one request.</summary>
+    [HttpPut(ApiActionsV1.MarkConversationAsRead, Name = nameof(ApiActionsV1.MarkConversationAsRead))]
+    public async Task<ActionResult<int>> MarkConversationAsRead([FromRoute] int otherUserId)
+    {
+        return Ok(await _messageService.MarkConversationAsReadAsync(GetCurrentUserId(), otherUserId));
+    }
+
     [HttpGet(ApiActionsV1.GetUnreadCount, Name = nameof(ApiActionsV1.GetUnreadCount))]
     public async Task<ActionResult<int>> GetUnreadCount([FromRoute] int userId)
     {

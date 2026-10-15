@@ -51,6 +51,10 @@ public static class AuthenticationServiceExtensions
                     },
                     OnTokenValidated = async ctx =>
                     {
+                        // Admin powers only in a session confirmed with a second factor.
+                        if (ctx.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
+                            Lander.src.Modules.Users.Implementation.UserImplementation.TwoFactorPolicy.RemoveUnconfirmedAdminRole(identity);
+
                         var jti = ctx.Principal?.FindFirst("jti")?.Value;
                         if (string.IsNullOrEmpty(jti)) return;
 

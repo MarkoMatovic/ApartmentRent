@@ -21,6 +21,9 @@ public class CommunicationsContext : DbContext, IUnitOfWork
     public DbSet<ConversationSettings> ConversationSettings { get; set; }
     public DbSet<ReportedMessage> ReportedMessages { get; set; }
     public DbSet<OutboxMessage> OutboxMessages { get; set; }
+    public DbSet<ChatGroup> ChatGroups { get; set; }
+    public DbSet<ChatGroupMember> ChatGroupMembers { get; set; }
+    public DbSet<ChatGroupMessage> ChatGroupMessages { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -194,6 +197,43 @@ public class CommunicationsContext : DbContext, IUnitOfWork
             entity.Property(e => e.Error).HasColumnType("nvarchar(max)");
             entity.Property(e => e.RetryCount).HasDefaultValue(0);
             entity.HasIndex(e => e.ProcessedAt); // fast unprocessed query
+        });
+
+        modelBuilder.Entity<ChatGroup>(entity =>
+        {
+            entity.HasKey(e => e.GroupId);
+            entity.ToTable("ChatGroups", "Communication");
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime");
+        });
+
+        modelBuilder.Entity<ChatGroupMember>(entity =>
+        {
+            entity.HasKey(e => new { e.GroupId, e.UserId });
+            entity.ToTable("ChatGroupMembers", "Communication");
+            entity.Property(e => e.JoinedDate).HasColumnType("datetime");
+
+            entity.HasOne(e => e.Group)
+                .WithMany(g => g.Members)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // "Which groups am I in" and the unread badge both start from the user.
+            entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<ChatGroupMessage>(entity =>
+        {
+            entity.HasKey(e => e.GroupMessageId);
+            entity.ToTable("ChatGroupMessages", "Communication");
+            entity.Property(e => e.MessageText).HasMaxLength(4000).IsRequired();
+            entity.Property(e => e.SentAt).HasColumnType("datetime");
+
+            entity.HasOne(e => e.Group)
+                .WithMany(g => g.Messages)
+                .HasForeignKey(e => e.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.GroupId, e.GroupMessageId });
         });
     }
 }

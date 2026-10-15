@@ -200,6 +200,7 @@ public class PaymentReversalService : IPaymentReversalService
                     : "Povraćaj novca za vašu kupovinu je obrađen, pa su pogodnosti iz te kupovine uklonjene sa vašeg naloga.",
                 ActionType      = "purchase_reversed",
                 ActionTarget    = "/istorija-placanja",
+                Key             = isChargeback ? "purchase_chargeback" : "purchase_refunded",
                 CreatedByGuid   = Guid.Empty,
                 SenderUserId    = 0,
                 RecipientUserId = userId

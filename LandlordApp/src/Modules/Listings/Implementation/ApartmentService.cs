@@ -40,6 +40,7 @@ public partial class ApartmentService : IApartmentService
     private readonly IOutputCacheStore _outputCacheStore;
     private readonly IConfiguration _configuration;
     private readonly Lander.src.Infrastructure.FileStorage.IImageUrlBuilder _imageUrlBuilder;
+    private readonly IGeocodingService _geocoding;
 
     public ApartmentService(
         ListingsContext context,
@@ -56,7 +57,8 @@ public partial class ApartmentService : IApartmentService
         IAnalyticsService analyticsService,
         IOutputCacheStore outputCacheStore,
         IConfiguration configuration,
-        Lander.src.Infrastructure.FileStorage.IImageUrlBuilder imageUrlBuilder)
+        Lander.src.Infrastructure.FileStorage.IImageUrlBuilder imageUrlBuilder,
+        IGeocodingService geocoding)
     {
         _context = context;
         _reviewStats = reviewStats;
@@ -73,6 +75,29 @@ public partial class ApartmentService : IApartmentService
         _outputCacheStore = outputCacheStore;
         _configuration = configuration;
         _imageUrlBuilder = imageUrlBuilder;
+        _geocoding = geocoding;
+    }
+
+    /// <summary>
+    /// Derives the map coordinates from the street address. Never fails the save: when the address
+    /// cannot be resolved the listing just has no map. Returns true when coordinates were set.
+    /// </summary>
+    private async Task<bool> ApplyGeocodingAsync(Lander.src.Modules.Listings.Models.Apartment apartment)
+    {
+        try
+        {
+            var point = await _geocoding.GeocodeAsync(apartment.Address, apartment.City, apartment.PostalCode);
+            if (point is null) return false;
+
+            apartment.Latitude = point.Value.Latitude;
+            apartment.Longitude = point.Value.Longitude;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Geocoding failed for apartment address '{Address}', '{City}'", apartment.Address, apartment.City);
+            return false;
+        }
     }
 
     /// <summary>

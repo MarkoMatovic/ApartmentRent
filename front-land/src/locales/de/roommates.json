@@ -83,7 +83,6 @@
   "profileCount_one": "{{count}} Profil",
   "profileCount_other": "{{count}} Profile",
   "aiMatchPrompt": "Erstelle ein Mitbewohner-Profil, um KI-Matches mit anderen zu sehen.",
-  "myProfile": "Mein Profil",
   "noResults": "Keine Ergebnisse für diese Filter",
   "noResultsHint": "Versuche es mit weniger Filtern",
   "removeAllFilters": "Alle Filter entfernen",
@@ -195,12 +194,16 @@
   "matchesUnavailable": "Für das Mitbewohner-Matching ist ein Mitbewohner-Profil erforderlich. Erstelle eines, um deine Matches zu sehen.",
   "noMatches": "Noch keine Matches gefunden.",
   "noMatchesHint": "Vervollständige dein Mitbewohner-Profil mit mehr Details, um das Matching zu verbessern.",
-  "matchesFound": "{{count}} kompatible Mitbewohner gefunden",
   "compatibility": "Kompatibilität",
   "lifestyleFactor": "Lebensstil {{percent}}%",
   "budgetFactor": "Budget {{percent}}%",
   "cleanlinessFactor": "Sauberkeit {{percent}}%",
   "compatibilityTooltip": "{{percent}}% Kompatibilität",
   "budgetMinPrefix": "ab",
-  "budgetMaxPrefix": "bis"
+  "budgetMaxPrefix": "bis",
+  "matchesFound_one": "{{count}} passender Mitbewohner gefunden",
+  "matchesFound_other": "{{count}} passende Mitbewohner gefunden",
+  "preferencesFactor": "Präferenzen {{percent}}%",
+  "locationFactor": "Standort {{percent}}%",
+  "refreshMatches": "Treffer aktualisieren"
 }

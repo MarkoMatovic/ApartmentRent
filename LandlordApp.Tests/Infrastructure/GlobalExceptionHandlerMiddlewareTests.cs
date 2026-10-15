@@ -2,6 +2,8 @@ using System.IO;
 using System.Text.Json;
 using FluentAssertions;
 using Lander.Middleware;
+using Lander.src.Common.Exceptions;
+using Lander.src.Common.Validation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -131,6 +133,24 @@ public class GlobalExceptionHandlerMiddlewareTests
         context.Response.StatusCode.Should().Be(500);
         var response = await ReadResponseAsync(context);
         response.GetProperty("statusCode").GetInt32().Should().Be(500);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_BusinessRuleException_Returns422WithCodeNotAServerError()
+    {
+        // A broken business rule (wrong old password, no tokens...) is the caller's situation,
+        // not a server fault: it must not look like a 500 and must carry a translatable code.
+        RequestDelegate next = _ => throw new BusinessRuleException(BusinessErrorCodes.IncorrectOldPassword);
+
+        var middleware = CreateMiddleware(next);
+        var context = CreateHttpContext();
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.StatusCode.Should().Be(422);
+        var response = await ReadResponseAsync(context);
+        response.GetProperty("statusCode").GetInt32().Should().Be(422);
+        response.GetProperty("code").GetString().Should().Be(BusinessErrorCodes.IncorrectOldPassword);
     }
 
     [Fact]

@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { roommatesApi, RoommateInputDto } from '../shared/api/roommates';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -168,8 +169,8 @@ const CreateRoommatePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['roommate-my'] });
       setTimeout(() => navigate('/roommates'), 1800);
     },
-    onError: (err: any) =>
-      setError(err.response?.data?.message || err.message || t('savingError')),
+    onError: (err: unknown) =>
+      setError(getApiErrorMessage(err, t, {}, t('savingError'))),
   });
 
   const handleSubmit = (e: React.FormEvent) => {

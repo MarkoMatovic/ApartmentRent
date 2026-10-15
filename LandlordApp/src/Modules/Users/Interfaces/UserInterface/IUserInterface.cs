@@ -7,6 +7,7 @@ public interface IUserInterface
     Task<UserRegistrationDto> RegisterUserAsync(UserRegistrationInputDto userRegistrationInputDto);
     Task<AuthTokenDto?> LoginUserAsync(LoginUserInputDto userRegistrationInputDto);
     Task LogoutUserAsync(string? rawRefreshToken = null);
+    Task LogoutEverywhereAsync();
     Task DeactivateUserAsync(DeactivateUserInputDto deactivateUserInputDto);
     Task ReactivateUserAsync(ReactivateUserInputDto reactivateUserInputDto);
     Task<bool> DeleteUserAsync(DeleteUserInputDto deleteUserInputDto);

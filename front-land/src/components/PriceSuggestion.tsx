@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { AxiosError } from 'axios';
 import {
     Box,
     Button,
@@ -14,6 +13,7 @@ import {
 } from '@mui/material';
 import { AutoAwesome as AutoAwesomeIcon, TrendingUp as TrendingUpIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { mlApi } from '../shared/api/analytics';
 import { PricePredictionRequest } from '../shared/types/analytics';
 
@@ -99,7 +99,7 @@ const PriceSuggestion: React.FC<PriceSuggestionProps> = ({ apartmentData, onPric
 
                 {predictMutation.isError && (
                     <Alert severity="error">
-                        {t('aiPriceError')} {(predictMutation.error as AxiosError<{ message?: string }>)?.response?.data?.message || ''}
+                        {t('aiPriceError')} {getApiErrorMessage(predictMutation.error, t, {}, '')}
                     </Alert>
                 )}
 

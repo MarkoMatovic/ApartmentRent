@@ -12,9 +12,11 @@ public static class ApartmentQueryBuilder
         if (filters.ListingType.HasValue)
             query = query.Where(a => a.ListingType == filters.ListingType.Value);
 
-        if (!string.IsNullOrEmpty(filters.City))
+        // A trailing space typed in the filter ("Beograd ") must still match "Beograd".
+        var city = filters.City?.Trim();
+        if (!string.IsNullOrEmpty(city))
             // Suffix wildcard → SQL LIKE 'value%' uses the City index (vs. Contains → '%value%')
-            query = query.Where(a => EF.Functions.Like(a.City!, filters.City + "%"));
+            query = query.Where(a => EF.Functions.Like(a.City!, city + "%"));
 
         if (filters.MinRent.HasValue)
             query = query.Where(a => a.Rent >= filters.MinRent.Value);

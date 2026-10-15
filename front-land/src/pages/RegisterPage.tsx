@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { useAuth } from '../shared/context/AuthContext';
 
 const RegisterPage: React.FC = () => {
@@ -58,11 +59,6 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError(t('passwordRequirements'));
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       setError(t('passwordsDoNotMatch'));
       return;
@@ -80,13 +76,8 @@ const RegisterPage: React.FC = () => {
         dateOfBirth: formData.dateOfBirth || undefined,
       });
       setRegisteredEmail(formData.email);
-    } catch (err: any) {
-      if (err.code === 'ERR_NETWORK' || err.message?.includes('Failed to fetch') || err.message?.includes('CONNECTION_REFUSED')) {
-        setError('Cannot connect to server. Please make sure the backend is running on https://localhost:5002');
-      } else {
-        const d = err.response?.data;
-        setError(typeof d === 'string' ? d : d?.message || d?.title || err.message || 'Registration failed');
-      }
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, t, { 409: t('registrationFailed') }));
     } finally {
       setLoading(false);
     }

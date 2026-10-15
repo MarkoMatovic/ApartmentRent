@@ -88,6 +88,8 @@ public partial class NotificationContext : DbContext, IUnitOfWork
             entity.Property(e => e.ActionTarget).HasMaxLength(255);
             entity.Property(e => e.Title).HasMaxLength(255);
             entity.Property(e => e.Message).HasColumnType("text");
+            entity.Property(e => e.Key).HasMaxLength(100);
+            entity.Property(e => e.ParamsJson).HasColumnType("nvarchar(max)");
             entity.Property(e => e.IsRead).HasDefaultValue(false);
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.SenderUserId);
@@ -111,6 +113,8 @@ public partial class NotificationContext : DbContext, IUnitOfWork
             entity.Property(e => e.ActionTarget).HasMaxLength(255);
             entity.Property(e => e.Title).HasMaxLength(255);
             entity.Property(e => e.Message).HasColumnType("text");
+            entity.Property(e => e.Key).HasMaxLength(100);
+            entity.Property(e => e.ParamsJson).HasColumnType("nvarchar(max)");
             entity.Property(e => e.IsRead).HasDefaultValue(false);
             entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.SenderUserId);

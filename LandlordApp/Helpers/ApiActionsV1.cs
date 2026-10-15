@@ -9,6 +9,13 @@ public static class ApiActionsV1
     public const string Register = "register";
     public const string Login = "login";
     public const string Logout = "logout";
+    public const string LogoutEverywhere = "logout-everywhere";
+    // Under /auth so the refresh cookie (Path=/api/v1/auth) reaches them.
+    public const string TwoFactor = $"{Auth}/two-factor";
+    public const string TwoFactorLogin = "login";
+    public const string TwoFactorSetup = "setup";
+    public const string TwoFactorEnable = "enable";
+    public const string TwoFactorDisable = "disable";
     public const string DeleteUser = "delete-user/{userGuid}";
     public const string DeactivateUser = "deactivate-user";
     public const string ReactivateUser = "reactivate-user";
@@ -79,6 +86,18 @@ public static class ApiActionsV1
     public const string DeleteRoommate = "delete-roommate/{id}";
     #endregion
 
+    #region Roommate pairing (two people who agreed to be roommates)
+    public const string RoommatePairing = $"{V1}/roommate-pairing";
+    public const string GetMyPairing = "my";
+    public const string ProposePairing = "propose";
+    public const string AcceptPairing = "{id}/accept";
+    public const string DeclinePairing = "{id}/decline";
+    public const string CancelPairing = "{id}/cancel";
+    public const string EndPairing = "{id}/end";
+    public const string SharedApartments = "shared-apartments";
+    public const string SharedApartment = "shared-apartments/{apartmentId}";
+    #endregion
+
     #region SearchRequests (Gesuche)
     public const string SearchRequests = $"{V1}/search-requests";
     public const string GetAllSearchRequests = "get-all-search-requests";
@@ -104,6 +123,7 @@ public static class ApiActionsV1
     public const string GetUserConversations = "user/{userId}";
     public const string SendMessage = "send";
     public const string MarkMessageAsRead = "mark-read/{messageId}";
+    public const string MarkConversationAsRead = "conversation/{otherUserId}/read";
     public const string GetUnreadCount = "unread-count/{userId}";
     public const string UploadMessageFile = "upload";
     public const string DownloadMessageFile = "files/{filename}";
@@ -116,6 +136,14 @@ public static class ApiActionsV1
     public const string DeleteConversation = "delete-conversation";
     public const string SearchMessages = "search";
     public const string ReportAbuse = "report";
+    #endregion
+
+    #region Chat groups (roommates + landlord in one conversation)
+    public const string ChatGroups = $"{V1}/chat-groups";
+    public const string OpenChatGroup = "open";
+    public const string ChatGroupMessages = "{id}/messages";
+    public const string ReadChatGroup = "{id}/read";
+    public const string LeaveChatGroup = "{id}/leave";
     #endregion
 
     #region Appointments

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle, Box, CircularProgress, Typography, IconButton, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../../shared/utils/apiError';
 import { paymentsApi } from '../../shared/api/paymentsApi';
 import { getPaddle, onPaddleEvent } from '../../shared/payments/paddle';
 
@@ -23,6 +25,7 @@ const FRAME_CLASS = 'paddle-checkout-frame';
  * Paddle event stream, not a redirect.
  */
 const PaddleCheckoutDialog: React.FC<PaddleCheckoutDialogProps> = ({ open, planId, apartmentId, onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const openedTxnRef = useRef<string | null>(null);
@@ -68,9 +71,9 @@ const PaddleCheckoutDialog: React.FC<PaddleCheckoutDialogProps> = ({ open, planI
             locale: 'sr',
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!cancelled) {
-          setError(err?.response?.data?.message || err?.message || 'Plaćanje trenutno nije dostupno.');
+          setError(getApiErrorMessage(err, t, {}, 'Plaćanje trenutno nije dostupno.'));
         }
       } finally {
         if (!cancelled) setLoading(false);

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predlog za cimerstvo – TuRentaj</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f0f2f5; }
+        .container { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .header { background-color: #1976d2; color: white; padding: 32px 24px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 32px 24px; }
+        .info-box { background: #e3f2fd; border-radius: 6px; padding: 20px 24px; margin: 20px 0; border-left: 4px solid #1976d2; }
+        .button-wrap { text-align: center; margin: 28px 0; }
+        .button { display: inline-block; padding: 14px 32px; background-color: #1976d2; color: white !important; text-decoration: none; border-radius: 6px; font-size: 15px; font-weight: bold; }
+        .footer { text-align: center; padding: 20px 24px; font-size: 12px; color: #888; border-top: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Predlog za cimerstvo</h1>
+        </div>
+        <div class="content">
+            <p>Zdravo <strong>{{UserName}}</strong>,</p>
+            <p><strong>{{ProposerName}}</strong> vam predlaže da budete cimeri.</p>
+            <div class="info-box">
+                <p>Ako prihvatite, vas dvoje ćete biti označeni kao zauzeti i nećete se više pojavljivati u pretrazi cimera. Dobićete i zajedničku listu stanova i zajednički razgovor sa stanodavcem.</p>
+            </div>
+            <p>Predlog možete da prihvatite ili odbijete na stranici „Moj cimer”.</p>
+            <div class="button-wrap">
+                <a href="{{BaseUrl}}/my-roommate" class="button">Odgovori na predlog</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 TuRentaj. Sva prava zadržana.</p>
+            <p>Pitanja? Pišite nam na <a href="mailto:podrska@turentaj.com">podrska@turentaj.com</a></p>
+        </div>
+    </div>
+</body>
+</html>

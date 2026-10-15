@@ -21,5 +21,123 @@
         "applicationRejected": "Prijava odbijena",
         "newReview": "Nova recenzija",
         "paymentReceived": "Plaćanje primljeno"
+    },
+    "events": {
+        "pairing_proposed": {
+            "title": "Predlog za cimerstvo",
+            "message": "{{name}} vam predlaže da budete cimeri."
+        },
+        "pairing_accepted": {
+            "title": "Cimerstvo potvrđeno 🎉",
+            "message": "{{name}} je prihvatio/la. Vas dvoje ste sada cimeri i niste više dostupni drugima."
+        },
+        "pairing_declined": {
+            "title": "Predlog za cimerstvo odbijen",
+            "message": "{{name}} je odbio/la vaš predlog da budete cimeri."
+        },
+        "pairing_ended": {
+            "title": "Cimerstvo je prekinuto",
+            "message": "{{name}} je prekinuo/la cimerstvo. Ponovo ste dostupni drugim cimerima."
+        },
+        "pairing_void": {
+            "title": "Predlog za cimerstvo više nije aktuelan",
+            "message": "{{name}} je u međuvremenu našao/la cimera."
+        },
+        "pairing_apartment": {
+            "title": "Novi stan na zajedničkoj listi",
+            "message": "{{name}} je podelio/la stan „{{title}}“ sa vama."
+        },
+        "group_created": {
+            "title": "Novi grupni razgovor",
+            "message": "{{name}} vas je dodao/la u zajednički razgovor."
+        },
+        "group_message": {
+            "title": "Nova poruka u grupi",
+            "message": "{{name}} je napisao/la u zajedničkom razgovoru."
+        },
+        "new_message": {
+            "title": "Nova poruka",
+            "message": "Imate novu poruku od {{name}}"
+        },
+        "application_new": {
+            "title": "Nova prijava za vaš stan",
+            "message": "{{name}} se prijavio/la za „{{title}}“."
+        },
+        "appointment_new": {
+            "title": "Novi zahtev za razgledanje",
+            "message": "{{name}} želi da razgleda „{{title}}“ ({{when}})."
+        },
+        "application_approved": {
+            "title": "Prijava odobrena! 🎉",
+            "message": "Čestitamo! Vaša prijava za „{{title}}“ je odobrena. Sada možete da zakažete razgledanje."
+        },
+        "application_rejected": {
+            "title": "Prijava odbijena",
+            "message": "Vaša prijava za „{{title}}“ nije odobrena."
+        },
+        "application_pending": {
+            "title": "Prijava: na čekanju",
+            "message": "Status vaše prijave za „{{title}}“ je ažuriran: na čekanju."
+        },
+        "application_cancelled": {
+            "title": "Prijava: otkazana",
+            "message": "Vaša prijava za „{{title}}“ je otkazana."
+        },
+        "application_status": {
+            "title": "Prijava: {{status}}",
+            "message": "Status vaše prijave za „{{title}}“ je ažuriran: {{status}}."
+        },
+        "listing_expiry_reminder": {
+            "title": "Oglas uskoro ističe",
+            "message": "Vaš oglas „{{title}}“ ističe za {{days}} dan(a). Obnovite ga kako bi ostao vidljiv."
+        },
+        "new_listing_match": {
+            "title": "Novi oglas odgovara vašoj pretrazi",
+            "message": "Pronađen je novi oglas „{{title}}“ u mestu {{city}} za {{price}} € koji odgovara pretrazi „{{search}}“."
+        },
+        "price_drop": {
+            "title": "Cena oglasa je smanjena!",
+            "message": "Oglas „{{title}}“ iz pretrage „{{search}}“ je pojeftinio sa {{oldRent}} € na {{newRent}} € (−{{drop}} €, {{percent}}% jeftinije)."
+        },
+        "new_listing": {
+            "title": "Novi stan na sajtu!",
+            "message": "Novi stan „{{title}}“ je dostupan u mestu {{city}}."
+        },
+        "purchase_tokens": {
+            "title": "Uspešna kupovina",
+            "message": "Uspešno ste kupili {{tokens}} tokena — dodati su na vaš nalog."
+        },
+        "purchase_analytics": {
+            "title": "Uspešna kupovina",
+            "message": "Napredna analitika je aktivirana na vašem nalogu."
+        },
+        "purchase_featured": {
+            "title": "Uspešna kupovina",
+            "message": "Vaš oglas je istaknut na vrhu pretrage narednih {{days}} dana."
+        },
+        "purchase_credits": {
+            "title": "Uspešna kupovina",
+            "message": "Dodato je {{credits}} kredita za objavu oglasa."
+        },
+        "purchase_boost": {
+            "title": "Uspešna kupovina",
+            "message": "Boost profila cimera je aktiviran na 7 dana."
+        },
+        "purchase_priority": {
+            "title": "Uspešna kupovina",
+            "message": "Priority Inbox je aktiviran na 30 dana."
+        },
+        "purchase_generic": {
+            "title": "Uspešna kupovina",
+            "message": "Vaša kupovina je uspešno obrađena."
+        },
+        "purchase_chargeback": {
+            "title": "Kupovina poništena",
+            "message": "Uplata je osporena kod banke, pa su pogodnosti iz te kupovine uklonjene sa vašeg naloga."
+        },
+        "purchase_refunded": {
+            "title": "Povraćaj novca obrađen",
+            "message": "Povraćaj novca za vašu kupovinu je obrađen, pa su pogodnosti iz te kupovine uklonjene sa vašeg naloga."
+        }
     }
 }

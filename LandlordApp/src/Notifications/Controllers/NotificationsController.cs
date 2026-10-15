@@ -2,6 +2,7 @@
 using Lander.src.Common;
 using Lander.src.Notifications.Dtos.Dto;
 using Lander.src.Notifications.Dtos.InputDto;
+using Lander.src.Notifications.Implementation;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Microsoft.AspNetCore.Authorization;
@@ -23,13 +24,13 @@ public class NotificationsController : ApiControllerBase
     }
 
     [HttpGet(ApiActionsV1.GetUserNotifications, Name = nameof(ApiActionsV1.GetUserNotifications))]
-    public async Task<ActionResult<IEnumerable<NotificationDto>>> GetUserNotifications([FromQuery] int id)
+    public async Task<ActionResult<IEnumerable<NotificationDto>>> GetUserNotifications([FromQuery] int id, [FromQuery] int? limit = null)
     {
         var callerId = TryGetCurrentUserId();
         if (callerId is null) return Unauthorized();
         if (callerId.Value != id) return Forbid();
 
-        return Ok(await _notificationService.GetUserNotificationsAsync(id));
+        return Ok(await _notificationService.GetUserNotificationsAsync(id, limit ?? NotificationService.DefaultPageSize));
     }
 
    

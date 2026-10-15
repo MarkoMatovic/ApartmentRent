@@ -89,9 +89,10 @@ const RoommateListPage: React.FC = () => {
 
   const sorted = useMemo(() => {
     if (!roommates) return [];
-    let list: (Roommate & { matchScore?: number })[] = [...roommates];
+    // The user's own card is rendered separately at the top, so keep it out of the general list.
+    let list: (Roommate & { matchScore?: number })[] = roommates.filter(r => r.userId !== user?.userId);
     if (sortBy === 'bestMatch' && matchScores) {
-      const map = new Map((matchScores as any[]).map(m => [m.roommateId, m.matchPercentage]));
+      const map = new Map(matchScores.map(m => [m.roommateId, m.matchPercentage]));
       list = list.map(r => ({ ...r, matchScore: map.get(r.roommateId) }))
         .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
     } else if (sortBy === 'soonest') {
@@ -102,7 +103,7 @@ const RoommateListPage: React.FC = () => {
       });
     }
     return list;
-  }, [roommates, matchScores, sortBy]);
+  }, [roommates, matchScores, sortBy, user?.userId]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -221,7 +222,6 @@ const RoommateListPage: React.FC = () => {
       {/* My card at top */}
       {myCard && (
         <Box sx={{ mb: 3 }}>
-          <Typography variant="overline" color="text.secondary">{t('myProfile')}</Typography>
           <Grid container spacing={2.5} sx={{ mt: 0 }}>
             <Grid item xs={12} sm={6} md={4} lg={3}>
               <RoommateCard roommate={myCard} isOwn />

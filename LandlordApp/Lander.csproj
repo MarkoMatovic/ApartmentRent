@@ -74,6 +74,8 @@
          ImageSharp 4.x requires a commercial license, so do not bump the major version without
          resolving licensing first. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- QR code of the authenticator-app setup link (two-factor sign-in). -->
+    <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.8.24" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.0" />

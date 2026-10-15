@@ -118,6 +118,9 @@ public partial class ApartmentService
             apartment.IsFurnished, apartment.HasBalcony, apartment.HasElevator,
             apartment.HasParking, apartment.HasInternet, apartment.HasAirCondition,
             apartment.IsPetFriendly, apartment.IsSmokingAllowed);
+        // The form does not collect coordinates: derive them from the street address so the map shows.
+        if (!apartment.Latitude.HasValue || !apartment.Longitude.HasValue)
+            await ApplyGeocodingAsync(apartment);
         await _context.RunInTransactionAsync(async () =>
         {
             _context.Apartments.Add(apartment);
@@ -257,6 +260,11 @@ public partial class ApartmentService
 
         // Capture old rent BEFORE applying the update — needed for price-drop detection.
         var oldRent = apartment.Rent;
+        var oldAddress = apartment.Address;
+        var oldCity = apartment.City;
+        var oldPostalCode = apartment.PostalCode;
+        var oldLatitude = apartment.Latitude;
+        var oldLongitude = apartment.Longitude;
 
         if (updateDto.Title != null) apartment.Title = HtmlSanitizationHelper.SanitizePlainText(updateDto.Title)!;
         if (updateDto.Description != null) apartment.Description = HtmlSanitizationHelper.SanitizeRichText(updateDto.Description);
@@ -271,6 +279,23 @@ public partial class ApartmentService
         if (updateDto.RentIncludeUtilities.HasValue) apartment.RentIncludeUtilities = updateDto.RentIncludeUtilities.Value;
         if (updateDto.Latitude.HasValue) apartment.Latitude = updateDto.Latitude.Value;
         if (updateDto.Longitude.HasValue) apartment.Longitude = updateDto.Longitude.Value;
+
+        // Keep the map pin in step with the address. A caller that sends *different* coordinates wins;
+        // otherwise re-geocode when the address changed or the listing never had a pin.
+        var addressChanged = apartment.Address != oldAddress || apartment.City != oldCity ||
+                             apartment.PostalCode != oldPostalCode;
+        var coordinatesChanged = apartment.Latitude != oldLatitude || apartment.Longitude != oldLongitude;
+        if (!coordinatesChanged &&
+            (addressChanged || !apartment.Latitude.HasValue || !apartment.Longitude.HasValue))
+        {
+            var located = await ApplyGeocodingAsync(apartment);
+            // A pin that belongs to the old address is worse than no pin.
+            if (!located && addressChanged)
+            {
+                apartment.Latitude = null;
+                apartment.Longitude = null;
+            }
+        }
         if (updateDto.SizeSquareMeters.HasValue) apartment.SizeSquareMeters = updateDto.SizeSquareMeters.Value;
         if (updateDto.ApartmentType.HasValue) apartment.ApartmentType = updateDto.ApartmentType.Value;
         if (updateDto.ListingType.HasValue) apartment.ListingType = updateDto.ListingType.Value;

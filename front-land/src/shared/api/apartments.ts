@@ -33,7 +33,7 @@ export const apartmentsApi = {
 
     if (filters) {
       if (filters.listingType !== undefined) params.listingType = filters.listingType;
-      if (filters.city) params.city = filters.city;
+      if (filters.city?.trim()) params.city = filters.city.trim();
       if (filters.minRent) params.minRent = Number(filters.minRent);
       if (filters.maxRent) params.maxRent = Number(filters.maxRent);
       if (filters.numberOfRooms) params.numberOfRooms = Number(filters.numberOfRooms);

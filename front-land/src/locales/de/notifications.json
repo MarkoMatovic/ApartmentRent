@@ -21,5 +21,123 @@
         "applicationRejected": "Bewerbung abgelehnt",
         "newReview": "Neue Bewertung",
         "paymentReceived": "Zahlung erhalten"
+    },
+    "events": {
+        "pairing_proposed": {
+            "title": "Vorschlag zur Mitbewohnerschaft",
+            "message": "{{name}} schlägt vor, dass Sie Mitbewohner werden."
+        },
+        "pairing_accepted": {
+            "title": "Mitbewohnerschaft bestätigt 🎉",
+            "message": "{{name}} hat zugestimmt. Sie sind jetzt Mitbewohner und für andere nicht mehr verfügbar."
+        },
+        "pairing_declined": {
+            "title": "Vorschlag zur Mitbewohnerschaft abgelehnt",
+            "message": "{{name}} hat Ihren Vorschlag, Mitbewohner zu werden, abgelehnt."
+        },
+        "pairing_ended": {
+            "title": "Mitbewohnerschaft beendet",
+            "message": "{{name}} hat die Mitbewohnerschaft beendet. Sie sind wieder für andere Wohnungssuchende verfügbar."
+        },
+        "pairing_void": {
+            "title": "Vorschlag zur Mitbewohnerschaft nicht mehr offen",
+            "message": "{{name}} hat inzwischen einen Mitbewohner gefunden."
+        },
+        "pairing_apartment": {
+            "title": "Neue Wohnung auf der gemeinsamen Liste",
+            "message": "{{name}} hat die Wohnung „{{title}}“ mit Ihnen geteilt."
+        },
+        "group_created": {
+            "title": "Neuer gemeinsamer Chat",
+            "message": "{{name}} hat Sie zu einem gemeinsamen Chat hinzugefügt."
+        },
+        "group_message": {
+            "title": "Neue Nachricht im gemeinsamen Chat",
+            "message": "{{name}} hat im gemeinsamen Chat geschrieben."
+        },
+        "new_message": {
+            "title": "Neue Nachricht",
+            "message": "Sie haben eine neue Nachricht von {{name}}"
+        },
+        "application_new": {
+            "title": "Neue Bewerbung für Ihre Wohnung",
+            "message": "{{name}} hat sich für „{{title}}“ beworben."
+        },
+        "appointment_new": {
+            "title": "Neue Besichtigungsanfrage",
+            "message": "{{name}} möchte „{{title}}“ besichtigen ({{when}})."
+        },
+        "application_approved": {
+            "title": "Bewerbung angenommen! 🎉",
+            "message": "Glückwunsch! Ihre Bewerbung für „{{title}}“ wurde angenommen. Sie können jetzt eine Besichtigung vereinbaren."
+        },
+        "application_rejected": {
+            "title": "Bewerbung abgelehnt",
+            "message": "Ihre Bewerbung für „{{title}}“ wurde nicht angenommen."
+        },
+        "application_pending": {
+            "title": "Bewerbung: in Prüfung",
+            "message": "Der Status Ihrer Bewerbung für „{{title}}“ wurde aktualisiert: in Prüfung."
+        },
+        "application_cancelled": {
+            "title": "Bewerbung: storniert",
+            "message": "Ihre Bewerbung für „{{title}}“ wurde storniert."
+        },
+        "application_status": {
+            "title": "Bewerbung: {{status}}",
+            "message": "Der Status Ihrer Bewerbung für „{{title}}“ wurde aktualisiert: {{status}}."
+        },
+        "listing_expiry_reminder": {
+            "title": "Ihre Anzeige läuft bald ab",
+            "message": "Ihre Anzeige „{{title}}“ läuft in {{days}} Tag(en) ab. Verlängern Sie sie, damit sie sichtbar bleibt."
+        },
+        "new_listing_match": {
+            "title": "Neue Anzeige passt zu Ihrer Suche",
+            "message": "Eine neue Anzeige „{{title}}“ in {{city}} für {{price}} € passt zu Ihrer Suche „{{search}}“."
+        },
+        "price_drop": {
+            "title": "Der Preis einer Anzeige ist gesunken!",
+            "message": "Die Anzeige „{{title}}“ aus Ihrer Suche „{{search}}“ ist von {{oldRent}} € auf {{newRent}} € gesunken (−{{drop}} €, {{percent}}% günstiger)."
+        },
+        "new_listing": {
+            "title": "Neue Wohnung auf der Seite!",
+            "message": "Eine neue Wohnung „{{title}}“ ist in {{city}} verfügbar."
+        },
+        "purchase_tokens": {
+            "title": "Kauf erfolgreich",
+            "message": "Sie haben {{tokens}} Tokens gekauft — sie wurden Ihrem Konto gutgeschrieben."
+        },
+        "purchase_analytics": {
+            "title": "Kauf erfolgreich",
+            "message": "Die erweiterte Analytik ist auf Ihrem Konto aktiviert."
+        },
+        "purchase_featured": {
+            "title": "Kauf erfolgreich",
+            "message": "Ihre Anzeige wird die nächsten {{days}} Tage oben in der Suche hervorgehoben."
+        },
+        "purchase_credits": {
+            "title": "Kauf erfolgreich",
+            "message": "{{credits}} Anzeigenguthaben wurden hinzugefügt."
+        },
+        "purchase_boost": {
+            "title": "Kauf erfolgreich",
+            "message": "Der Boost Ihres Mitbewohnerprofils ist für 7 Tage aktiv."
+        },
+        "purchase_priority": {
+            "title": "Kauf erfolgreich",
+            "message": "Priority Inbox ist für 30 Tage aktiv."
+        },
+        "purchase_generic": {
+            "title": "Kauf erfolgreich",
+            "message": "Ihr Kauf wurde erfolgreich verarbeitet."
+        },
+        "purchase_chargeback": {
+            "title": "Kauf rückgängig gemacht",
+            "message": "Die Zahlung wurde bei der Bank beanstandet, daher wurden die Vorteile dieses Kaufs von Ihrem Konto entfernt."
+        },
+        "purchase_refunded": {
+            "title": "Rückerstattung verarbeitet",
+            "message": "Die Rückerstattung für Ihren Kauf wurde verarbeitet, daher wurden die Vorteile dieses Kaufs von Ihrem Konto entfernt."
+        }
     }
 }

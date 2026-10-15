@@ -16,6 +16,8 @@ public class RoommatesContext : DbContext, IUnitOfWork
     { }
     private IDbContextTransaction? _currentTransaction;
     public DbSet<Roommate> Roommates { get; set; }
+    public DbSet<RoommatePairing> Pairings { get; set; }
+    public DbSet<PairingApartment> PairingApartments { get; set; }
 
     public async Task<IDbContextTransaction?> BeginTransactionAsync()
     {
@@ -108,6 +110,38 @@ public class RoommatesContext : DbContext, IUnitOfWork
             entity.HasIndex(e => e.BudgetMax);
             entity.HasIndex(e => e.AvailableFrom);
             entity.HasIndex(e => e.CreatedDate);
+        });
+
+        modelBuilder.Entity<RoommatePairing>(entity =>
+        {
+            entity.HasKey(e => e.PairingId);
+            entity.ToTable("Pairings", "Roommates");
+
+            entity.Property(e => e.Status).HasConversion<int>();
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime");
+            entity.Property(e => e.RespondedDate).HasColumnType("datetime");
+            entity.Property(e => e.EndedDate).HasColumnType("datetime");
+
+            // "Who is taken" and "my pairings" both look rows up by user + status.
+            entity.HasIndex(e => new { e.RequesterUserId, e.Status });
+            entity.HasIndex(e => new { e.PartnerUserId, e.Status });
+        });
+
+        modelBuilder.Entity<PairingApartment>(entity =>
+        {
+            entity.HasKey(e => e.PairingApartmentId);
+            entity.ToTable("PairingApartments", "Roommates");
+
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.AddedDate).HasColumnType("datetime");
+
+            entity.HasOne(e => e.Pairing)
+                .WithMany(p => p.Apartments)
+                .HasForeignKey(e => e.PairingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // An apartment is on a pair's list once.
+            entity.HasIndex(e => new { e.PairingId, e.ApartmentId }).IsUnique();
         });
     }
 }

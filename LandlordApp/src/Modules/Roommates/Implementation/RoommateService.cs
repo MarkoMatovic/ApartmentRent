@@ -26,9 +26,9 @@ public class RoommateService : IRoommateService
 
     // List cache keys include a version number; bumping it on any mutation
     // invalidates all cached pages/filter combinations at once.
-    private const string CacheVersionKey = "Roommates_CacheVersion";
-    private long GetCacheVersion() => _cache.GetOrCreate(CacheVersionKey, _ => 0L);
-    private void InvalidateListCache() => _cache.Set(CacheVersionKey, GetCacheVersion() + 1);
+    private long GetCacheVersion() => RoommateListCache.Version(_cache);
+    private void InvalidateListCache() => RoommateListCache.Invalidate(_cache);
+
     public async Task<PagedResult<RoommateDto>> GetAllRoommatesAsync(RoommateFilterQuery filter)
     {
         var location       = filter.Location;
@@ -43,12 +43,13 @@ public class RoommateService : IRoommateService
         var apartmentId    = filter.ApartmentId;
         var gender         = filter.Gender;
         var workSchedule   = filter.WorkSchedule;
+        var includeTaken   = filter.IncludeTaken;
 
         // Clamp to prevent DoS via oversized page requests
         var page = filter.Page < 1 ? 1 : filter.Page;
         var pageSize = filter.PageSize < 1 ? 20 : filter.PageSize > 100 ? 100 : filter.PageSize;
 
-        var cacheKey = $"Roommates_v{GetCacheVersion()}_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{gender}_{workSchedule}_{page}_{pageSize}";
+        var cacheKey = $"Roommates_v{GetCacheVersion()}_{location}_{minBudget}_{maxBudget}_{smokingAllowed}_{petFriendly}_{lifestyle}_{profession}_{availableFrom}_{stayDuration}_{apartmentId}_{gender}_{workSchedule}_{includeTaken}_{page}_{pageSize}";
 
         if (_cache.TryGetValue(cacheKey, out PagedResult<RoommateDto>? cachedResult) && cachedResult != null)
         {
@@ -58,9 +59,17 @@ public class RoommateService : IRoommateService
         var query = _context.Roommates
             .Where(r => r.IsActive)
             .AsNoTracking();
-        if (!string.IsNullOrEmpty(location))
+        if (!includeTaken)
         {
-            query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(location));
+            // Two people who agreed to be roommates are no longer available to anybody else.
+            query = query.Where(r => !_context.Pairings.Any(p =>
+                p.Status == PairingStatus.Accepted
+                && (p.RequesterUserId == r.UserId || p.PartnerUserId == r.UserId)));
+        }
+        var locationTerm = location?.Trim();
+        if (!string.IsNullOrEmpty(locationTerm))
+        {
+            query = query.Where(r => r.PreferredLocation != null && r.PreferredLocation.Contains(locationTerm));
         }
         if (minBudget.HasValue)
         {
@@ -122,6 +131,7 @@ public class RoommateService : IRoommateService
             .AsNoTracking()
             .ToListAsync();
         var userDict = users.ToDictionary(u => u.UserId);
+        var takenIds = await GetTakenAmongAsync(userIds);
         var resultList = roommates.Select(r =>
         {
             var user = userDict.GetValueOrDefault(r.UserId);
@@ -157,7 +167,8 @@ public class RoommateService : IRoommateService
                 Gender = r.Gender,
                 Languages = r.Languages,
                 WorkSchedule = r.WorkSchedule,
-                MusicFriendly = r.MusicFriendly
+                MusicFriendly = r.MusicFriendly,
+                IsTaken = takenIds.Contains(r.UserId)
             };
         }).ToList();
 
@@ -187,6 +198,7 @@ public class RoommateService : IRoommateService
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserId == roommate.UserId);
         if (user == null) return null;
+        var isTaken = (await GetTakenAmongAsync(new[] { roommate.UserId })).Contains(roommate.UserId);
         return new RoommateDto
         {
             RoommateId = roommate.RoommateId,
@@ -218,7 +230,8 @@ public class RoommateService : IRoommateService
             Gender = roommate.Gender,
             Languages = roommate.Languages,
             WorkSchedule = roommate.WorkSchedule,
-            MusicFriendly = roommate.MusicFriendly
+            MusicFriendly = roommate.MusicFriendly,
+            IsTaken = isTaken
         };
     }
     public async Task<RoommateDto?> GetRoommateByUserIdAsync(int userId)
@@ -235,6 +248,7 @@ public class RoommateService : IRoommateService
             .FirstOrDefaultAsync(u => u.UserId == roommate.UserId);
         if (user == null) return null;
 
+        var isTaken = (await GetTakenAmongAsync(new[] { roommate.UserId })).Contains(roommate.UserId);
         return new RoommateDto
         {
             RoommateId           = roommate.RoommateId,
@@ -266,7 +280,8 @@ public class RoommateService : IRoommateService
             Gender               = roommate.Gender,
             Languages            = roommate.Languages,
             WorkSchedule         = roommate.WorkSchedule,
-            MusicFriendly        = roommate.MusicFriendly
+            MusicFriendly        = roommate.MusicFriendly,
+            IsTaken              = isTaken
         };
     }
     public async Task<RoommateDto> CreateRoommateAsync(int userId, RoommateInputDto input)
@@ -476,6 +491,25 @@ public class RoommateService : IRoommateService
                     });
         InvalidateListCache();
         return true;
+    }
+    private async Task<HashSet<int>> GetTakenAmongAsync(IEnumerable<int> userIds)
+    {
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0) return new HashSet<int>();
+
+        var pairs = await _context.Pairings.AsNoTracking()
+            .Where(p => p.Status == PairingStatus.Accepted
+                        && (ids.Contains(p.RequesterUserId) || ids.Contains(p.PartnerUserId)))
+            .Select(p => new { p.RequesterUserId, p.PartnerUserId })
+            .ToListAsync();
+
+        var taken = new HashSet<int>();
+        foreach (var pair in pairs)
+        {
+            taken.Add(pair.RequesterUserId);
+            taken.Add(pair.PartnerUserId);
+        }
+        return taken;
     }
     public async Task<bool> DeleteRoommateByUserIdAsync(int userId)
     {

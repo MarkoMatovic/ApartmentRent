@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Container,
@@ -17,21 +17,29 @@ import {
   Chip,
   InputAdornment,
   Fade,
+  Button,
+  Tooltip,
   alpha,
   useTheme
 } from '@mui/material';
-import {
-  Send as SendIcon,
-  Search as SearchIcon,
-  MoreVert as MoreVertIcon,
-  DoneAll as DoneAllIcon,
-  Done as DoneIcon,
-  ChatBubbleOutline as ChatBubbleOutlineIcon,
-  Circle as CircleIcon
-} from '@mui/icons-material';
+// One import per icon: the '@mui/icons-material' index pulls in thousands of modules.
+import SendIcon from '@mui/icons-material/Send';
+import SearchIcon from '@mui/icons-material/Search';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ScrollDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import CircleIcon from '@mui/icons-material/Circle';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import GroupsIcon from '@mui/icons-material/Groups';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { messagesApi, ConversationDto, MessageDto } from '../api/messagesApi';
 import { useChatSignalR } from '../hooks/useChatSignalR';
+import ChatMessageList from '../components/Chat/ChatMessageList';
+import GroupChatPanel from '../components/Chat/GroupChatPanel';
+import { ChatGroup, ChatGroupMessage, chatGroupsApi, groupTitle } from '../shared/api/chatGroups';
+import { useMyPairing } from '../hooks/useMyPairing';
+import { applyLiveMessage, buildTimeline, markMessagesRead, parseServerDate } from '../components/Chat/chatMessageUtils';
 import { useAuth } from '../shared/context/AuthContext';
 import { useNotifications } from '../shared/context/NotificationContext';
 import { analyticsApi } from '../shared/api/analytics';
@@ -63,29 +71,98 @@ const chatColors = {
 };
 
 const ChatPage: React.FC = () => {
-  const { t } = useTranslation('chat');
+  const { t, i18n } = useTranslation('chat');
   const { user } = useAuth();
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [conversations, setConversations] = useState<ConversationDto[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<ConversationDto | null>(null);
   const [messages, setMessages] = useState<MessageDto[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Shared conversations of two roommates with a landlord.
+  const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const groupsRef = useRef<ChatGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const selectedGroupIdRef = useRef<number | null>(null);
+  const [openingGroup, setOpeningGroup] = useState(false);
+  // Scrolling behaves like WhatsApp: stay glued to the bottom while you are there, and when you have
+  // scrolled up to read, do not yank the view down - offer a button with the number of new messages.
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const openingConversationRef = useRef(false);
+  const lastMessageIdRef = useRef<number | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [newBelowCount, setNewBelowCount] = useState(0);
+  // First message the user had not read when opening the conversation: the "N unread" divider goes above it.
+  const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<number | null>(null);
   const [searchParams] = useSearchParams();
   const targetUserIdParam = searchParams.get('userId');
+  const targetGroupParam = searchParams.get('group');
+  const openedGroupParamRef = useRef<string | null>(null);
+  const apartmentTitleParam = searchParams.get('apartmentTitle');
+  const prefilledForApartmentRef = useRef(false);
 
   const currentUserId = user!.userId;
-  const { connected, sendMessage, markAsRead, newMessage, userTyping } = useChatSignalR(currentUserId);
-  const { refreshUnreadMessagesCount } = useNotifications();
+  const { connected, sendMessage, markAsRead, newMessage, userTyping, readMessageIds, newGroupMessage, groupsChanged } = useChatSignalR(currentUserId);
+  const { partner } = useMyPairing();
+  const { refreshUnreadMessagesCount, addNotification } = useNotifications();
 
   useEffect(() => {
     loadConversations();
+    loadGroups();
     // Učitaj broj nepročitanih poruka kada se otvori Messages stranica
     refreshUnreadMessagesCount();
   }, [currentUserId]);
+
+  // Somebody added us to a shared conversation: show it without a reload.
+  useEffect(() => {
+    if (groupsChanged > 0) loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupsChanged]);
+
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
+
+  // A message arrived in a shared conversation: the sidebar preview and badge follow, without
+  // asking for the whole list again (only a conversation we do not know yet needs that).
+  useEffect(() => {
+    if (!newGroupMessage) return;
+    const message = newGroupMessage;
+    if (!groupsRef.current.some(g => g.groupId === message.groupId)) {
+      loadGroups();
+      return;
+    }
+    setGroups(prev => {
+      const target = prev.find(g => g.groupId === message.groupId);
+      if (!target || target.lastMessage?.messageId === message.messageId) return prev;
+      const unread = message.senderId !== currentUserId && message.groupId !== selectedGroupIdRef.current;
+      const updated = { ...target, lastMessage: message, unreadCount: target.unreadCount + (unread ? 1 : 0) };
+      return [updated, ...prev.filter(g => g.groupId !== message.groupId)];
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newGroupMessage]);
+
+  // A link to a shared conversation (from a notification) opens it, once the list has it.
+  useEffect(() => {
+    if (!targetGroupParam || openedGroupParamRef.current === targetGroupParam) return;
+    const target = groups.find(g => g.groupId === Number(targetGroupParam));
+    if (!target) return;
+    openedGroupParamRef.current = targetGroupParam;
+    openGroup(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetGroupParam, groups]);
+
+  // Choosing a one-to-one conversation leaves the shared one.
+  useEffect(() => {
+    if (selectedConversation) setSelectedGroupId(null);
+  }, [selectedConversation]);
+
+  useEffect(() => {
+    selectedGroupIdRef.current = selectedGroupId;
+  }, [selectedGroupId]);
 
   useEffect(() => {
     if (loading || !targetUserIdParam) return;
@@ -116,8 +193,10 @@ const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (newMessage) {
-      // Ažuriraj listu konverzacija kada stigne nova poruka
-      loadConversations();
+      // The list follows the message on its own; fetching the whole list again for every message
+      // made the page slower the more conversations a user had.
+      setConversations(prev =>
+        applyLiveMessage(prev, newMessage, currentUserId, selectedConversation?.otherUserId ?? null));
 
       if (selectedConversation &&
         (newMessage.senderId === selectedConversation.otherUserId ||
@@ -138,27 +217,77 @@ const ChatPage: React.FC = () => {
     }
   }, [newMessage, selectedConversation, currentUserId, markAsRead]);
 
+  // Coming from an apartment page: type the first message for the user (they can edit it before sending).
   useEffect(() => {
-    // Debounce scroll - ne skroluj odmah, sačekaj malo
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
+    if (prefilledForApartmentRef.current || !apartmentTitleParam || !selectedConversation) return;
+    if (selectedConversation.otherUserId !== Number(targetUserIdParam)) return;
+    prefilledForApartmentRef.current = true;
+    setMessageText(current => current || t('interestedInApartment', { title: apartmentTitleParam }));
+  }, [apartmentTitleParam, targetUserIdParam, selectedConversation, t]);
 
-    scrollTimeoutRef.current = setTimeout(() => {
-      scrollToBottom();
-    }, 100);
-
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, [messages]);
+  // A different conversation: start glued to the bottom and remember to jump to the unread divider.
+  useEffect(() => {
+    stickToBottomRef.current = true;
+    openingConversationRef.current = true;
+    lastMessageIdRef.current = null;
+    setShowScrollDown(false);
+    setNewBelowCount(0);
+  }, [selectedConversation?.otherUserId]);
 
   const scrollToBottom = () => {
-    // Koristi 'auto' umesto 'smooth' za brže skrolovanje bez animacije
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
   };
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const last = messages[messages.length - 1];
+    const isNewTail = last !== undefined && last.messageId !== lastMessageIdRef.current;
+    lastMessageIdRef.current = last?.messageId ?? null;
+
+    if (openingConversationRef.current && messages.length > 0) {
+      openingConversationRef.current = false;
+      // Jump to the first unread message if there is one, otherwise to the latest.
+      const divider = container.querySelector('[data-unread-divider]');
+      if (divider) divider.scrollIntoView({ block: 'center' });
+      else scrollToBottom();
+      return;
+    }
+
+    if (!isNewTail) return; // e.g. only a read receipt changed
+
+    if (stickToBottomRef.current || last.senderId === currentUserId) {
+      scrollToBottom();
+      setNewBelowCount(0);
+    } else {
+      setNewBelowCount(count => count + 1);
+    }
+  }, [messages, currentUserId]);
+
+  const handleMessagesScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+    stickToBottomRef.current = nearBottom;
+    setShowScrollDown(!nearBottom);
+    if (nearBottom) setNewBelowCount(0);
+  };
+
+  // The other person read our messages: flip the ticks live (the server pushes "MessageRead").
+  useEffect(() => {
+    if (readMessageIds.length === 0) return;
+    const read = new Set(readMessageIds);
+    setMessages(prev => markMessagesRead(prev, read));
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.lastMessage && !conv.lastMessage.isRead && read.has(conv.lastMessage.messageId)
+          ? { ...conv, lastMessage: { ...conv.lastMessage, isRead: true } }
+          : conv,
+      ),
+    );
+  }, [readMessageIds]);
 
   const loadUserInfoAndCreateConversation = async (userId: number) => {
     try {
@@ -235,6 +364,50 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const loadGroups = async () => {
+    try {
+      const data = await chatGroupsApi.getMine();
+      // The group that is open is being read right now, whatever the server counted a moment ago.
+      setGroups(data.map(g => (g.groupId === selectedGroupIdRef.current ? { ...g, unreadCount: 0 } : g)));
+    } catch {
+      // One-to-one chats keep working without the shared ones.
+    }
+  };
+
+  const openGroup = (group: ChatGroup) => {
+    setSelectedConversation(null);
+    setMessages([]);
+    setSelectedGroupId(group.groupId);
+  };
+
+  const handleGroupRead = useCallback((groupId: number) => {
+    setGroups(prev => prev.map(g => (g.groupId === groupId ? { ...g, unreadCount: 0 } : g)));
+  }, []);
+
+  const handleGroupMessage = useCallback((groupId: number, message: ChatGroupMessage) => {
+    setGroups(prev => prev.map(g => (g.groupId === groupId ? { ...g, lastMessage: message } : g)));
+  }, []);
+
+  const handleGroupLeft = useCallback((groupId: number) => {
+    setGroups(prev => prev.filter(g => g.groupId !== groupId));
+    setSelectedGroupId(null);
+  }, []);
+
+  /** Puts my roommate into the conversation with this person (landlord); what was said so far comes along. */
+  const startGroupWith = async (otherUserId: number) => {
+    setOpeningGroup(true);
+    try {
+      const group = await chatGroupsApi.open(otherUserId);
+      setGroups(prev => (prev.some(g => g.groupId === group.groupId) ? prev : [group, ...prev]));
+      openGroup(group);
+      addNotification({ title: t('groupOpened'), message: t('groupHistoryHint'), type: 'success' });
+    } catch (error) {
+      addNotification({ title: t('groupOpenFailed'), message: getApiErrorMessage(error, t), type: 'error' });
+    } finally {
+      setOpeningGroup(false);
+    }
+  };
+
   const loadConversations = async () => {
     try {
       const data = await messagesApi.getUserConversations(currentUserId);
@@ -250,28 +423,23 @@ const ChatPage: React.FC = () => {
   const loadMessages = async (conv: ConversationDto) => {
     try {
       const data = await messagesApi.getConversation(currentUserId, conv.otherUserId);
+      setFirstUnreadMessageId(
+        data.messages.find(m => m.receiverId === currentUserId && !m.isRead)?.messageId ?? null,
+      );
       setMessages(data.messages);
       setSelectedConversation(conv);
 
-      // Označi sve nepročitane poruke kao pročitane kada se otvori konverzacija
-      const unreadMessages = data.messages.filter(m => m.receiverId === currentUserId && !m.isRead);
-      for (const msg of unreadMessages) {
+      // Opening a conversation reads it: one request for all of it (it used to be one per message).
+      const hasUnread = conv.unreadCount > 0 || data.messages.some(m => m.receiverId === currentUserId && !m.isRead);
+      if (hasUnread) {
         try {
-          await messagesApi.markAsRead(msg.messageId);
-        } catch (error) {
-          // Ignoriši greške
+          await messagesApi.markConversationRead(conv.otherUserId);
+          setConversations(prev =>
+            prev.map(c => (c.otherUserId === conv.otherUserId ? { ...c, unreadCount: 0 } : c)));
+          await refreshUnreadMessagesCount();
+        } catch {
+          // Still unread on the server: the badge and the list keep showing it, which is the truth.
         }
-      }
-
-      // Ažuriraj broj nepročitanih poruka nakon označavanja poruka kao pročitanih
-      await refreshUnreadMessagesCount();
-
-      // Ažuriraj listu konverzacija bez pozivanja loadConversations (da izbegnemo circular dependency)
-      try {
-        const conversationsData = await messagesApi.getUserConversations(currentUserId);
-        setConversations(conversationsData);
-      } catch (error) {
-        // Ignoriši greške
       }
     } catch (error) {
       // Opening the conversation failed; the list stays as it was.
@@ -294,47 +462,53 @@ const ChatPage: React.FC = () => {
           receiverId: selectedConversation.otherUserId,
           messageText: messageToSend
         });
-        setMessages(prev => [...prev, newMsg]);
+        setMessages(prev => (prev.some(m => m.messageId === newMsg.messageId) ? prev : [...prev, newMsg]));
+        // Sent over the hub, the "MessageSent" event updates the list; without it, the reply does.
+        setConversations(prev => applyLiveMessage(prev, newMsg, currentUserId, selectedConversation.otherUserId));
       }
 
       // Track message sent event
       await analyticsApi.trackEvent('MessageSent', 'Communication');
 
       setMessageText('');
-
-      // Ažuriraj lokalno stanje konverzacije umesto pozivanja loadConversations
-      setConversations(prev => prev.map(conv =>
-        conv.otherUserId === selectedConversation.otherUserId
-          ? {
-            ...conv,
-            lastMessage: {
-              messageId: 0,
-              senderId: currentUserId,
-              receiverId: selectedConversation.otherUserId,
-              messageText: messageToSend,
-              sentAt: new Date().toISOString(),
-              isRead: true,
-            }
-          }
-          : conv
-      ));
     } catch (error) {
-      // Send failed: leave the typed text in the input so the user can retry instead of losing it.
+      // Send failed: leave the typed text in the input so the user can retry instead of losing it,
+      // and tell the user why (too long, no tokens, blocked...).
+      addNotification({ title: t('messageNotSent'), message: getApiErrorMessage(error, t), type: 'error' });
     }
   };
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = parseServerDate(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 48) {
       return t('yesterday', 'Juče');
     } else {
-      return date.toLocaleDateString('sr-RS', { day: 'numeric', month: 'short' });
+      return date.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' });
     }
+  };
+
+  const conversationRowSx = {
+                    borderRadius: 3,
+                    mb: 1,
+                    py: 1.5,
+                    transition: 'all 0.2s ease',
+                    // The selected row used the light-blue of the light theme in dark mode too, so the
+                    // white name was unreadable (contrast 1.1:1). Dark mode gets a deep teal (9:1).
+                    '&.Mui-selected': {
+                      bgcolor: isDark ? '#164e63' : chatColors.selectedBg,
+                      borderLeft: `3px solid ${isDark ? chatColors.primaryLight : chatColors.selectedBorder}`,
+                      '&:hover': {
+                        bgcolor: isDark ? '#155e75' : alpha(chatColors.selectedBg, 0.8),
+                      }
+                    },
+                    '&:hover': {
+                      bgcolor: isDark ? 'rgba(255,255,255,0.06)' : chatColors.hoverBg,
+                    }
   };
 
   const filteredConversations = useMemo(() =>
@@ -342,6 +516,31 @@ const ChatPage: React.FC = () => {
       conv.otherUserName?.toLowerCase().includes(searchQuery.toLowerCase())
     ),
     [conversations, searchQuery]
+  );
+
+  const selectedGroup = useMemo(
+    () => groups.find(g => g.groupId === selectedGroupId) ?? null,
+    [groups, selectedGroupId],
+  );
+
+  const filteredGroups = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return groups.filter(g => groupTitle(g, currentUserId).toLowerCase().includes(q));
+  }, [groups, searchQuery, currentUserId]);
+
+  // "Add my roommate" on a conversation with someone who is not my roommate.
+  const roommateGroupWithThisPerson = useMemo(() => {
+    if (!partner || !selectedConversation) return undefined;
+    return groups.find(g =>
+      g.members.some(m => m.userId === selectedConversation.otherUserId)
+      && g.members.some(m => m.userId === partner.partnerUserId));
+  }, [groups, partner, selectedConversation]);
+  const canAddRoommate = !!partner && !!selectedConversation
+    && selectedConversation.otherUserId !== partner.partnerUserId;
+
+  const timeline = useMemo(
+    () => buildTimeline(messages, currentUserId, firstUnreadMessageId),
+    [messages, currentUserId, firstUnreadMessageId],
   );
 
   if (loading) {
@@ -426,7 +625,56 @@ const ChatPage: React.FC = () => {
 
           {/* Conversations List */}
           <List sx={{ flex: 1, overflow: 'auto', p: 1.5 }}>
-            {filteredConversations.length === 0 ? (
+            {filteredGroups.map(group => {
+              const title = groupTitle(group, currentUserId);
+              const last = group.lastMessage;
+              return (
+                <ListItemButton
+                  key={`group-${group.groupId}`}
+                  selected={selectedGroupId === group.groupId}
+                  onClick={() => openGroup(group)}
+                  sx={conversationRowSx}
+                >
+                  <ListItemAvatar>
+                    <Badge badgeContent={group.unreadCount} color="error" overlap="circular"
+                      sx={{ '& .MuiBadge-badge': { bgcolor: '#ef4444', fontWeight: 600 } }}>
+                      <Avatar sx={{ width: 52, height: 52, bgcolor: chatColors.accent }}>
+                        <GroupsIcon />
+                      </Avatar>
+                    </Badge>
+                  </ListItemAvatar>
+                  <ListItemText
+                    sx={{ ml: 1.5 }}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="subtitle1" noWrap fontWeight={group.unreadCount > 0 ? 700 : 500} sx={{ color: 'text.primary' }}>
+                          {title}
+                        </Typography>
+                        <Chip label={t('groupBadge')} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+                      </Box>
+                    }
+                    secondary={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          fontWeight: group.unreadCount > 0 ? 500 : 400,
+                          color: group.unreadCount > 0 ? 'text.primary' : 'text.secondary',
+                        }}
+                      >
+                        {last ? `${last.senderId === currentUserId ? t('groupSenderYou') : (last.senderName ?? '').split(' ')[0]}: ${last.messageText}` : t('groupChat')}
+                      </Typography>
+                    }
+                  />
+                  {last && (
+                    <Typography variant="caption" sx={{ alignSelf: 'flex-start', mt: 0.5, color: chatColors.textMuted, fontWeight: 500 }}>
+                      {formatTime(last.sentAt)}
+                    </Typography>
+                  )}
+                </ListItemButton>
+              );
+            })}
+            {filteredConversations.length === 0 && filteredGroups.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Box sx={{
                   width: 80,
@@ -451,22 +699,7 @@ const ChatPage: React.FC = () => {
                   key={conv.otherUserId}
                   selected={selectedConversation?.otherUserId === conv.otherUserId}
                   onClick={() => loadMessages(conv)}
-                  sx={{
-                    borderRadius: 3,
-                    mb: 1,
-                    py: 1.5,
-                    transition: 'all 0.2s ease',
-                    '&.Mui-selected': {
-                      bgcolor: chatColors.selectedBg,
-                      borderLeft: `3px solid ${chatColors.selectedBorder}`,
-                      '&:hover': {
-                        bgcolor: alpha(chatColors.selectedBg, 0.8),
-                      }
-                    },
-                    '&:hover': {
-                      bgcolor: chatColors.hoverBg,
-                    }
-                  }}
+                  sx={conversationRowSx}
                 >
                   <ListItemAvatar>
                     <Badge
@@ -548,7 +781,16 @@ const ChatPage: React.FC = () => {
             bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : '#ffffff',
           }}
         >
-          {!selectedConversation ? (
+          {selectedGroup ? (
+            <GroupChatPanel
+              group={selectedGroup}
+              currentUserId={currentUserId}
+              incoming={newGroupMessage}
+              onRead={handleGroupRead}
+              onMessage={handleGroupMessage}
+              onLeft={handleGroupLeft}
+            />
+          ) : !selectedConversation ? (
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
@@ -633,6 +875,35 @@ const ChatPage: React.FC = () => {
                       )}
                     </Box>
                   </Box>
+                  {canAddRoommate && (
+                    <Tooltip title={t('groupHistoryHint')}>
+                      <span>
+                        {/* Wide screens get the words, a phone gets the icon: the action is on both. */}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<GroupAddIcon />}
+                          disabled={openingGroup}
+                          onClick={() => (roommateGroupWithThisPerson
+                            ? openGroup(roommateGroupWithThisPerson)
+                            : startGroupWith(selectedConversation.otherUserId))}
+                          sx={{ mr: 1, textTransform: 'none', display: { xs: 'none', sm: 'inline-flex' } }}
+                        >
+                          {roommateGroupWithThisPerson ? t('openGroupChat') : t('addRoommateToChat')}
+                        </Button>
+                        <IconButton
+                          disabled={openingGroup}
+                          aria-label={roommateGroupWithThisPerson ? t('openGroupChat') : t('addRoommateToChat')}
+                          onClick={() => (roommateGroupWithThisPerson
+                            ? openGroup(roommateGroupWithThisPerson)
+                            : startGroupWith(selectedConversation.otherUserId))}
+                          sx={{ mr: 0.5, color: chatColors.primary, display: { xs: 'inline-flex', sm: 'none' } }}
+                        >
+                          <GroupAddIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
                   <IconButton sx={{ color: chatColors.textMuted }}>
                     <MoreVertIcon />
                   </IconButton>
@@ -640,12 +911,18 @@ const ChatPage: React.FC = () => {
               </Box>
 
               {/* Messages List */}
-              <Box sx={{
-                flex: 1,
-                overflow: 'auto',
-                p: 3,
-                bgcolor: theme.palette.mode === 'dark' ? 'background.default' : '#f8fafc',
-              }}>
+              <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex' }}>
+              <Box
+                ref={scrollContainerRef}
+                onScroll={handleMessagesScroll}
+                sx={{
+                  flex: 1,
+                  overflow: 'auto',
+                  px: { xs: 1, sm: 3 },
+                  py: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'background.default' : '#f8fafc',
+                }}
+              >
                 {messages.length === 0 && (
                   <Box sx={{ textAlign: 'center', py: 8 }}>
                     <Box sx={{
@@ -669,126 +946,30 @@ const ChatPage: React.FC = () => {
                     </Typography>
                   </Box>
                 )}
-                {messages.map((msg, index) => {
-                  const isOwn = msg.senderId === currentUserId;
-                  const showAvatar = index === 0 || messages[index - 1].senderId !== msg.senderId;
-                  const isLastInGroup = index === messages.length - 1 || messages[index + 1].senderId !== msg.senderId;
-
-                  return (
-                    <Box
-                      key={msg.messageId}
-                      sx={{
-                        display: 'flex',
-                        justifyContent: isOwn ? 'flex-end' : 'flex-start',
-                        mb: isLastInGroup ? 2 : 0.5,
-                        alignItems: 'flex-end'
-                      }}
-                    >
-                      {/* Avatar za primljene poruke (levo) */}
-                      {!isOwn && showAvatar && (
-                        <Avatar
-                          src={selectedConversation.otherUserProfilePicture || undefined}
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            mr: 1,
-                            mb: 0.5,
-                            bgcolor: chatColors.accent,
-                            fontSize: '0.875rem',
-                          }}
-                        >
-                          {selectedConversation.otherUserName?.charAt(0)}
-                        </Avatar>
-                      )}
-                      {!isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
-
-                      <Box
-                        sx={{
-                          maxWidth: '70%',
-                          position: 'relative'
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            px: 2,
-                            py: 1.25,
-                            borderRadius: isOwn
-                              ? isLastInGroup ? '20px 4px 20px 20px' : '20px 20px 20px 20px'
-                              : isLastInGroup ? '4px 20px 20px 20px' : '20px 20px 20px 20px',
-                            bgcolor: isOwn
-                              ? chatColors.messageSent
-                              : (theme.palette.mode === 'dark' ? chatColors.messageReceivedDark : chatColors.messageReceived),
-                            color: isOwn
-                              ? chatColors.textOnPrimary
-                              : (theme.palette.mode === 'dark' ? chatColors.textOnReceivedDark : chatColors.textOnReceived),
-                            boxShadow: isOwn
-                              ? '0 1px 2px rgba(0, 0, 0, 0.1)'
-                              : '0 1px 2px rgba(0, 0, 0, 0.08)',
-                            border: isOwn ? 'none' : `1px solid ${theme.palette.mode === 'dark' ? '#4b5563' : chatColors.borderColor}`,
-                          }}
-                        >
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              lineHeight: 1.5,
-                              wordBreak: 'break-word',
-                              color: 'inherit',
-                              fontWeight: 400,
-                            }}
-                          >
-                            {msg.messageText}
-                          </Typography>
-                        </Box>
-                        {isLastInGroup && (
-                          <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            mt: 0.5,
-                            px: 0.5,
-                            justifyContent: isOwn ? 'flex-end' : 'flex-start'
-                          }}>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: chatColors.textMuted,
-                                fontSize: '0.7rem'
-                              }}
-                            >
-                              {formatTime(msg.sentAt)}
-                            </Typography>
-                            {isOwn && (
-                              msg.isRead ? (
-                                <DoneAllIcon sx={{ fontSize: 14, color: chatColors.primary }} />
-                              ) : (
-                                <DoneIcon sx={{ fontSize: 14, color: chatColors.textMuted }} />
-                              )
-                            )}
-                          </Box>
-                        )}
-                      </Box>
-
-                      {/* Avatar za moje poruke (desno) */}
-                      {isOwn && showAvatar && (
-                        <Avatar
-                          src={user?.profilePicture || undefined}
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            ml: 1,
-                            mb: 0.5,
-                            bgcolor: chatColors.primary,
-                            fontSize: '0.875rem',
-                          }}
-                        >
-                          {user?.firstName?.charAt(0) || 'U'}
-                        </Avatar>
-                      )}
-                      {isOwn && !showAvatar && <Box sx={{ width: 40 }} />}
-                    </Box>
-                  );
-                })}
-                <div ref={messagesEndRef} />
+                <ChatMessageList items={timeline} locale={i18n.language} />
+              </Box>
+              {showScrollDown && (
+                <Badge
+                  badgeContent={newBelowCount}
+                  color="error"
+                  sx={{ position: 'absolute', right: 20, bottom: 14 }}
+                >
+                  <IconButton
+                    onClick={scrollToBottom}
+                    aria-label={t('scrollToLatest')}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      bgcolor: isDark ? '#374151' : '#ffffff',
+                      color: isDark ? '#f9fafb' : '#334155',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      '&:hover': { bgcolor: isDark ? '#4b5563' : '#f1f5f9' },
+                    }}
+                  >
+                    <ScrollDownIcon />
+                  </IconButton>
+                </Badge>
+              )}
               </Box>
 
               {/* Input Area */}

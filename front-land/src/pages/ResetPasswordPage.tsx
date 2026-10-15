@@ -9,13 +9,17 @@ import {
   Link,
   Alert,
 } from '@mui/material';
-import { useNavigate, useParams, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { authApi } from '../shared/api/auth';
 
 const ResetPasswordPage: React.FC = () => {
   const { t } = useTranslation('auth');
-  const { token } = useParams<{ token: string }>();
+  const { token: tokenParam } = useParams<{ token: string }>();
+  // The e-mail link is /reset-password?token=..., older links used /reset-password/:token.
+  const [searchParams] = useSearchParams();
+  const token = tokenParam ?? searchParams.get('token') ?? undefined;
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -38,13 +42,8 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    if (formData.newPassword.length < 8) {
-      setError(t('passwordRequirements'));
-      return;
-    }
-
     if (!token) {
-      setError('Invalid reset token');
+      setError(t('resetTokenInvalid'));
       return;
     }
 
@@ -60,8 +59,8 @@ const ResetPasswordPage: React.FC = () => {
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data || 'Failed to reset password');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, t, { 400: t('resetTokenInvalid') }));
     } finally {
       setLoading(false);
     }

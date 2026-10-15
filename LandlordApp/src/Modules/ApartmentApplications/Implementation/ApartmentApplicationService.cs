@@ -1,5 +1,8 @@
 using System.Security.Claims;
 using Lander.src.Common;
+using Lander.src.Infrastructure.Services;
+using Lander.src.Notifications.Dtos.InputDto;
+using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.ApartmentApplications.Interfaces;
 using Lander.src.Modules.ApartmentApplications.Models;
 using Lander.src.Modules.ApartmentApplications.Dtos.Dto;
@@ -8,8 +11,6 @@ using Lander.src.Modules.Listings;
 using Lander.src.Modules.Users.Interfaces.UserInterface;
 using Lander;
 using Lander.src.Notifications.Interfaces;
-using Lander.src.Notifications.NotificationsHub;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lander.src.Modules.ApartmentApplications.Implementation;
@@ -20,46 +21,98 @@ public class ApartmentApplicationService : IApartmentApplicationService
     private readonly ListingsContext _listingsContext;
     private readonly UsersContext _usersContext;
     private readonly IApartmentService _apartmentService;
-    private readonly IHubContext<NotificationHub> _notificationHub;
     private readonly Lander.src.Notifications.Interfaces.INotificationService _bell;
     private readonly IUserInterface _userService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IEmailService _emailService;
+    private readonly IPresenceTracker _presence;
+    private readonly ILogger<ApartmentApplicationService> _logger;
 
     public ApartmentApplicationService(
         ApplicationsContext context,
         ListingsContext listingsContext,
         UsersContext usersContext,
         IApartmentService apartmentService,
-        IHubContext<NotificationHub> notificationHub,
         Lander.src.Notifications.Interfaces.INotificationService bell,
         IUserInterface userService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IEmailService emailService,
+        IPresenceTracker presence,
+        ILogger<ApartmentApplicationService> logger)
     {
         _context = context;
         _listingsContext = listingsContext;
         _usersContext = usersContext;
         _apartmentService = apartmentService;
-        _notificationHub = notificationHub;
         _bell = bell;
         _userService = userService;
         _httpContextAccessor = httpContextAccessor;
+        _emailService = emailService;
+        _presence = presence;
+        _logger = logger;
     }
 
-    // Persists a bell-history notification alongside the real-time SignalR push above, so the
-    // recipient still finds it in the bell if they were offline. Best-effort — never throws.
-    private async Task PersistBellAsync(int recipientUserId, string title, string message,
-        string actionType, string actionTarget, int senderUserId = 0)
+    /// <summary>
+    /// Stores a notification and pushes it live (in the user's language the browser translates the key).
+    /// Best-effort: the application itself is already saved and must not fail because of a notification.
+    /// </summary>
+    private async Task SendBellAsync(
+        int recipientUserId, int senderUserId, string key, Dictionary<string, string> parameters,
+        string title, string message, string actionTarget, string type = "info", string? metadata = null)
     {
         try
         {
-            await _bell.PersistNotificationAsync(new Lander.src.Notifications.Dtos.InputDto.CreateNotificationInputDto
+            await _bell.SendNotificationAsync(new CreateNotificationInputDto
             {
-                Title = title, Message = message,
-                ActionType = actionType, ActionTarget = actionTarget,
-                CreatedByGuid = Guid.Empty, SenderUserId = senderUserId, RecipientUserId = recipientUserId
+                Title = title,
+                Message = message,
+                ActionType = key,
+                ActionTarget = actionTarget,
+                Key = key,
+                Params = parameters,
+                Type = type,
+                Metadata = metadata,
+                CreatedByGuid = Guid.Empty,
+                SenderUserId = senderUserId,
+                RecipientUserId = recipientUserId,
             });
         }
-        catch { /* bell persistence is best-effort — the live push already went out */ }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not send notification {Key} to user {UserId}", key, recipientUserId);
+        }
+    }
+
+    /// <summary>
+    /// Tells the landlord, in Serbian and with the applicant's name, that someone applied. Live push and
+    /// bell entry always; an e-mail only when the landlord is not on the site (they already see the bell).
+    /// Never throws: the application is already saved and must not fail because of a notification.
+    /// </summary>
+    private async Task NotifyLandlordOfApplicationAsync(int landlordId, int applicantId, int apartmentId, string? apartmentTitle)
+    {
+        try
+        {
+            var people = await _usersContext.Users.AsNoTracking()
+                .Where(u => u.UserId == applicantId || u.UserId == landlordId)
+                .ToDictionaryAsync(u => u.UserId);
+            people.TryGetValue(applicantId, out var applicant);
+            people.TryGetValue(landlordId, out var landlord);
+
+            var applicantName = applicant is null ? "Neko" : $"{applicant.FirstName} {applicant.LastName}".Trim();
+            var title = "Nova prijava za vaš stan";
+            var message = $"{applicantName} se prijavio/la za „{apartmentTitle}“.";
+
+            await SendBellAsync(landlordId, applicantId, "application_new",
+                new Dictionary<string, string> { ["name"] = applicantName, ["title"] = apartmentTitle ?? string.Empty },
+                title, message, "/applications/received");
+
+            if (landlord is not null && !string.IsNullOrEmpty(landlord.Email) && !_presence.IsOnline(landlordId))
+                await _emailService.SendNewApplicationEmailAsync(landlord.Email, landlord.FirstName, apartmentTitle ?? string.Empty);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not notify landlord {LandlordId} about a new application", landlordId);
+        }
     }
 
     public async Task<ApartmentApplication?> ApplyForApartmentAsync(int userId, int apartmentId, bool isPriority = false)
@@ -104,13 +157,7 @@ public class ApartmentApplicationService : IApartmentApplicationService
         // or we fetch the apartment to get the landlord ID.
         if (apartment != null && apartment.LandlordId.HasValue)
         {
-             await _notificationHub.Clients.Group(apartment.LandlordId.Value.ToString()).SendAsync("ReceiveNotification",
-                "New Application!",
-                $"You have a new application for '{apartment.Title}'.",
-                "info");
-             await PersistBellAsync(apartment.LandlordId.Value, "New Application!",
-                $"You have a new application for '{apartment.Title}'.",
-                "application_new", apartmentId.ToString(), senderUserId: userId);
+            await NotifyLandlordOfApplicationAsync(apartment.LandlordId.Value, userId, apartmentId, apartment.Title);
         }
 
         return application;
@@ -262,16 +309,14 @@ public class ApartmentApplicationService : IApartmentApplicationService
             var apartment = application.ApartmentId.HasValue
                 ? await _apartmentService.GetApartmentByIdAsync(application.ApartmentId.Value)
                 : null;
-            var aptTitle = apartment?.Title ?? "the apartment";
+            var aptTitle = apartment?.Title ?? "stan";
 
-            var aptTarget = (application.ApartmentId ?? 0).ToString();
+            var byTitle = new Dictionary<string, string> { ["title"] = aptTitle };
             if (status == ApplicationStatuses.Approved)
             {
-                var msg = $"Congratulations! Your application for '{aptTitle}' has been approved. You can now schedule a viewing.";
-                await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification", "Application Approved! 🎉", msg, "success");
-                await PersistBellAsync(application.UserId.Value, "Application Approved! 🎉", msg,
-                    "application_approved", aptTarget, senderUserId: landlordUserId);
+                var msg = $"Čestitamo! Vaša prijava za „{aptTitle}“ je odobrena. Sada možete da zakažete razgledanje.";
+                await SendBellAsync(application.UserId.Value, landlordUserId, "application_approved", byTitle,
+                    "Prijava odobrena! 🎉", msg, $"/apartments/{application.ApartmentId}", type: "success");
             }
             else if (status == ApplicationStatuses.Rejected)
             {
@@ -280,19 +325,24 @@ public class ApartmentApplicationService : IApartmentApplicationService
                     apartmentTitle = aptTitle,
                     apartmentId = application.ApartmentId ?? 0
                 });
-                var msg = $"Your application for '{aptTitle}' was not approved.";
-                await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification", "Application Rejected", msg, "rejection", metadata);
-                await PersistBellAsync(application.UserId.Value, "Application Rejected", msg,
-                    "application_rejected", aptTarget, senderUserId: landlordUserId);
+                var msg = $"Vaša prijava za „{aptTitle}“ nije odobrena.";
+                await SendBellAsync(application.UserId.Value, landlordUserId, "application_rejected", byTitle,
+                    "Prijava odbijena", msg, "/applications/sent", type: "rejection", metadata: metadata);
             }
             else
             {
-                var msg = $"Your application status has been updated to: {status}.";
-                await _notificationHub.Clients.Group(application.UserId.Value.ToString()).SendAsync(
-                    "ReceiveNotification", $"Application {status}", msg, "info");
-                await PersistBellAsync(application.UserId.Value, $"Application {status}", msg,
-                    "application_status", aptTarget, senderUserId: landlordUserId);
+                var label = status == ApplicationStatuses.Pending ? "na čekanju" : status;
+                var msg = $"Status vaše prijave je ažuriran: {label}.";
+                // Pending and Cancelled have their own translations; any other status shows its name.
+                var statusKey = status switch
+                {
+                    ApplicationStatuses.Pending => "application_pending",
+                    ApplicationStatuses.Cancelled => "application_cancelled",
+                    _ => "application_status",
+                };
+                await SendBellAsync(application.UserId.Value, landlordUserId, statusKey,
+                    new Dictionary<string, string> { ["title"] = aptTitle, ["status"] = status },
+                    $"Prijava: {label}", msg, "/applications/sent");
             }
         }
 

@@ -175,4 +175,24 @@ public class MachineLearningTests : IDisposable
         var matches = await service.GetMatchesForUserAsync(1);
         matches.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task GetMatchesForUserAsync_ExcludesPeopleWhoAlreadyAgreedToBeRoommates()
+    {
+        var service = new RoommateMatchingService(_roommatesContext, _usersContext);
+        _roommatesContext.Roommates.AddRange(
+            new Roommate { UserId = 1, RoommateId = 1, IsActive = true },
+            new Roommate { UserId = 2, RoommateId = 2, IsActive = true },   // paired up with user 9
+            new Roommate { UserId = 3, RoommateId = 3, IsActive = true },   // only proposed to: still free
+            new Roommate { UserId = 4, RoommateId = 4, IsActive = true });  // paired up, but the pairing ended
+        _roommatesContext.Pairings.AddRange(
+            new RoommatePairing { RequesterUserId = 9, PartnerUserId = 2, Status = PairingStatus.Accepted },
+            new RoommatePairing { RequesterUserId = 3, PartnerUserId = 8, Status = PairingStatus.Pending },
+            new RoommatePairing { RequesterUserId = 4, PartnerUserId = 7, Status = PairingStatus.Ended });
+        await _roommatesContext.SaveChangesAsync();
+
+        var matches = await service.GetMatchesForUserAsync(1);
+
+        matches.Select(m => m.RoommateId).Should().BeEquivalentTo(new[] { 3, 4 });
+    }
 }

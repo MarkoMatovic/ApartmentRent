@@ -28,6 +28,7 @@ import {
     Euro as EuroIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../../shared/utils/apiError';
 import { useNavigate } from 'react-router-dom';
 import { savedSearchesApi, SavedSearch, SavedSearchInput } from '../../shared/api/savedSearches';
 import { useAuth } from '../../shared/context/AuthContext';
@@ -79,9 +80,9 @@ export const SavedSearchesPage: React.FC = () => {
             setError('');
             const data = await savedSearchesApi.getUserSavedSearches(user!.userId);
             setSearches(data);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error loading saved searches:', err);
-            setError(err.message || 'Failed to load saved searches');
+            setError(getApiErrorMessage(err, t));
         } finally {
             setLoading(false);
         }
@@ -99,8 +100,8 @@ export const SavedSearchesPage: React.FC = () => {
             const created = await savedSearchesApi.createSavedSearch(newSearchForm);
             setSearches([...searches, created]);
             setNewSearchOpen(false);
-        } catch (err: any) {
-            setError(err.message || 'Failed to create search');
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err, t));
         } finally {
             setSaving(false);
         }

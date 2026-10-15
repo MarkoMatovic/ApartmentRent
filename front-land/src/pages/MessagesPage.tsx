@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../shared/utils/apiError';
 import { useSearchParams } from 'react-router-dom';
 import { messagesApi } from '../shared/api/messages';
 import { MessageList } from '../components/Messages/MessageList';
@@ -71,6 +72,9 @@ const MessagesPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['conversation-messages', selectedConversationId] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
+        onError: (err: unknown) => {
+            setSnackbar({ open: true, message: getApiErrorMessage(err, t), severity: 'error' });
+        },
     });
 
     const uploadFileMutation = useMutation({
@@ -93,8 +97,12 @@ const MessagesPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['conversation-messages', selectedConversationId] });
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
         },
-        onError: () => {
-            setSnackbar({ open: true, message: t('chat:fileUploadFailed'), severity: 'error' });
+        onError: (err: unknown) => {
+            setSnackbar({
+                open: true,
+                message: getApiErrorMessage(err, t, {}, t('chat:fileUploadFailed')),
+                severity: 'error',
+            });
         },
     });
 
@@ -160,6 +168,9 @@ const MessagesPage: React.FC = () => {
             messagesApi.reportAbuse(messageId, reportedUserId, reason),
         onSuccess: () => {
             setSnackbar({ open: true, message: t('chat:reportSubmitted'), severity: 'success' });
+        },
+        onError: (err: unknown) => {
+            setSnackbar({ open: true, message: getApiErrorMessage(err, t), severity: 'error' });
         },
     });
 

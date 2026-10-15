@@ -52,6 +52,10 @@ namespace Lander.src.Modules.Users.Controllers
             if (tokens == null)
                 return Unauthorized(new { message = "Neispravan email ili lozinka" });
 
+            // The password was right, the code from the app comes next (POST two-factor/login): no session yet.
+            if (tokens.RequiresTwoFactor)
+                return Ok(new AuthTokenDto { RequiresTwoFactor = true, TwoFactorToken = tokens.TwoFactorToken });
+
             SetRefreshTokenCookie(tokens.RefreshToken);
 
             return Ok(new AuthTokenDto { AccessToken = tokens.AccessToken, RefreshToken = string.Empty });
@@ -72,6 +76,24 @@ namespace Lander.src.Modules.Users.Controllers
             });
 
             return Ok(new { Message = "Logged out successfully" });
+        }
+
+        /// <summary>Signs out every device of the current user (e.g. a lost phone).</summary>
+        [HttpPost(ApiActionsV1.LogoutEverywhere, Name = nameof(ApiActionsV1.LogoutEverywhere))]
+        [Authorize]
+        [EnableRateLimiting("auth")]
+        public async Task<ActionResult> LogoutEverywhere()
+        {
+            await _userInterface.LogoutEverywhereAsync();
+
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                Path = "/api/v1/auth",
+                Secure = true,
+                SameSite = SameSiteMode.Strict
+            });
+
+            return Ok(new { Message = "Logged out everywhere" });
         }
         [EnableRateLimiting("change-password")]
         [Authorize]
@@ -139,6 +161,8 @@ namespace Lander.src.Modules.Users.Controllers
                     profile.UserRoleId = null;
                     profile.RoleName = null;
                     profile.CreatedDate = null;
+                    profile.TwoFactorEnabled = false;
+                    profile.TwoFactorRequired = false;
                 }
             }
 
@@ -174,7 +198,7 @@ namespace Lander.src.Modules.Users.Controllers
 
         
         [HttpPost(ApiActionsV1.RefreshToken, Name = nameof(ApiActionsV1.RefreshToken))]
-        [EnableRateLimiting("auth")]
+        [EnableRateLimiting("refresh")]
         public async Task<ActionResult<AuthTokenDto>> RotateRefreshToken([FromBody] LogoutInputDto? dto = null)
         {
             
@@ -183,17 +207,14 @@ namespace Lander.src.Modules.Users.Controllers
             if (string.IsNullOrEmpty(rawRefreshToken))
                 return BadRequest(new { message = "Refresh token je obavezan." });
 
-            var storedToken = await _refreshTokenService.ValidateAsync(rawRefreshToken);
-            if (storedToken is null)
+            // The token is exchanged for the next one of the same session (this device only).
+            var rotation = await _refreshTokenService.RotateAsync(rawRefreshToken);
+            if (rotation is null)
                 return Unauthorized(new { message = "Refresh token je nevažeći ili je istekao." });
 
-            await _refreshTokenService.RevokeAsync(rawRefreshToken);
+            var newAccess = await _tokenProvider.CreateAsync(rotation.User, rotation.TwoFactorVerified);
 
-            var user = storedToken.User;
-            var newAccess = await _tokenProvider.CreateAsync(user);
-            var newRefresh = await _refreshTokenService.CreateAsync(user.UserId);
-
-            SetRefreshTokenCookie(newRefresh);
+            SetRefreshTokenCookie(rotation.RawToken);
 
             return Ok(new AuthTokenDto { AccessToken = newAccess, RefreshToken = string.Empty });
         }
@@ -238,17 +259,7 @@ namespace Lander.src.Modules.Users.Controllers
             return Ok(new { message = "Lozinka je uspješno promijenjena." });
         }
 
-        private void SetRefreshTokenCookie(string rawRefreshToken)
-        {
-            var cookieOptions = new CookieOptions
-            {
-                HttpOnly  = true,     
-                Secure    = true,  
-                SameSite  = SameSiteMode.Strict,
-                Expires   = DateTimeOffset.UtcNow.Add(RefreshTokenService.Lifetime),
-                Path      = "/api/v1/auth" 
-            };
-            Response.Cookies.Append("refreshToken", rawRefreshToken, cookieOptions);
-        }
+        private void SetRefreshTokenCookie(string rawRefreshToken) =>
+            AuthCookie.SetRefreshToken(Response, rawRefreshToken);
     }
 }

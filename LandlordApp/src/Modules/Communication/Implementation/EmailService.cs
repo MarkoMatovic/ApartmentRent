@@ -6,8 +6,6 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
 using System.Security.Claims;
-using sib_api_v3_sdk.Api;
-using sib_api_v3_sdk.Client;
 using SendSmtpEmail = sib_api_v3_sdk.Model.SendSmtpEmail;
 using SendSmtpEmailSender = sib_api_v3_sdk.Model.SendSmtpEmailSender;
 using SendSmtpEmailTo = sib_api_v3_sdk.Model.SendSmtpEmailTo;
@@ -17,11 +15,8 @@ namespace Lander.src.Modules.Communication.Implementation;
 
 public class EmailService : IEmailService
 {
-    // NOTE: sib_api_v3_sdk uses a global static Configuration.Default.  In a future
-    // refactoring this should be replaced with a per-request ApiClient instance that
-    // accepts the API key in its constructor so multi-tenant scenarios are safe.
-    // For now, the key is set once at startup in the constructor (idempotent).
-    private static readonly ResiliencePipeline _pipeline = new ResiliencePipelineBuilder()
+    /// <summary>Retries and a circuit breaker around Brevo, shared by the whole process.</summary>
+    private static readonly ResiliencePipeline DefaultPipeline = new ResiliencePipelineBuilder()
         .AddRetry(new Polly.Retry.RetryStrategyOptions
         {
             MaxRetryAttempts = 3,
@@ -40,6 +35,8 @@ public class EmailService : IEmailService
         .Build();
 
     private readonly BrevoSettings _settings;
+    private readonly IBrevoEmailClient _brevo;
+    private readonly ResiliencePipeline _pipeline;
     private readonly CommunicationsContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailTemplateRenderer _templateRenderer;
@@ -50,9 +47,13 @@ public class EmailService : IEmailService
         CommunicationsContext context,
         IHttpContextAccessor httpContextAccessor,
         IEmailTemplateRenderer templateRenderer,
-        ILogger<EmailService> logger)
+        ILogger<EmailService> logger,
+        IBrevoEmailClient brevo,
+        ResiliencePipeline? pipeline = null)
     {
         _settings = settings.Value;
+        _brevo = brevo;
+        _pipeline = pipeline ?? DefaultPipeline;
         _context = context;
         _httpContextAccessor = httpContextAccessor;
         _templateRenderer = templateRenderer;
@@ -60,27 +61,12 @@ public class EmailService : IEmailService
         // Guard: warn early if key is missing rather than getting cryptic 401s later.
         if (string.IsNullOrWhiteSpace(_settings.ApiKey))
             logger.LogWarning("Brevo API key is not configured — email sending will fail.");
-        // Note: the legacy global Configuration.Default is intentionally NOT used here.
-        // Each send call creates its own Configuration instance (see CreateApiConfiguration).
-    }
-
-    /// <summary>
-    /// Creates a per-call Brevo configuration so the API key is never shared via the
-    /// static Configuration.Default — safe in multi-tenant and concurrent scenarios.
-    /// </summary>
-    private Configuration CreateApiConfiguration()
-    {
-        var config = new Configuration();
-        config.AddApiKey("api-key", _settings.ApiKey ?? string.Empty);
-        return config;
     }
 
     public async Task<bool> SendEmailAsync(string to, string subject, string htmlContent)
     {
         try
         {
-            var apiInstance = new TransactionalEmailsApi(CreateApiConfiguration());
-
             var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
             var toList = new List<SendSmtpEmailTo> { new SendSmtpEmailTo(to) };
 
@@ -91,10 +77,8 @@ public class EmailService : IEmailService
                 htmlContent: htmlContent
             );
 
-            var result = await _pipeline.ExecuteAsync(async ct =>
-                await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail), ct));
+            var messageId = await _pipeline.ExecuteAsync(async ct => await _brevo.SendAsync(sendSmtpEmail, ct));
 
-            var messageId = result?.MessageId;
             await LogEmailAsync(null, to, subject, htmlContent, null, true, messageId, null);
             return true;
         }
@@ -116,8 +100,6 @@ public class EmailService : IEmailService
     {
         try
         {
-            var apiInstance = new TransactionalEmailsApi(CreateApiConfiguration());
-
             var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
             var toList = recipients.Select(r => new SendSmtpEmailTo(r)).ToList();
 
@@ -128,9 +110,7 @@ public class EmailService : IEmailService
                 htmlContent: htmlContent
             );
 
-            var result = await _pipeline.ExecuteAsync(async ct =>
-                await Task.Run(() => apiInstance.SendTransacEmail(sendSmtpEmail), ct));
-            var messageId = result?.MessageId;
+            var messageId = await _pipeline.ExecuteAsync(async ct => await _brevo.SendAsync(sendSmtpEmail, ct));
 
             foreach (var recipient in recipients)
             {
@@ -151,14 +131,14 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendWelcomeEmailAsync(string to, string userName)
     {
-        var subject = "Welcome to Landlander Platform!";
+        var subject = "Dobrodošli na TuRentaj!";
         var templateData = new { UserName = userName };
         return await SendTemplatedEmailAsync(to, subject, "WelcomeEmail", templateData);
     }
 
     public async Task<bool> SendNewApplicationEmailAsync(string to, string landlordName, string apartmentTitle)
     {
-        var subject = "New Application for Your Apartment";
+        var subject = "Nova prijava za vaš stan";
         var templateData = new { LandlordName = landlordName, ApartmentTitle = apartmentTitle };
         return await SendTemplatedEmailAsync(to, subject, "NewApplicationEmail", templateData);
     }
@@ -169,7 +149,7 @@ public class EmailService : IEmailService
         {
             "Approved"  => "Prijava odobrena",
             "Rejected"  => "Prijava odbijena",
-            "Pending"   => "Prijava na cekanju",
+            "Pending"   => "Prijava na čekanju",
             "Cancelled" => "Prijava otkazana",
             _           => status
         };
@@ -187,28 +167,28 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendNewMessageEmailAsync(string to, string senderName, string messagePreview)
     {
-        var subject = $"New Message from {senderName}";
+        var subject = $"Nova poruka od {senderName}";
         var templateData = new { SenderName = senderName, MessagePreview = messagePreview };
         return await SendTemplatedEmailAsync(to, subject, "NewMessageEmail", templateData);
     }
 
     public async Task<bool> SendAppointmentConfirmationEmailAsync(string to, string userName, DateTime appointmentDate, string apartmentTitle)
     {
-        var subject = "Appointment Confirmation";
-        var templateData = new { UserName = userName, AppointmentDate = appointmentDate.ToString("f"), ApartmentTitle = apartmentTitle };
+        var subject = "Potvrda razgledanja stana";
+        var templateData = new { UserName = userName, AppointmentDate = appointmentDate.ToString("dd.MM.yyyy. 'u' HH:mm", System.Globalization.CultureInfo.InvariantCulture), ApartmentTitle = apartmentTitle };
         return await SendTemplatedEmailAsync(to, subject, "AppointmentConfirmationEmail", templateData);
     }
 
     public async Task<bool> SendSavedSearchAlertEmailAsync(string to, int matchCount, string searchCriteria)
     {
-        var subject = $"New Matches for Your Saved Search ({matchCount})";
+        var subject = $"Novi stanovi za vašu sačuvanu pretragu ({matchCount})";
         var templateData = new { MatchCount = matchCount, SearchCriteria = searchCriteria };
         return await SendTemplatedEmailAsync(to, subject, "SavedSearchAlertEmail", templateData);
     }
 
     public async Task<bool> SendListingUnavailableEmailAsync(string to, string userName, string apartmentTitle, string reason)
     {
-        var subject = $"Update on saved listing: {apartmentTitle}";
+        var subject = $"Oglas više nije dostupan: {apartmentTitle}";
         var templateData = new { UserName = userName, ApartmentTitle = apartmentTitle, Reason = reason };
         return await SendTemplatedEmailAsync(to, subject, "ListingUnavailableEmail", templateData);
     }
@@ -224,6 +204,20 @@ public class EmailService : IEmailService
         var subject = "Reset lozinke";
         var templateData = new { UserName = userName, ResetLink = resetLink };
         return await SendTemplatedEmailAsync(to, subject, "PasswordResetEmail", templateData);
+    }
+
+    public async Task<bool> SendRoommateProposalEmailAsync(string to, string userName, string proposerName)
+    {
+        var subject = $"{proposerName} vam predlaže da budete cimeri";
+        var templateData = new { UserName = userName, ProposerName = proposerName };
+        return await SendTemplatedEmailAsync(to, subject, "RoommateProposalEmail", templateData);
+    }
+
+    public async Task<bool> SendRoommateAcceptedEmailAsync(string to, string userName, string partnerName)
+    {
+        var subject = "Cimerstvo je potvrđeno";
+        var templateData = new { UserName = userName, PartnerName = partnerName };
+        return await SendTemplatedEmailAsync(to, subject, "RoommateAcceptedEmail", templateData);
     }
 
     public async Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur)

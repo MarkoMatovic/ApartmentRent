@@ -17,6 +17,12 @@ describe('decodeToken', () => {
     expect(user?.userRoleId).toBe(2);
   });
 
+  it('knows whether the session was confirmed with the authenticator app ("amr": "mfa")', () => {
+    expect(decodeToken(tokenWith({ userId: '1', amr: 'mfa' }))?.twoFactorVerified).toBe(true);
+    expect(decodeToken(tokenWith({ userId: '1', amr: ['pwd', 'mfa'] }))?.twoFactorVerified).toBe(true);
+    expect(decodeToken(tokenWith({ userId: '1' }))?.twoFactorVerified).toBe(false);
+  });
+
   it('still accepts a plain "role" claim', () => {
     expect(decodeToken(tokenWith({ userId: '1', role: 'Landlord' }))?.roleName).toBe('Landlord');
   });
