@@ -125,6 +125,7 @@ public class LanderWebApplicationFactory : WebApplicationFactory<Program>
         public Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink) => Task.FromResult(true);
         public Task<bool> SendRoommateProposalEmailAsync(string to, string userName, string proposerName) => Task.FromResult(true);
         public Task<bool> SendRoommateAcceptedEmailAsync(string to, string userName, string partnerName) => Task.FromResult(true);
+        public Task<bool> SendBillReminderEmailAsync(string to, string userName, string billTitle, decimal amount, DateOnly dueDate, bool overdue) => Task.FromResult(true);
         public Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur) => Task.FromResult(true);
     }
 

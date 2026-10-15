@@ -59,7 +59,7 @@ public class EmailTemplateTests
         var known = new[]
         {
             "/applications/sent", "/applications/received", "/appointments/my", "/chat", "/apartments",
-            "/istorija-placanja", "/roommates", "/messages", "/my-roommate",
+            "/istorija-placanja", "/roommates", "/messages", "/my-roommate", "/bills",
         };
 
         foreach (System.Text.RegularExpressions.Match m in Regex.Matches(html, @"\{\{BaseUrl\}\}(/[a-z/\-]*)?"))

@@ -15,5 +15,7 @@ public interface IEmailService
     Task<bool> SendPasswordResetEmailAsync(string to, string userName, string resetLink);
     Task<bool> SendRoommateProposalEmailAsync(string to, string userName, string proposerName);
     Task<bool> SendRoommateAcceptedEmailAsync(string to, string userName, string partnerName);
+    /// <summary>A bill is due in a few days, or (<paramref name="overdue"/>) its due date has passed.</summary>
+    Task<bool> SendBillReminderEmailAsync(string to, string userName, string billTitle, decimal amount, DateOnly dueDate, bool overdue);
     Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur);
 }

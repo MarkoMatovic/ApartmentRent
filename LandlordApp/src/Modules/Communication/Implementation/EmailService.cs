@@ -220,6 +220,25 @@ public class EmailService : IEmailService
         return await SendTemplatedEmailAsync(to, subject, "RoommateAcceptedEmail", templateData);
     }
 
+    public async Task<bool> SendBillReminderEmailAsync(string to, string userName, string billTitle, decimal amount, DateOnly dueDate, bool overdue)
+    {
+        var serbian = System.Globalization.CultureInfo.GetCultureInfo("sr-Latn-RS");
+        var due = dueDate.ToString("d. M. yyyy.", serbian);
+        var subject = overdue ? $"Rok je prošao: {billTitle}" : $"Podsetnik: {billTitle} dospeva {due}";
+        var templateData = new
+        {
+            UserName = userName,
+            Heading = overdue ? "Rok za plaćanje je prošao" : "Rok za plaćanje se bliži",
+            BillTitle = billTitle,
+            Amount = amount.ToString("N2", serbian) + " RSD",
+            DueDate = due,
+            Note = overdue
+                ? "Ako ste već platili, označite to u aplikaciji da bi primalac mogao da potvrdi uplatu."
+                : "Platite skeniranjem IPS QR koda u aplikaciji vaše banke; novac stiže za nekoliko sekundi.",
+        };
+        return await SendTemplatedEmailAsync(to, subject, "BillReminderEmail", templateData);
+    }
+
     public async Task<bool> SendOrderConfirmationEmailAsync(string to, string userName, string planName, string orderNumber, decimal amountEur)
     {
         var subject = $"Potvrda narudžbe — {planName}";

@@ -47,6 +47,8 @@ const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const RoommateMatchesPage = lazy(() => import('./pages/RoommateMatchesPage'));
 const MyRoommatePage = lazy(() => import('./pages/MyRoommatePage'));
+const BillsPage = lazy(() => import('./pages/BillsPage'));
+const TenancyPage = lazy(() => import('./pages/TenancyPage'));
 
 // These modules expose named exports only, so map them onto `default` for lazy().
 const SavedSearchesPage = lazy(() =>
@@ -104,6 +106,8 @@ function App() {
                 <Route path="/roommates/create" element={<ProtectedRoute><CreateRoommatePage /></ProtectedRoute>} />
                 <Route path="/roommates/matches" element={<ProtectedRoute><RoommateMatchesPage /></ProtectedRoute>} />
                 <Route path="/my-roommate" element={<ProtectedRoute><MyRoommatePage /></ProtectedRoute>} />
+                <Route path="/bills" element={<ProtectedRoute><BillsPage /></ProtectedRoute>} />
+                <Route path="/bills/tenancy/:id" element={<ProtectedRoute><TenancyPage /></ProtectedRoute>} />
                 <Route path="/roommates/:id" element={<RoommateDetailPage />} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                 <Route path="/my-apartments" element={<ProtectedRoute><MyApartmentsPage /></ProtectedRoute>} />

@@ -7,7 +7,7 @@ import { parseServerDate } from '../../components/Chat/chatMessageUtils';
 import { apiBaseUrl } from '../api/client';
 import { getAccessToken } from '../api/tokenStore';
 import { notificationsApi, StoredNotification } from '../api/notifications';
-import { MY_PAIRING_KEY, SHARED_APARTMENTS_KEY } from '../api/queryKeys';
+import { BILLS_KEY, BILLS_SUMMARY_KEY, MY_PAIRING_KEY, SHARED_APARTMENTS_KEY, TENANCIES_KEY } from '../api/queryKeys';
 import { NotificationDescriptor, isInAppRoute, parseDescriptor } from '../notifications/descriptor';
 import { useAuth } from './AuthContext';
 
@@ -145,6 +145,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       if (descriptor?.key?.startsWith('pairing_')) {
         queryClient.invalidateQueries({ queryKey: [MY_PAIRING_KEY] });
         queryClient.invalidateQueries({ queryKey: [SHARED_APARTMENTS_KEY] });
+      }
+
+      // A bill, a payment or a tenancy changed somewhere else: the badge and the bills pages follow.
+      if (descriptor?.key?.startsWith('bill_') || descriptor?.key?.startsWith('tenancy_')) {
+        queryClient.invalidateQueries({ queryKey: [BILLS_KEY] });
+        queryClient.invalidateQueries({ queryKey: [BILLS_SUMMARY_KEY] });
+        queryClient.invalidateQueries({ queryKey: [TENANCIES_KEY] });
       }
 
       // A rejected application opens the dialog that offers to keep or remove the apartment.

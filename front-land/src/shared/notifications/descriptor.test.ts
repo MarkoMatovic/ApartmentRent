@@ -140,7 +140,7 @@ describe('the translations of server notifications', () => {
   it('only ask for values the server sends', () => {
     const sent = [
       'name', 'title', 'when', 'city', 'price', 'search', 'oldRent', 'newRent', 'drop', 'percent',
-      'days', 'tokens', 'credits', 'status',
+      'days', 'tokens', 'credits', 'status', 'amount', 'share', 'due', 'payee',
     ];
     for (const [language, file] of Object.entries(languages)) {
       for (const [event, text] of Object.entries(file.events)) {
@@ -160,6 +160,10 @@ describe('the translations of server notifications', () => {
       'appointment_new', 'listing_expiry_reminder', 'new_listing_match', 'price_drop', 'new_listing',
       'purchase_tokens', 'purchase_analytics', 'purchase_featured', 'purchase_credits', 'purchase_boost',
       'purchase_priority', 'purchase_generic', 'purchase_chargeback', 'purchase_refunded',
+      'tenancy_added', 'tenancy_removed', 'tenancy_member_left', 'tenancy_ended',
+      'bill_new', 'bill_company_new', 'bill_changed', 'bill_marked_paid', 'bill_confirmed', 'bill_rejected',
+      'bill_company_paid', 'bill_company_paid_landlord', 'bill_due_soon', 'bill_overdue', 'bill_overdue_receiver',
+      'bill_company_overdue',
     ];
     expect(Object.keys(sr.events).sort()).toEqual([...serverKeys].sort());
   });
@@ -182,6 +186,13 @@ describe('localizeParams', () => {
     expect(localizeParams({ price: '1200' }, 'sr').price).toBe('1.200');
     expect(localizeParams({ oldRent: '1500', newRent: '1200', drop: '300' }, 'de'))
       .toEqual({ oldRent: '1.500', newRent: '1.200', drop: '300' });
+  });
+
+  it('writes bill amounts to the para, and a due date as a day without a time', () => {
+    expect(localizeParams({ amount: '15000.5', share: '3000' }, 'sr')).toEqual({ amount: '15.000,50', share: '3.000,00' });
+    expect(localizeParams({ amount: '15000.5' }, 'en').amount).toBe('15,000.50');
+    expect(localizeParams({ due: '2026-10-15' }, 'en').due).toBe('Oct 15, 2026');
+    expect(localizeParams({ due: '2026-10-15' }, 'sr').due).not.toMatch(/[Ѐ-ӿ]|:/);
   });
 
   it('leaves everything else, and what it cannot read, as it came', () => {

@@ -122,6 +122,7 @@ public class E2eFixture : IAsyncLifetime
             sp.GetRequiredService<AnalyticsContext>(),
             sp.GetRequiredService<Lander.src.Modules.Appointments.AppointmentsContext>(),
             sp.GetRequiredService<Lander.src.Modules.Payments.PaymentsContext>(),
+            sp.GetRequiredService<Lander.src.Modules.Billing.BillingContext>(),
         };
 
         foreach (var ctx in remaining)

@@ -186,6 +186,14 @@ public static class ApplicationServiceExtensions
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Notifications.NotificationUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Analytics.AnalyticsUserDeletedHandler>();
         services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.ApartmentApplications.ApplicationUserDeletedHandler>();
+        services.AddScoped<Lander.src.Common.IUserDeletedHandler, Lander.src.Modules.Billing.Implementation.BillingUserDeletedHandler>();
+
+        // Bills: tenancies, monthly rent, utilities, IPS QR payments
+        services.AddScoped<Lander.src.Modules.Billing.Implementation.BillingPeople>();
+        services.AddScoped<Lander.src.Modules.Billing.Implementation.BillingNotifier>();
+        services.AddScoped<Lander.src.Modules.Billing.Implementation.ITenancyService, Lander.src.Modules.Billing.Implementation.TenancyService>();
+        services.AddScoped<Lander.src.Modules.Billing.Implementation.IBillService, Lander.src.Modules.Billing.Implementation.BillService>();
+        services.AddScoped<Lander.src.Modules.Billing.Implementation.BillingDailyJob>();
 
         // Reviews/Favorites module. Scoped because it owns a ReviewsContext — this used
         // to be a singleton gRPC client dialling GrpcServerUrl, which pointed back at

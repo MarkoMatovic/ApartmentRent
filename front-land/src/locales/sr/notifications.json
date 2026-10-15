@@ -138,6 +138,70 @@
         "purchase_refunded": {
             "title": "Povraćaj novca obrađen",
             "message": "Povraćaj novca za vašu kupovinu je obrađen, pa su pogodnosti iz te kupovine uklonjene sa vašeg naloga."
+        },
+        "tenancy_added": {
+            "title": "Dodati ste u najam",
+            "message": "{{name}} vas je dodao/la u najam stana „{{title}}”. Računi za kiriju i režije stižu ovde."
+        },
+        "tenancy_removed": {
+            "title": "Uklonjeni ste iz najma",
+            "message": "{{name}} vas je uklonio/la iz najma „{{title}}”."
+        },
+        "tenancy_member_left": {
+            "title": "Stanar je napustio najam",
+            "message": "{{name}} je napustio/la najam „{{title}}”."
+        },
+        "tenancy_ended": {
+            "title": "Najam je završen",
+            "message": "Najam stana „{{title}}” je završen. Neplaćeni računi ostaju vidljivi."
+        },
+        "bill_new": {
+            "title": "Novi račun: {{title}}",
+            "message": "Vaš deo: {{amount}} RSD, rok {{due}}"
+        },
+        "bill_company_new": {
+            "title": "Novi račun: {{title}}",
+            "message": "{{name}} je uneo/la račun od {{amount}} RSD ({{payee}}), rok {{due}}"
+        },
+        "bill_changed": {
+            "title": "Račun je izmenjen",
+            "message": "{{name}} je izmenio/la račun „{{title}}”. Vaš deo: {{amount}} RSD, rok {{due}}"
+        },
+        "bill_marked_paid": {
+            "title": "Stigla je uplata?",
+            "message": "{{name}} kaže da je uplatio/la {{amount}} RSD za „{{title}}”. Potvrdite kad novac stigne."
+        },
+        "bill_confirmed": {
+            "title": "Uplata je potvrđena",
+            "message": "{{name}} je potvrdio/la da je primio/la {{amount}} RSD za „{{title}}”."
+        },
+        "bill_rejected": {
+            "title": "Uplata nije stigla",
+            "message": "{{name}} još ne vidi vašu uplatu od {{amount}} RSD za „{{title}}”. Proverite nalog u banci."
+        },
+        "bill_company_paid": {
+            "title": "Račun je plaćen",
+            "message": "{{name}} je platio/la „{{title}}” ({{amount}} RSD). Vaš deo: {{share}} RSD."
+        },
+        "bill_company_paid_landlord": {
+            "title": "Račun je plaćen",
+            "message": "{{name}} je platio/la „{{title}}” ({{amount}} RSD)."
+        },
+        "bill_due_soon": {
+            "title": "Rok se bliži: {{title}}",
+            "message": "{{amount}} RSD treba platiti do {{due}}"
+        },
+        "bill_overdue": {
+            "title": "Rok je prošao: {{title}}",
+            "message": "{{amount}} RSD je trebalo platiti do {{due}}"
+        },
+        "bill_overdue_receiver": {
+            "title": "Uplata kasni: {{title}}",
+            "message": "{{name}} još nije platio/la {{amount}} RSD (rok {{due}})."
+        },
+        "bill_company_overdue": {
+            "title": "Račun nije plaćen: {{title}}",
+            "message": "„{{title}}” ({{amount}} RSD) još nije plaćen, rok je bio {{due}}"
         }
     }
 }

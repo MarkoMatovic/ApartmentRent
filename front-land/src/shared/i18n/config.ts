@@ -26,6 +26,7 @@ import srSubscriptions from '../../locales/sr/subscriptions.json';
 import srApplications from '../../locales/sr/applications.json';
 import srValidation from '../../locales/sr/validation.json';
 import srPairing from '../../locales/sr/pairing.json';
+import srBills from '../../locales/sr/bills.json';
 
 import enCommon from '../../locales/en/common.json';
 import enProfile from '../../locales/en/profile.json';
@@ -51,6 +52,7 @@ import enSubscriptions from '../../locales/en/subscriptions.json';
 import enApplications from '../../locales/en/applications.json';
 import enValidation from '../../locales/en/validation.json';
 import enPairing from '../../locales/en/pairing.json';
+import enBills from '../../locales/en/bills.json';
 
 import ruCommon from '../../locales/ru/common.json';
 import ruProfile from '../../locales/ru/profile.json';
@@ -76,6 +78,7 @@ import ruSubscriptions from '../../locales/ru/subscriptions.json';
 import ruApplications from '../../locales/ru/applications.json';
 import ruValidation from '../../locales/ru/validation.json';
 import ruPairing from '../../locales/ru/pairing.json';
+import ruBills from '../../locales/ru/bills.json';
 
 import deCommon from '../../locales/de/common.json';
 import deProfile from '../../locales/de/profile.json';
@@ -101,6 +104,7 @@ import deSubscriptions from '../../locales/de/subscriptions.json';
 import deApplications from '../../locales/de/applications.json';
 import deValidation from '../../locales/de/validation.json';
 import dePairing from '../../locales/de/pairing.json';
+import deBills from '../../locales/de/bills.json';
 
 i18n
   .use(LanguageDetector)
@@ -132,6 +136,7 @@ i18n
         applications: srApplications,
         validation: srValidation,
         pairing: srPairing,
+        bills: srBills,
       },
       en: {
         common: enCommon,
@@ -158,6 +163,7 @@ i18n
         applications: enApplications,
         validation: enValidation,
         pairing: enPairing,
+        bills: enBills,
       },
       ru: {
         common: ruCommon,
@@ -184,6 +190,7 @@ i18n
         applications: ruApplications,
         validation: ruValidation,
         pairing: ruPairing,
+        bills: ruBills,
       },
       de: {
         common: deCommon,
@@ -210,11 +217,12 @@ i18n
         applications: deApplications,
         validation: deValidation,
         pairing: dePairing,
+        bills: deBills,
       },
     },
     fallbackLng: 'sr',
     defaultNS: 'common',
-    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications', 'appointments', 'payments', 'subscriptions', 'applications', 'validation', 'pairing'],
+    ns: ['common', 'profile', 'apartments', 'auth', 'roommates', 'chat', 'dashboard', 'support', 'pricing', 'footer', 'roommateAnalytics', 'analytics', 'premium', 'messages', 'savedSearches', 'searchRequests', 'machineLearning', 'notifications', 'appointments', 'payments', 'subscriptions', 'applications', 'validation', 'pairing', 'bills'],
     interpolation: {
       escapeValue: false,
     },

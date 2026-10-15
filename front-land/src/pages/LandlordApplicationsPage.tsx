@@ -5,9 +5,11 @@ import { applicationsApi } from '../shared/api/applicationsApi';
 import { useNotifications } from '../shared/context/NotificationContext';
 
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const LandlordApplicationsPage: React.FC = () => {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation(['common', 'bills']);
+    const navigate = useNavigate();
     const [applications, setApplications] = useState<ApartmentApplication[]>([]);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -108,6 +110,12 @@ const LandlordApplicationsPage: React.FC = () => {
                                                 {t('reject')}
                                             </Button>
                                         </Stack>
+                                    )}
+                                    {/* Approved: the tenant moves in, the rent and utility bills start here. */}
+                                    {app.status === 'Approved' && app.apartmentId && (
+                                        <Button size="small" variant="outlined" onClick={() => navigate(`/bills?newTenancy=${app.apartmentId}`)}>
+                                            {t('bills:createTenancy')}
+                                        </Button>
                                     )}
                                 </TableCell>
                             </TableRow>

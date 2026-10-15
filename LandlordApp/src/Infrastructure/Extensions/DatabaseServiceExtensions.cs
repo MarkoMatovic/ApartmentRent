@@ -58,6 +58,10 @@ public static class DatabaseServiceExtensions
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
                    .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 
+        services.AddDbContext<Lander.src.Modules.Billing.BillingContext>((sp, options) =>
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"), DbResilience())
+                   .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
+
         return services;
     }
 

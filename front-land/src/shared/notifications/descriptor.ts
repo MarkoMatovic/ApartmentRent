@@ -47,6 +47,8 @@ export const intlLocale = (language: string): string => (language === 'sr' ? 'sr
 
 // Amounts of money: written the way the language writes numbers (1.200 in Serbian, 1,200 in English).
 const AMOUNT_PARAMS = new Set(['price', 'oldRent', 'newRent', 'drop']);
+// Bills are paid to the para: 3.596,13.
+const MONEY_PARAMS = new Set(['amount', 'share']);
 
 /**
  * Values from the server that only the browser can write correctly for the user's language:
@@ -72,6 +74,20 @@ export function localizeParams(
     if (params[name] !== undefined && Number.isFinite(value)) {
       result[name] = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
     }
+  }
+
+  for (const name of MONEY_PARAMS) {
+    const value = Number(params[name]);
+    if (params[name] !== undefined && Number.isFinite(value)) {
+      result[name] = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    }
+  }
+
+  // A due date ("2026-10-15") is a calendar day: no time, and not shifted by the time zone.
+  const due = params.due;
+  if (typeof due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(due)) {
+    const [y, m, d] = due.split('-').map(Number);
+    result.due = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(y, m - 1, d));
   }
   return result;
 }

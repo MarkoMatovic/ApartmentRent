@@ -138,6 +138,70 @@
         "purchase_refunded": {
             "title": "Refund processed",
             "message": "The refund for your purchase was processed, so the benefits of that purchase were removed from your account."
+        },
+        "tenancy_added": {
+            "title": "You were added to a tenancy",
+            "message": "{{name}} added you to the tenancy of \"{{title}}\". Rent and utility bills arrive here."
+        },
+        "tenancy_removed": {
+            "title": "You were removed from a tenancy",
+            "message": "{{name}} removed you from the tenancy of \"{{title}}\"."
+        },
+        "tenancy_member_left": {
+            "title": "A tenant left",
+            "message": "{{name}} left the tenancy of \"{{title}}\"."
+        },
+        "tenancy_ended": {
+            "title": "The tenancy has ended",
+            "message": "The tenancy of \"{{title}}\" has ended. Unpaid bills stay visible."
+        },
+        "bill_new": {
+            "title": "New bill: {{title}}",
+            "message": "Your part: {{amount}} RSD, due {{due}}."
+        },
+        "bill_company_new": {
+            "title": "New bill: {{title}}",
+            "message": "{{name}} entered a bill of {{amount}} RSD ({{payee}}), due {{due}}."
+        },
+        "bill_changed": {
+            "title": "The bill was changed",
+            "message": "{{name}} changed the bill \"{{title}}\". Your part: {{amount}} RSD, due {{due}}."
+        },
+        "bill_marked_paid": {
+            "title": "Has the money arrived?",
+            "message": "{{name}} says they paid {{amount}} RSD for \"{{title}}\". Confirm once the money arrives."
+        },
+        "bill_confirmed": {
+            "title": "Payment confirmed",
+            "message": "{{name}} confirmed receiving {{amount}} RSD for \"{{title}}\"."
+        },
+        "bill_rejected": {
+            "title": "The payment has not arrived",
+            "message": "{{name}} does not see your payment of {{amount}} RSD for \"{{title}}\" yet. Check the order in your bank."
+        },
+        "bill_company_paid": {
+            "title": "The bill is paid",
+            "message": "{{name}} paid \"{{title}}\" ({{amount}} RSD). Your part: {{share}} RSD."
+        },
+        "bill_company_paid_landlord": {
+            "title": "The bill is paid",
+            "message": "{{name}} paid \"{{title}}\" ({{amount}} RSD)."
+        },
+        "bill_due_soon": {
+            "title": "Due soon: {{title}}",
+            "message": "{{amount}} RSD is due by {{due}}."
+        },
+        "bill_overdue": {
+            "title": "Overdue: {{title}}",
+            "message": "{{amount}} RSD was due by {{due}}."
+        },
+        "bill_overdue_receiver": {
+            "title": "Payment late: {{title}}",
+            "message": "{{name}} has not paid {{amount}} RSD yet (due {{due}})."
+        },
+        "bill_company_overdue": {
+            "title": "Bill not paid: {{title}}",
+            "message": "\"{{title}}\" ({{amount}} RSD) is still unpaid; it was due {{due}}."
         }
     }
 }

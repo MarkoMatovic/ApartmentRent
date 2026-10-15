@@ -138,6 +138,70 @@
         "purchase_refunded": {
             "title": "Возврат средств выполнен",
             "message": "Возврат средств за вашу покупку выполнен, поэтому преимущества этой покупки удалены с вашего аккаунта."
+        },
+        "tenancy_added": {
+            "title": "Вас добавили в аренду",
+            "message": "{{name}} добавил(а) вас в аренду квартиры «{{title}}». Счета за аренду и коммунальные услуги приходят сюда."
+        },
+        "tenancy_removed": {
+            "title": "Вас удалили из аренды",
+            "message": "{{name}} удалил(а) вас из аренды «{{title}}»."
+        },
+        "tenancy_member_left": {
+            "title": "Жилец покинул аренду",
+            "message": "{{name}} покинул(а) аренду «{{title}}»."
+        },
+        "tenancy_ended": {
+            "title": "Аренда завершена",
+            "message": "Аренда квартиры «{{title}}» завершена. Неоплаченные счета остаются видны."
+        },
+        "bill_new": {
+            "title": "Новый счёт: {{title}}",
+            "message": "Ваша часть: {{amount}} RSD, срок {{due}}"
+        },
+        "bill_company_new": {
+            "title": "Новый счёт: {{title}}",
+            "message": "{{name}} внёс(ла) счёт на {{amount}} RSD ({{payee}}), срок {{due}}"
+        },
+        "bill_changed": {
+            "title": "Счёт изменён",
+            "message": "{{name}} изменил(а) счёт «{{title}}». Ваша часть: {{amount}} RSD, срок {{due}}"
+        },
+        "bill_marked_paid": {
+            "title": "Деньги поступили?",
+            "message": "{{name}} сообщает, что оплатил(а) {{amount}} RSD за «{{title}}». Подтвердите, когда деньги поступят."
+        },
+        "bill_confirmed": {
+            "title": "Оплата подтверждена",
+            "message": "{{name}} подтвердил(а) получение {{amount}} RSD за «{{title}}»."
+        },
+        "bill_rejected": {
+            "title": "Оплата не поступила",
+            "message": "{{name}} пока не видит вашу оплату {{amount}} RSD за «{{title}}». Проверьте платёж в банке."
+        },
+        "bill_company_paid": {
+            "title": "Счёт оплачен",
+            "message": "{{name}} оплатил(а) «{{title}}» ({{amount}} RSD). Ваша часть: {{share}} RSD."
+        },
+        "bill_company_paid_landlord": {
+            "title": "Счёт оплачен",
+            "message": "{{name}} оплатил(а) «{{title}}» ({{amount}} RSD)."
+        },
+        "bill_due_soon": {
+            "title": "Скоро срок: {{title}}",
+            "message": "{{amount}} RSD нужно оплатить до {{due}}"
+        },
+        "bill_overdue": {
+            "title": "Срок прошёл: {{title}}",
+            "message": "{{amount}} RSD нужно было оплатить до {{due}}"
+        },
+        "bill_overdue_receiver": {
+            "title": "Оплата опаздывает: {{title}}",
+            "message": "{{name}} ещё не оплатил(а) {{amount}} RSD (срок {{due}})."
+        },
+        "bill_company_overdue": {
+            "title": "Счёт не оплачен: {{title}}",
+            "message": "«{{title}}» ({{amount}} RSD) всё ещё не оплачен, срок был {{due}}"
         }
     }
 }

@@ -98,6 +98,31 @@ public static class ApiActionsV1
     public const string SharedApartment = "shared-apartments/{apartmentId}";
     #endregion
 
+    #region Bills (tenancies, rent and utility bills paid with IPS QR)
+    public const string Tenancies = $"{V1}/tenancies";
+    public const string TenancyCandidates = "candidates";
+    public const string Tenancy = "{id:int}";
+    public const string TenancyTenants = "{id:int}/tenants";
+    public const string TenancyTenant = "{id:int}/tenants/{userId:int}";
+    public const string EndTenancy = "{id:int}/end";
+    public const string TenancyBills = "{id:int}/bills";
+
+    public const string Bills = $"{V1}/bills";
+    public const string MyBills = "mine";
+    public const string BillsSummary = "summary";
+    public const string BillingProfile = "profile";
+    public const string Bill = "{id:int}";
+    public const string CancelBill = "{id:int}/cancel";
+    public const string CompanyPayment = "{id:int}/payment";
+    public const string PayCompanyBill = "{id:int}/pay";
+    public const string UndoCompanyPayment = "{id:int}/undo-payment";
+    public const string SharePayment = "shares/{shareId:int}/payment";
+    public const string MarkSharePaid = "shares/{shareId:int}/mark-paid";
+    public const string UnmarkShare = "shares/{shareId:int}/unmark";
+    public const string ConfirmShare = "shares/{shareId:int}/confirm";
+    public const string RejectShare = "shares/{shareId:int}/reject";
+    #endregion
+
     #region SearchRequests (Gesuche)
     public const string SearchRequests = $"{V1}/search-requests";
     public const string GetAllSearchRequests = "get-all-search-requests";

@@ -30,6 +30,7 @@ public class DatabaseMigrationService(
         await MigrateAsync<AnalyticsContext>(scope, cancellationToken);
         await MigrateAsync<Lander.src.Modules.Appointments.AppointmentsContext>(scope, cancellationToken);
         await MigrateAsync<Lander.src.Modules.Payments.PaymentsContext>(scope, cancellationToken);
+        await MigrateAsync<Lander.src.Modules.Billing.BillingContext>(scope, cancellationToken);
 
         logger.LogInformation("DatabaseMigrationService: sve migracije završene.");
     }

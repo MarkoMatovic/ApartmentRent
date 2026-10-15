@@ -72,4 +72,21 @@ public static class ValidationCodes
     public const string ReasonRequired = "REASON_REQUIRED";
     public const string ReasonTooShort = "REASON_TOO_SHORT";
     public const string ReasonTooLong = "REASON_TOO_LONG";
+
+    // ── Bills and tenancies ──────────────────────────────────────────────────
+    public const string AmountInvalid = "AMOUNT_INVALID";
+    public const string DueDayInvalid = "DUE_DAY_INVALID";
+    public const string DueDateRequired = "DUE_DATE_REQUIRED";
+    public const string StartDateRequired = "START_DATE_REQUIRED";
+    public const string BankAccountInvalid = "BANK_ACCOUNT_INVALID";
+    public const string PayeeNameRequired = "PAYEE_NAME_REQUIRED";
+    public const string PayeeNameTooLong = "PAYEE_NAME_TOO_LONG";
+    public const string PaymentCodeInvalid = "PAYMENT_CODE_INVALID";
+    public const string PaymentModelInvalid = "PAYMENT_MODEL_INVALID";
+    public const string PaymentReferenceInvalid = "PAYMENT_REFERENCE_INVALID";
+    public const string TenantsRequired = "TENANTS_REQUIRED";
+    public const string BillTitleTooLong = "BILL_TITLE_TOO_LONG";
+    public const string BillKindInvalid = "BILL_KIND_INVALID";
+    public const string BillPayeeInvalid = "BILL_PAYEE_INVALID";
+    public const string UserInvalid = "USER_INVALID";
 }

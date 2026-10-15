@@ -36,18 +36,20 @@ import { useAuth } from '../../shared/context/AuthContext';
 import { useTheme as useThemeContext } from '../../shared/context/ThemeContext';
 import { useNotifications } from '../../shared/context/NotificationContext';
 import { useMyPairing } from '../../hooks/useMyPairing';
+import { useBillsSummary } from '../../hooks/useBillsSummary';
 import LanguageSwitcher from './LanguageSwitcher';
 import UserAvatar from './UserAvatar';
 import NotificationPanel from '../Notification/NotificationPanel';
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat', 'payments', 'pairing', 'profile']);
+  const { t } = useTranslation(['common', 'dashboard', 'premium', 'savedSearches', 'searchRequests', 'machineLearning', 'chat', 'payments', 'pairing', 'profile', 'bills']);
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { mode, toggleTheme } = useThemeContext();
   const { unreadCount, unreadMessagesCount } = useNotifications();
   // Proposals to be roommates that wait for this user's answer: they show on "My roommate" like unread messages on Chat.
   const { incoming: roommateProposals } = useMyPairing();
+  const bills = useBillsSummary();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -86,6 +88,7 @@ const Header: React.FC = () => {
       { label: t('chat:chat', 'Chat'), path: '/chat', badge: unreadMessagesCount },
       { label: t('roommates'), path: '/roommates' },
       { label: t('pairing:pageTitle'), path: '/my-roommate', badge: roommateProposals.length },
+      { label: t('bills:navTitle'), path: '/bills', badge: bills.toPay + bills.toConfirm },
     ] : []),
   ];
 

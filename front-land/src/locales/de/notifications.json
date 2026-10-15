@@ -138,6 +138,70 @@
         "purchase_refunded": {
             "title": "Rückerstattung verarbeitet",
             "message": "Die Rückerstattung für Ihren Kauf wurde verarbeitet, daher wurden die Vorteile dieses Kaufs von Ihrem Konto entfernt."
+        },
+        "tenancy_added": {
+            "title": "Sie wurden zu einem Mietverhältnis hinzugefügt",
+            "message": "{{name}} hat Sie zum Mietverhältnis „{{title}}“ hinzugefügt. Miet- und Nebenkostenrechnungen kommen hier an."
+        },
+        "tenancy_removed": {
+            "title": "Sie wurden aus einem Mietverhältnis entfernt",
+            "message": "{{name}} hat Sie aus dem Mietverhältnis „{{title}}“ entfernt."
+        },
+        "tenancy_member_left": {
+            "title": "Ein Mieter ist ausgezogen",
+            "message": "{{name}} hat das Mietverhältnis „{{title}}“ verlassen."
+        },
+        "tenancy_ended": {
+            "title": "Das Mietverhältnis ist beendet",
+            "message": "Das Mietverhältnis „{{title}}“ ist beendet. Unbezahlte Rechnungen bleiben sichtbar."
+        },
+        "bill_new": {
+            "title": "Neue Rechnung: {{title}}",
+            "message": "Ihr Teil: {{amount}} RSD, fällig am {{due}}."
+        },
+        "bill_company_new": {
+            "title": "Neue Rechnung: {{title}}",
+            "message": "{{name}} hat eine Rechnung über {{amount}} RSD ({{payee}}) eingetragen, fällig am {{due}}."
+        },
+        "bill_changed": {
+            "title": "Die Rechnung wurde geändert",
+            "message": "{{name}} hat die Rechnung „{{title}}“ geändert. Ihr Teil: {{amount}} RSD, fällig am {{due}}."
+        },
+        "bill_marked_paid": {
+            "title": "Ist das Geld eingegangen?",
+            "message": "{{name}} gibt an, {{amount}} RSD für „{{title}}“ bezahlt zu haben. Bestätigen Sie, sobald das Geld eingeht."
+        },
+        "bill_confirmed": {
+            "title": "Zahlung bestätigt",
+            "message": "{{name}} hat den Eingang von {{amount}} RSD für „{{title}}“ bestätigt."
+        },
+        "bill_rejected": {
+            "title": "Die Zahlung ist nicht eingegangen",
+            "message": "{{name}} sieht Ihre Zahlung von {{amount}} RSD für „{{title}}“ noch nicht. Prüfen Sie den Auftrag bei Ihrer Bank."
+        },
+        "bill_company_paid": {
+            "title": "Die Rechnung ist bezahlt",
+            "message": "{{name}} hat „{{title}}“ ({{amount}} RSD) bezahlt. Ihr Teil: {{share}} RSD."
+        },
+        "bill_company_paid_landlord": {
+            "title": "Die Rechnung ist bezahlt",
+            "message": "{{name}} hat „{{title}}“ ({{amount}} RSD) bezahlt."
+        },
+        "bill_due_soon": {
+            "title": "Bald fällig: {{title}}",
+            "message": "{{amount}} RSD sind bis {{due}} zu zahlen."
+        },
+        "bill_overdue": {
+            "title": "Überfällig: {{title}}",
+            "message": "{{amount}} RSD waren bis {{due}} zu zahlen."
+        },
+        "bill_overdue_receiver": {
+            "title": "Zahlung verspätet: {{title}}",
+            "message": "{{name}} hat {{amount}} RSD noch nicht bezahlt (fällig am {{due}})."
+        },
+        "bill_company_overdue": {
+            "title": "Rechnung nicht bezahlt: {{title}}",
+            "message": "„{{title}}“ ({{amount}} RSD) ist noch unbezahlt; fällig war sie am {{due}}."
         }
     }
 }

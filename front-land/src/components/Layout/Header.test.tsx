@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { User } from '../../shared/types/user';
 
-const session = vi.hoisted(() => ({ user: null as User | null, unreadMessages: 0, proposals: 0 }));
+const session = vi.hoisted(() => ({ user: null as User | null, unreadMessages: 0, proposals: 0, billsToPay: 0, billsToConfirm: 0 }));
 
 vi.mock('../../shared/context/AuthContext', () => ({
   useAuth: () => ({ user: session.user, isAuthenticated: session.user !== null, logout: vi.fn() }),
@@ -11,6 +11,9 @@ vi.mock('../../shared/context/AuthContext', () => ({
 vi.mock('../../shared/context/ThemeContext', () => ({ useTheme: () => ({ mode: 'light', toggleTheme: vi.fn() }) }));
 vi.mock('../../shared/context/NotificationContext', () => ({
   useNotifications: () => ({ unreadCount: 0, unreadMessagesCount: session.unreadMessages }),
+}));
+vi.mock('../../hooks/useBillsSummary', () => ({
+  useBillsSummary: () => ({ toPay: session.billsToPay, toConfirm: session.billsToConfirm, amountToPay: 0 }),
 }));
 vi.mock('../../hooks/useMyPairing', () => ({
   useMyPairing: () => ({ incoming: Array.from({ length: session.proposals }, (_, i) => ({ pairingId: i + 1 })) }),
@@ -35,6 +38,8 @@ beforeEach(() => {
   session.user = null;
   session.unreadMessages = 0;
   session.proposals = 0;
+  session.billsToPay = 0;
+  session.billsToConfirm = 0;
 });
 
 describe('Header - the profile button', () => {
@@ -140,5 +145,25 @@ describe('Header - administration', () => {
 
     expect(screen.queryByText('dashboard:analyticsDashboard')).not.toBeInTheDocument();
     expect(screen.queryByText('profile:twoFactorMenu')).not.toBeInTheDocument();
+  });
+});
+
+describe('Header - bills', () => {
+  const navButton = (name: string) => screen.getByRole('button', { name: new RegExp(name) });
+
+  it('counts the bills to pay and the payments to confirm next to "Bills"', () => {
+    session.user = signedIn();
+    session.billsToPay = 2;
+    session.billsToConfirm = 1;
+
+    renderHeader();
+
+    expect(navButton('bills:navTitle')).toHaveTextContent('3');
+  });
+
+  it('is not offered to visitors who are not signed in', () => {
+    renderHeader();
+
+    expect(screen.queryByRole('button', { name: /bills:navTitle/ })).not.toBeInTheDocument();
   });
 });

@@ -532,6 +532,13 @@ RecurringJob.AddOrUpdate<Lander.src.Modules.Communication.Services.EmailLogClean
     "0 3 * * *",
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
+// Bills: this month's rent bills and payment reminders (06:00 UTC = 7 or 8 in the morning in Serbia).
+RecurringJob.AddOrUpdate<Lander.src.Modules.Billing.Implementation.BillingDailyJob>(
+    "billing-daily",
+    j => j.RunAsync(),
+    "0 6 * * *",
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
 // Moves profile pictures still stored inline in the database to file storage; a no-op once done.
 RecurringJob.AddOrUpdate<Lander.src.Modules.Users.Services.ProfilePictureMigrationService>(
     "profile-picture-migration",
