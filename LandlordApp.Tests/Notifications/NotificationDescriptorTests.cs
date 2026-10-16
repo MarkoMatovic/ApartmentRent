@@ -1,10 +1,10 @@
+using Lander.src.Modules.Communication.Hubs;
 using System.Text.Json;
 using FluentAssertions;
 using Lander;
 using Lander.src.Notifications;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Implementation;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -98,7 +98,7 @@ public class NotificationDescriptorTests
             .Returns(Task.CompletedTask);
         var clients = new Mock<IHubClients>();
         clients.Setup(c => c.Group(It.IsAny<string>())).Returns(proxy.Object);
-        var hub = new Mock<IHubContext<NotificationHub>>();
+        var hub = new Mock<IHubContext<ChatHub>>();
         hub.Setup(h => h.Clients).Returns(clients.Object);
 
         var options = new DbContextOptionsBuilder<NotificationContext>()

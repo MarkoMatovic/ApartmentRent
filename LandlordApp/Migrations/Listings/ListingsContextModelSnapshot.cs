@@ -193,8 +193,16 @@ namespace Lander.Migrations.Listings
                     b.HasIndex("IsActive", "IsDeleted", "City")
                         .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsActive", "IsDeleted", "City"), new[] { "Rent", "NumberOfRooms", "ApartmentType", "ListingType", "IsImmediatelyAvailable", "AvailableFrom", "IsFeatured", "CreatedDate" });
+
                     b.HasIndex("IsActive", "IsDeleted", "CreatedDate")
                         .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
+
+                    b.HasIndex("IsActive", "IsDeleted", "IsFeatured", "CreatedDate")
+                        .IsDescending(false, false, true, true)
+                        .HasDatabaseName("IX_Apartments_List");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("IsActive", "IsDeleted", "IsFeatured", "CreatedDate"), new[] { "City", "Rent", "NumberOfRooms", "ApartmentType", "ListingType", "IsImmediatelyAvailable", "AvailableFrom" });
 
                     b.HasIndex("IsFeatured", "IsActive", "IsDeleted", "CreatedDate")
                         .HasDatabaseName("IX_Apartments_IsFeatured_IsActive_IsDeleted_CreatedDate");

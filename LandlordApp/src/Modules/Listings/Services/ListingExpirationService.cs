@@ -127,6 +127,16 @@ public sealed class ListingExpirationService
             _logger.LogInformation("Soft-deleted {Count} listing(s) past grace period.", softDeleted);
 
         // ── 4. Deactivate expired featured promotions ───────────────────────────
+        await ExpireFeaturedAsync();
+    }
+
+    /// <summary>
+    /// Switches off featured promotions whose time is up. Runs with the daily job and every 15 minutes on
+    /// its own ("featured-expiration"), because the listing search sorts by IsFeatured alone.
+    /// </summary>
+    public async Task<int> ExpireFeaturedAsync()
+    {
+        var now = DateTime.UtcNow;
         int featuredExpired = await _db.Apartments
             .IgnoreQueryFilters()
             .Where(a =>
@@ -141,5 +151,6 @@ public sealed class ListingExpirationService
 
         if (featuredExpired > 0)
             _logger.LogInformation("Cleared {Count} expired featured listing promotion(s).", featuredExpired);
+        return featuredExpired;
     }
 }

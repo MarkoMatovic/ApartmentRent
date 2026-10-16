@@ -154,8 +154,10 @@ public partial class ApartmentService
         {
             await _notificationService.NotifyNewListingAsync(apartment.Title, apartment.City ?? string.Empty);
 
-            // Alert users whose saved searches match this new listing.
-            await _notificationService.NotifyNewListingMatchesAsync(BuildAlertContext(apartment));
+            // Alert users whose saved searches match this new listing, in the background: it is one
+            // notification and one update per matching search, which must not hold up the landlord.
+            var alert = BuildAlertContext(apartment);
+            _scheduler.Enqueue<IApartmentNotificationService>(s => s.NotifyNewListingMatchesAsync(alert));
         }
 
         return new ApartmentDto

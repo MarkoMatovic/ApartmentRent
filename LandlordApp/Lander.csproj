@@ -54,8 +54,6 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.15.2" />
-    <PackageReference Include="Polly" Version="8.5.2" />
-    <PackageReference Include="Polly.Extensions" Version="8.5.2" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
     <!-- Brevo (formerly Sendinblue) is the live email provider — see EmailService. -->

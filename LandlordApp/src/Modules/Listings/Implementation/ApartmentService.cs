@@ -41,6 +41,7 @@ public partial class ApartmentService : IApartmentService
     private readonly IConfiguration _configuration;
     private readonly Lander.src.Infrastructure.FileStorage.IImageUrlBuilder _imageUrlBuilder;
     private readonly IGeocodingService _geocoding;
+    private readonly Lander.src.Infrastructure.Services.IBackgroundScheduler _scheduler;
 
     public ApartmentService(
         ListingsContext context,
@@ -58,7 +59,8 @@ public partial class ApartmentService : IApartmentService
         IOutputCacheStore outputCacheStore,
         IConfiguration configuration,
         Lander.src.Infrastructure.FileStorage.IImageUrlBuilder imageUrlBuilder,
-        IGeocodingService geocoding)
+        IGeocodingService geocoding,
+        Lander.src.Infrastructure.Services.IBackgroundScheduler scheduler)
     {
         _context = context;
         _reviewStats = reviewStats;
@@ -76,6 +78,7 @@ public partial class ApartmentService : IApartmentService
         _configuration = configuration;
         _imageUrlBuilder = imageUrlBuilder;
         _geocoding = geocoding;
+        _scheduler = scheduler;
     }
 
     /// <summary>

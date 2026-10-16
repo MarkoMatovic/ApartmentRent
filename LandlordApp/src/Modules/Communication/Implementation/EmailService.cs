@@ -1,42 +1,20 @@
 using Lander.Helpers;
+using Lander.src.Infrastructure.Services;
 using Lander.src.Modules.Communication.Interfaces;
-using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Communication.Services;
 using Microsoft.Extensions.Options;
-using Polly;
-using Polly.CircuitBreaker;
 using System.Security.Claims;
-using SendSmtpEmail = sib_api_v3_sdk.Model.SendSmtpEmail;
-using SendSmtpEmailSender = sib_api_v3_sdk.Model.SendSmtpEmailSender;
-using SendSmtpEmailTo = sib_api_v3_sdk.Model.SendSmtpEmailTo;
-using SdkTask = System.Threading.Tasks.Task;
 
 namespace Lander.src.Modules.Communication.Implementation;
 
+/// <summary>
+/// Builds the e-mails and queues them; <see cref="EmailDeliveryJob"/> sends them through Brevo in the
+/// background, so the request that caused an e-mail never waits for Brevo (or for its retries).
+/// </summary>
 public class EmailService : IEmailService
 {
-    /// <summary>Retries and a circuit breaker around Brevo, shared by the whole process.</summary>
-    private static readonly ResiliencePipeline DefaultPipeline = new ResiliencePipelineBuilder()
-        .AddRetry(new Polly.Retry.RetryStrategyOptions
-        {
-            MaxRetryAttempts = 3,
-            Delay = TimeSpan.FromSeconds(2),
-            BackoffType = DelayBackoffType.Exponential,
-            ShouldHandle = new PredicateBuilder().Handle<Exception>()
-        })
-        .AddCircuitBreaker(new Polly.CircuitBreaker.CircuitBreakerStrategyOptions
-        {
-            FailureRatio = 0.5,
-            SamplingDuration = TimeSpan.FromSeconds(30),
-            MinimumThroughput = 5,
-            BreakDuration = TimeSpan.FromMinutes(1),
-            ShouldHandle = new PredicateBuilder().Handle<Exception>()
-        })
-        .Build();
-
     private readonly BrevoSettings _settings;
-    private readonly IBrevoEmailClient _brevo;
-    private readonly ResiliencePipeline _pipeline;
+    private readonly IBackgroundScheduler _scheduler;
     private readonly CommunicationsContext _context;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailTemplateRenderer _templateRenderer;
@@ -48,12 +26,10 @@ public class EmailService : IEmailService
         IHttpContextAccessor httpContextAccessor,
         IEmailTemplateRenderer templateRenderer,
         ILogger<EmailService> logger,
-        IBrevoEmailClient brevo,
-        ResiliencePipeline? pipeline = null)
+        IBackgroundScheduler scheduler)
     {
         _settings = settings.Value;
-        _brevo = brevo;
-        _pipeline = pipeline ?? DefaultPipeline;
+        _scheduler = scheduler;
         _context = context;
         _httpContextAccessor = httpContextAccessor;
         _templateRenderer = templateRenderer;
@@ -63,29 +39,40 @@ public class EmailService : IEmailService
             logger.LogWarning("Brevo API key is not configured — email sending will fail.");
     }
 
-    public async Task<bool> SendEmailAsync(string to, string subject, string htmlContent)
+    /// <summary>
+    /// Without an API key nothing can be sent: the mail is logged as not delivered at once instead of
+    /// queuing a job that Brevo would refuse. Local runs and tests have no key.
+    /// </summary>
+    private bool NotConfigured => string.IsNullOrWhiteSpace(_settings.ApiKey);
+    private const string NotConfiguredError = "Brevo API key is not configured";
+
+    /// <summary>True when the e-mail is queued (Brevo is called later, by the job).</summary>
+    public Task<bool> SendEmailAsync(string to, string subject, string htmlContent) =>
+        QueueAsync(new List<string> { to }, subject, htmlContent);
+
+    /// <summary>One e-mail to all recipients, queued like a single one.</summary>
+    public Task<bool> SendBulkEmailAsync(List<string> recipients, string subject, string htmlContent) =>
+        QueueAsync(recipients, subject, htmlContent);
+
+    private async Task<bool> QueueAsync(List<string> recipients, string subject, string htmlContent)
     {
+        var requestedBy = Guid.TryParse(
+            _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier), out var guid) ? guid : (Guid?)null;
+        if (NotConfigured)
+        {
+            await EmailLogWriter.WriteAsync(_context, _logger, recipients, subject, requestedBy, false, null, NotConfiguredError);
+            return false;
+        }
         try
         {
-            var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
-            var toList = new List<SendSmtpEmailTo> { new SendSmtpEmailTo(to) };
-
-            var sendSmtpEmail = new SendSmtpEmail(
-                sender: sender,
-                to: toList,
-                subject: subject,
-                htmlContent: htmlContent
-            );
-
-            var messageId = await _pipeline.ExecuteAsync(async ct => await _brevo.SendAsync(sendSmtpEmail, ct));
-
-            await LogEmailAsync(null, to, subject, htmlContent, null, true, messageId, null);
+            var email = new QueuedEmail { To = recipients, Subject = subject, HtmlContent = htmlContent, RequestedBy = requestedBy };
+            _scheduler.Enqueue<EmailDeliveryJob>(job => job.SendAsync(email, null));
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Brevo: Failed to send email to {To}", to);
-            await LogEmailAsync(null, to, subject, htmlContent, null, false, null, ex.Message);
+            _logger.LogError(ex, "Could not queue the email to {To}", string.Join(", ", recipients));
+            await EmailLogWriter.WriteAsync(_context, _logger, recipients, subject, requestedBy, false, null, ex.Message);
             return false;
         }
     }
@@ -94,39 +81,6 @@ public class EmailService : IEmailService
     {
         var htmlContent = _templateRenderer.Render(templateName, templateData);
         return await SendEmailAsync(to, subject, htmlContent);
-    }
-
-    public async Task<bool> SendBulkEmailAsync(List<string> recipients, string subject, string htmlContent)
-    {
-        try
-        {
-            var sender = new SendSmtpEmailSender(_settings.SenderName, _settings.SenderEmail);
-            var toList = recipients.Select(r => new SendSmtpEmailTo(r)).ToList();
-
-            var sendSmtpEmail = new SendSmtpEmail(
-                sender: sender,
-                to: toList,
-                subject: subject,
-                htmlContent: htmlContent
-            );
-
-            var messageId = await _pipeline.ExecuteAsync(async ct => await _brevo.SendAsync(sendSmtpEmail, ct));
-
-            foreach (var recipient in recipients)
-            {
-                await LogEmailAsync(null, recipient, subject, htmlContent, null, true, messageId, null);
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Brevo: Failed to send bulk email to {Count} recipients", recipients.Count);
-            foreach (var recipient in recipients)
-            {
-                await LogEmailAsync(null, recipient, subject, htmlContent, null, false, null, ex.Message);
-            }
-            return false;
-        }
     }
 
     public async Task<bool> SendWelcomeEmailAsync(string to, string userName)
@@ -244,38 +198,6 @@ public class EmailService : IEmailService
         var subject = $"Potvrda narudžbe — {planName}";
         var templateData = new { UserName = userName, PlanName = planName, OrderNumber = orderNumber, AmountEur = amountEur.ToString("F2") };
         return await SendTemplatedEmailAsync(to, subject, "OrderConfirmationEmail", templateData);
-    }
-
-    private async Task LogEmailAsync(int? userId, string recipientEmail, string subject, string htmlContent,
-        string? templateId, bool isDelivered, string? providerMessageId, string? errorMessage)
-    {
-        var currentUserGuid = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-        var log = new EmailLog
-        {
-            UserId = userId,
-            RecipientEmail = recipientEmail,
-            Subject = subject,
-            // Do NOT persist the full HTML body — it can be kilobytes per email and accumulates
-            // to gigabytes over time. It also contains PII (names, links with tokens) which
-            // creates a GDPR retention problem. Log only what is needed for delivery tracing.
-            HtmlContent = null,
-            TemplateId = templateId,
-            SentAt = DateTime.UtcNow,
-            IsDelivered = isDelivered,
-            ProviderMessageId = providerMessageId,
-            ErrorMessage = errorMessage,
-            CreatedByGuid = Guid.TryParse(currentUserGuid, out var elCg) ? elCg : null,
-            CreatedDate = DateTime.UtcNow
-        };
-        try
-        {
-            _context.EmailLogs.Add(log);
-            await _context.SaveEntitiesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to log email to database");
-        }
     }
 
 }

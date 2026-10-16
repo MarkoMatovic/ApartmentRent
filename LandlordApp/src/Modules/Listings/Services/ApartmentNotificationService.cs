@@ -1,10 +1,10 @@
+using Lander.src.Modules.Communication.Hubs;
 using System.Text.Json;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.SavedSearches.Models;
 using Lander.src.Modules.SavedSearches.Services;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +12,7 @@ namespace Lander.src.Modules.Listings.Services;
 
 public class ApartmentNotificationService : IApartmentNotificationService
 {
-    private readonly IHubContext<NotificationHub> _notificationHub;
+    private readonly IHubContext<ChatHub> _notificationHub;
     private readonly IEmailService _emailService;
     private readonly SavedSearchesContext _savedSearchesContext;
     private readonly UsersContext _usersContext;
@@ -26,7 +26,7 @@ public class ApartmentNotificationService : IApartmentNotificationService
     private static readonly JsonSerializerOptions _jsonOpts = new(JsonSerializerDefaults.Web);
 
     public ApartmentNotificationService(
-        IHubContext<NotificationHub> notificationHub,
+        IHubContext<ChatHub> notificationHub,
         IEmailService emailService,
         SavedSearchesContext savedSearchesContext,
         UsersContext usersContext,

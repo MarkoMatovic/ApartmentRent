@@ -10,7 +10,6 @@ using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Notifications;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,7 +25,7 @@ public class ChatGroupService : IChatGroupService
     private readonly IRoommatePairingService _pairings;
     private readonly IEmailService _emailService;
     private readonly IHubContext<ChatHub> _chatHub;
-    private readonly IHubContext<NotificationHub> _notificationHub;
+    private readonly IHubContext<ChatHub> _notificationHub;
     private readonly IPresenceTracker _presence;
     private readonly ILogger<ChatGroupService> _logger;
 
@@ -36,7 +35,7 @@ public class ChatGroupService : IChatGroupService
         IRoommatePairingService pairings,
         IEmailService emailService,
         IHubContext<ChatHub> chatHub,
-        IHubContext<NotificationHub> notificationHub,
+        IHubContext<ChatHub> notificationHub,
         IPresenceTracker presence,
         ILogger<ChatGroupService> logger)
     {

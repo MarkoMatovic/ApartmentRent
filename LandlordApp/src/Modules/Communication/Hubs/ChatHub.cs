@@ -7,6 +7,10 @@ using System.Security.Claims;
 
 namespace Lander.src.Modules.Communication.Hubs;
 
+/// <summary>
+/// The one live connection of a browser tab: chat, and the notifications of the bell (which had their own
+/// hub, so every tab held two connections). Also mapped at /notificationHub for tabs opened before that.
+/// </summary>
 [Authorize]
 public class ChatHub : Hub
 {
@@ -22,16 +26,44 @@ public class ChatHub : Hub
         _cache = cache;
     }
 
+    /// <summary>The group the bell's notifications are sent to (the user id).</summary>
+    public static string NotificationGroup(int userId) => userId.ToString();
+
     /// <summary>
-    /// Puts every new connection into its owner's group right away (the user id comes from the token), so a
-    /// message that arrives before the client has asked to join, or after an automatic reconnect, is not lost.
+    /// Puts every new connection into its owner's chat room and notification group right away (the user id
+    /// comes from the token), so nothing that arrives before the client has asked to join, or after an
+    /// automatic reconnect, is lost.
     /// </summary>
     public override async Task OnConnectedAsync()
     {
         if (int.TryParse(Context.User?.FindFirstValue("userId"), out var userId))
+        {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, NotificationGroup(userId));
+        }
 
         await base.OnConnectedAsync();
+    }
+
+    /// <summary>
+    /// Joins the caller to their own notification group (tabs opened before the hubs were merged still ask).
+    /// The user id is taken from the token; asking for somebody else's group closes the connection.
+    /// </summary>
+    public async Task JoinNotificationGroup(int userId)
+    {
+        if (!int.TryParse(Context.User?.FindFirstValue("userId"), out var callerId) || callerId != userId)
+        {
+            Context.Abort();
+            return;
+        }
+        await Groups.AddToGroupAsync(Context.ConnectionId, NotificationGroup(callerId));
+    }
+
+    /// <summary>Admin-only broadcast to everybody on the site.</summary>
+    [Authorize(Roles = "Admin")]
+    public async Task SendNotificationToAll(string message)
+    {
+        await Clients.All.SendAsync("ReceiveNotification", message);
     }
 
     private int GetCurrentUserId()

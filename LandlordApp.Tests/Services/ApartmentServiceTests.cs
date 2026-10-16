@@ -1,3 +1,4 @@
+using Lander.src.Modules.Communication.Hubs;
 using Xunit;
 using Moq;
 using FluentAssertions;
@@ -17,7 +18,6 @@ using Lander.src.Modules.Listings.Models;
 using Lander.src.Modules.Listings.Dtos.InputDto;
 using Lander.src.Modules.Listings.Dtos.Dto;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
-using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.SavedSearches.Models;
 
@@ -30,7 +30,7 @@ public class ApartmentServiceTests : IDisposable
     private readonly SavedSearchesContext _savedSearchesContext;
     private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor;
     private readonly Mock<IMemoryCache> _mockCache;
-    private readonly Mock<IHubContext<NotificationHub>> _mockHubContext;
+    private readonly Mock<IHubContext<ChatHub>> _mockHubContext;
     private readonly Mock<ILogger<ApartmentService>> _mockLogger;
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<Microsoft.AspNetCore.Authorization.IAuthorizationService> _mockAuthService;
@@ -66,7 +66,7 @@ public class ApartmentServiceTests : IDisposable
         // Setup mocks
         _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         _mockCache = new Mock<IMemoryCache>();
-        _mockHubContext = new Mock<IHubContext<NotificationHub>>();
+        _mockHubContext = new Mock<IHubContext<ChatHub>>();
         _mockLogger = new Mock<ILogger<ApartmentService>>();
         _mockEmailService = new Mock<IEmailService>();
         _mockEmailService
@@ -153,7 +153,8 @@ public class ApartmentServiceTests : IDisposable
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
             new ConfigurationBuilder().Build(),
             new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object,
-            _mockGeocoding.Object
+            _mockGeocoding.Object,
+            new Mock<Lander.src.Infrastructure.Services.IBackgroundScheduler>().Object
         );
     }
 

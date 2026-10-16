@@ -9,7 +9,6 @@ using Lander.Middleware;
 using Lander.src.Infrastructure.Extensions;
 using Lander.src.Infrastructure.Hangfire;
 using Lander.src.Modules.Communication.Hubs;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.SignalR;
 using OpenTelemetry;
@@ -48,9 +47,9 @@ if (!string.IsNullOrWhiteSpace(blobConnectionFallback) &&
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // Hard cap to prevent resource exhaustion under load.
-    options.Limits.MaxConcurrentConnections = 1000;
-    options.Limits.MaxConcurrentUpgradedConnections = 100;
+    // No cap on concurrent connections: every signed-in tab keeps a SignalR connection open, and the
+    // old caps (1,000 connections, 100 WebSockets) refused people from about 500 users on (load test,
+    // October 2026). Rate limiting, the body size limit and the request timeouts guard against abuse.
     // 10 MB max body — returns 413 before the payload reaches controllers.
     options.Limits.MaxRequestBodySize = 10 * 1024 * 1024;
     // Keep the default MinRequestBodyDataRate so slow-loris-style attacks are mitigated.
@@ -412,6 +411,14 @@ app.UseCors("AllowFrontend");
 app.UseSerilogRequestLogging(opts =>
 {
     opts.MessageTemplate = "HTTP {RequestMethod} {RequestPath} → {StatusCode} ({Elapsed:0.0}ms)";
+    // This middleware writes through the static logger, which stays the bootstrap one (Information,
+    // console) because of preserveStaticLogger, so the Warning level of production did not apply to it
+    // and every request was printed. Outside development only what needs attention is written now.
+    var quietLevel = app.Environment.IsDevelopment() ? LogEventLevel.Information : LogEventLevel.Debug;
+    opts.GetLevel = (httpCtx, elapsedMs, ex) =>
+        ex != null || httpCtx.Response.StatusCode >= 500 ? LogEventLevel.Error
+        : elapsedMs > 1000 ? LogEventLevel.Warning
+        : quietLevel;
     opts.EnrichDiagnosticContext = (diagCtx, httpCtx) =>
     {
         diagCtx.Set("ClientIP", httpCtx.Connection.RemoteIpAddress?.ToString());
@@ -520,6 +527,13 @@ RecurringJob.AddOrUpdate<Lander.src.Modules.Listings.Services.ListingExpirationS
     "0 2 * * *",
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
+// The listing search sorts by IsFeatured itself, so an expired promotion must not wait for the night.
+RecurringJob.AddOrUpdate<Lander.src.Modules.Listings.Services.ListingExpirationService>(
+    "featured-expiration",
+    j => j.ExpireFeaturedAsync(),
+    "*/15 * * * *",
+    new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
 RecurringJob.AddOrUpdate<Lander.src.Modules.Listings.Services.ApartmentGeocodingBackfillService>(
     "apartment-geocoding-backfill",
     j => j.RunAsync(),
@@ -553,7 +567,8 @@ RecurringJob.AddOrUpdate<Lander.src.Modules.MachineLearning.Services.PriceModelT
     new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
 app.MapControllers();
-app.MapHub<NotificationHub>("/notificationHub").RequireRateLimiting("signalr");
+// Chat and notifications share one hub (one connection per tab); the old address keeps tabs opened before working.
+app.MapHub<ChatHub>("/notificationHub").RequireRateLimiting("signalr");
 app.MapHub<ChatHub>("/chatHub").RequireRateLimiting("signalr");
 app.MapHealthChecks("/health");
 // Prometheus: not a public API. Allow in Development, from loopback, or with

@@ -1,3 +1,4 @@
+using Lander.src.Modules.Communication.Hubs;
 using System.Text.Json;
 using FluentAssertions;
 using Lander;
@@ -7,7 +8,6 @@ using Lander.src.Modules.Listings.Services;
 using Lander.src.Modules.SavedSearches.Models;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -41,7 +41,7 @@ public class NotificationSendersTests
             .Returns(Task.CompletedTask);
         var clients = new Mock<IHubClients>();
         clients.Setup(c => c.All).Returns(proxy.Object);
-        var hub = new Mock<IHubContext<NotificationHub>>();
+        var hub = new Mock<IHubContext<ChatHub>>();
         hub.Setup(h => h.Clients).Returns(clients.Object);
 
         var service = new ApartmentNotificationService(
@@ -86,7 +86,7 @@ public class NotificationSendersTests
         searches.SavedSearches.AddRange(savedSearches);
         searches.SaveChanges();
 
-        var hub = new Mock<IHubContext<NotificationHub>>();
+        var hub = new Mock<IHubContext<ChatHub>>();
         var service = new ApartmentNotificationService(
             hub.Object, new Mock<IEmailService>().Object, searches, new UsersContext(InMemory<UsersContext>()),
             notifications.Object, NullLogger<ApartmentNotificationService>.Instance);

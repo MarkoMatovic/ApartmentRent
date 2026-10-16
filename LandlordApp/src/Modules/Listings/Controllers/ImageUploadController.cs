@@ -93,14 +93,7 @@ public class ImageUploadController : ControllerBase
                 return BadRequest($"File '{Path.GetFileName(file.FileName)}' content does not match its extension.");
             }
 
-            // ── Process via ImageSharp: strip EXIF + normalise format ─────────
-            // Re-encoding through ImageSharp:
-            //   • Removes all EXIF metadata (GPS location, device info, etc.)
-            //   • Acts as a second-layer polyglot defence (re-decodes pixel data)
-            //   • Converts to WebP for smaller file sizes; falls back to JPEG/PNG
-            //     for formats where WebP is unsuitable.
-            // Always save as .webp for uniformity except for original PNG/GIF/BMP
-            // which may need lossless handling.
+         
             byte[] processedBytes;
             string saveExtension;
             try
@@ -140,10 +133,7 @@ public class ImageUploadController : ControllerBase
                 return BadRequest($"File '{Path.GetFileName(file.FileName)}' could not be processed as a valid image.");
             }
 
-            // ── Save via storage abstraction (Azure Blob in prod, local disk in dev) ──
-            // Folder scheme {yyyy}/{MM}/{guid}.ext. (apartmentId is not known at upload
-            // time — images are uploaded before the apartment is created — so it is not
-            // part of the path; can be added once the flow passes it.)
+           
             var now = DateTime.UtcNow;
             var blobPath = $"{now:yyyy}/{now:MM}/{Guid.NewGuid()}{saveExtension}";
             var contentType = saveExtension == ".png" ? "image/png" : "image/webp";
@@ -153,10 +143,7 @@ public class ImageUploadController : ControllerBase
                 FileStorageContainers.ApartmentImages, blobPath, uploadStream, contentType);
             fileUrl = ToAbsolute(fileUrl);
 
-            // ── Thumbnail (best-effort) ──────────────────────────────────────
-            // 400x300 WebP @ q50. Failure never aborts the original upload — the client
-            // simply falls back to the full-size image. Path follows the -thumb.webp convention
-            // so ApartmentService can derive ThumbnailPath without round-tripping it.
+         
             string? thumbnailUrl = null;
             var thumbBytes = await ImageThumbnailFactory.TryBuildWebpThumbnailAsync(processedBytes);
             if (thumbBytes is not null)
@@ -180,16 +167,11 @@ public class ImageUploadController : ControllerBase
         return Ok(uploadedImages);
     }
 
-    // Local storage returns a site-relative URL; promote it to absolute for the client.
-    // Azure already returns an absolute blob/CDN URL.
+  
     private string ToAbsolute(string url)
         => url.StartsWith('/') ? $"{Request.Scheme}://{Request.Host}{url}" : url;
 
-    /// <summary>
-    /// Admin-only, idempotent one-off migration: backfills BlobPath/ThumbnailPath for legacy
-    /// ApartmentImage rows and generates missing thumbnails. Runs in the background; progress
-    /// and the final summary are written to the logs. Safe to re-run.
-    /// </summary>
+    
     [HttpPost(ApiActionsV1.MigrateImagesToBlob, Name = nameof(ApiActionsV1.MigrateImagesToBlob))]
     [Authorize(Roles = "Admin")]
     public IActionResult MigrateImagesToBlob()
@@ -213,7 +195,7 @@ public class ImageUploadController : ControllerBase
         return Accepted(new { message = "Apartment image blob migration started. Check logs for progress." });
     }
 
-    // ── Magic byte validation ────────────────────────────────────────────────
+    
 
     private static async Task<bool> IsValidImageMagicBytes(IFormFile file)
     {

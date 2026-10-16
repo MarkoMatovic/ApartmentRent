@@ -29,7 +29,8 @@ public sealed class BrevoEmailClient : IBrevoEmailClient
         config.AddApiKey("api-key", _settings.ApiKey ?? string.Empty);
         var api = new TransactionalEmailsApi(config);
 
-        var result = await Task.Run(() => api.SendTransacEmail(email), ct);
+        // The SDK's own async call: waiting for Brevo does not hold a thread-pool thread.
+        var result = await api.SendTransacEmailAsync(email);
         return result?.MessageId;
     }
 }

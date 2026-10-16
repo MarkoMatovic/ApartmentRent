@@ -1,17 +1,21 @@
 using FluentAssertions;
-using Lander.src.Notifications.NotificationsHub;
+using Lander.src.Modules.Communication.Hubs;
+using Lander.src.Modules.Communication.Interfaces;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 
 namespace LandlordApp.Tests.Hubs;
 
+/// <summary>The bell's side of the chat hub (the notification hub was merged into it: one connection per tab).</summary>
 public class NotificationHubTests
 {
     private readonly Mock<IHubCallerClients> _mockClients;
     private readonly Mock<IClientProxy> _mockClientProxy;
     private readonly Mock<IGroupManager> _mockGroups;
     private readonly Mock<HubCallerContext> _mockContext;
-    private readonly NotificationHub _hub;
+    private readonly ChatHub _hub;
 
     public NotificationHubTests()
     {
@@ -31,7 +35,9 @@ public class NotificationHubTests
         _mockGroups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _hub = new NotificationHub
+        var cache = new MemoryDistributedCache(
+            Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions()));
+        _hub = new ChatHub(new Mock<IMessageService>().Object, cache)
         {
             Clients = _mockClients.Object,
             Groups  = _mockGroups.Object,
@@ -42,7 +48,7 @@ public class NotificationHubTests
     // ─── OnConnectedAsync ────────────────────────────────────────────────────
 
     [Fact]
-    public async Task OnConnectedAsync_PutsTheConnectionInTheOwnersGroup_WithoutTheClientAskingToJoin()
+    public async Task OnConnectedAsync_PutsTheConnectionInTheOwnersNotificationGroup_WithoutTheClientAskingToJoin()
     {
         // The group of a connection is gone after an automatic reconnect; joining on connect keeps notifications flowing.
         await _hub.OnConnectedAsync();
@@ -50,6 +56,15 @@ public class NotificationHubTests
         _mockGroups.Verify(
             g => g.AddToGroupAsync("conn-notify-1", "7", It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task OnConnectedAsync_OneConnectionJoinsBothTheChatRoomAndTheNotificationGroup()
+    {
+        await _hub.OnConnectedAsync();
+
+        _mockGroups.Verify(g => g.AddToGroupAsync("conn-notify-1", "user_7", It.IsAny<CancellationToken>()), Times.Once);
+        _mockGroups.Verify(g => g.AddToGroupAsync("conn-notify-1", ChatHub.NotificationGroup(7), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

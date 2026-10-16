@@ -9,7 +9,6 @@ using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Roommates.Interfaces;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,7 +58,7 @@ public class ChatGroupServiceTests : IDisposable
 
         _service = new ChatGroupService(
             _comms, _users, _pairings.Object, _email.Object,
-            RecordingHub<ChatHub>(_chatPushes), RecordingHub<NotificationHub>(_bellPushes, _bellArgs),
+            RecordingHub<ChatHub>(_chatPushes), RecordingHub<ChatHub>(_bellPushes, _bellArgs),
             _presence.Object, NullLogger<ChatGroupService>.Instance);
     }
 

@@ -1,13 +1,17 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import * as signalR from '@microsoft/signalr';
 import { MessageDto } from '../api/messagesApi';
 import type { ChatGroupMessage } from '../shared/api/chatGroups';
-import { apiBaseUrl } from '../shared/api/client';
-import { getAccessToken } from '../shared/api/tokenStore';
+import { useNotifications } from '../shared/context/NotificationContext';
 
+/**
+ * The chat page's view of the tab's live connection. It does not open a connection of its own: it uses
+ * the one NotificationContext keeps for the bell, so a tab holds one connection, not two or three.
+ */
 export const useChatSignalR = (userId: number | null) => {
-  const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-  const [connected, setConnected] = useState(false);
+  const { liveConnection, liveConnected, liveReconnects } = useNotifications();
+  const connection = userId ? liveConnection : null;
+  const connected = !!connection && liveConnected;
+
   const [newMessage, setNewMessage] = useState<MessageDto | null>(null);
   // Ids of messages the other person has read. Accumulated (not a single value) because several
   // "MessageRead" events can arrive within one render and none of them may be lost.
@@ -17,96 +21,61 @@ export const useChatSignalR = (userId: number | null) => {
   // ticks whenever somebody adds us to a new group so the list can be reloaded.
   const [newGroupMessage, setNewGroupMessage] = useState<ChatGroupMessage | null>(null);
   const [groupsChanged, setGroupsChanged] = useState(0);
-  const connectionRef = useRef<signalR.HubConnection | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!connection) return;
 
-    const chatHubUrl = apiBaseUrl + '/chatHub';
-    const newConnection = new signalR.HubConnectionBuilder()
-      .withUrl(chatHubUrl, {
-        // Use in-memory token — never sessionStorage (XSS risk).
-        accessTokenFactory: () => getAccessToken() ?? ''
-      })
-      .withAutomaticReconnect()
-      .build();
-
-    connectionRef.current = newConnection;
-    setConnection(newConnection);
-
-    // Handlers first, then start: a message that arrives right after the connection opens is not missed.
-    newConnection.on('ReceiveMessage', (message: MessageDto) => {
-      setNewMessage(message);
-    });
-
-    newConnection.on('MessageSent', (message: MessageDto) => {
-      setNewMessage(message);
-    });
-
-    newConnection.on('ReceiveGroupMessage', (message: ChatGroupMessage) => {
-      setNewGroupMessage(message);
-    });
-
-    newConnection.on('GroupCreated', () => {
-      setGroupsChanged(count => count + 1);
-    });
-
-    newConnection.on('MessageRead', (data: { messageId: number }) => {
+    const onMessage = (message: MessageDto) => setNewMessage(message);
+    const onGroupMessage = (message: ChatGroupMessage) => setNewGroupMessage(message);
+    const onGroupCreated = () => setGroupsChanged(count => count + 1);
+    const onRead = (data: { messageId: number }) =>
       setReadMessageIds(prev => (prev.includes(data.messageId) ? prev : [...prev, data.messageId]));
-    });
-
     // The other person opened the conversation: everything they had not read, in one event.
-    newConnection.on('MessagesRead', (data: { messageIds: number[] }) => {
+    const onAllRead = (data: { messageIds: number[] }) =>
       setReadMessageIds(prev => {
         const fresh = (data.messageIds ?? []).filter(id => !prev.includes(id));
         return fresh.length === 0 ? prev : [...prev, ...fresh];
       });
-    });
-
-    newConnection.on('UserTyping', (data: { userId: number }) => {
+    const onTyping = (data: { userId: number }) => {
       setUserTyping(data.userId);
       // Clear any previous typing timeout before starting a new one
-      if (typingTimeoutRef.current !== null) {
-        clearTimeout(typingTimeoutRef.current);
-      }
+      if (typingTimeoutRef.current !== null) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         setUserTyping(null);
         typingTimeoutRef.current = null;
       }, 3000);
-    });
+    };
 
-    // "connected" follows the real state of the connection, so the page falls back to REST while it is down.
-    newConnection.onreconnecting(() => setConnected(false));
-    newConnection.onreconnected(() => {
-      setConnected(true);
-      // The server puts a new connection into the user's room itself; asking again is harmless.
-      newConnection.invoke('JoinChatRoom', userId).catch(() => {});
-      // Whatever arrived while the connection was down is read from the server.
-      setGroupsChanged(count => count + 1);
-    });
-    newConnection.onclose(() => setConnected(false));
-
-    newConnection.start()
-      .then(() => {
-        setConnected(true);
-        newConnection.invoke('JoinChatRoom', userId).catch(() => {});
-      })
-      .catch(() => {
-        setConnected(false);
-      });
+    connection.on('ReceiveMessage', onMessage);
+    connection.on('MessageSent', onMessage);
+    connection.on('ReceiveGroupMessage', onGroupMessage);
+    connection.on('GroupCreated', onGroupCreated);
+    connection.on('MessageRead', onRead);
+    connection.on('MessagesRead', onAllRead);
+    connection.on('UserTyping', onTyping);
 
     return () => {
+      // Only this page's handlers go; the connection stays open for the bell.
+      connection.off('ReceiveMessage', onMessage);
+      connection.off('MessageSent', onMessage);
+      connection.off('ReceiveGroupMessage', onGroupMessage);
+      connection.off('GroupCreated', onGroupCreated);
+      connection.off('MessageRead', onRead);
+      connection.off('MessagesRead', onAllRead);
+      connection.off('UserTyping', onTyping);
       // Cancel pending typing-indicator timeout to avoid setState on unmounted component
       if (typingTimeoutRef.current !== null) {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      if (connectionRef.current) {
-        connectionRef.current.stop();
-      }
     };
-  }, [userId]);
+  }, [connection]);
+
+  // Whatever arrived while the connection was down is read from the server.
+  useEffect(() => {
+    if (liveReconnects > 0) setGroupsChanged(count => count + 1);
+  }, [liveReconnects]);
 
   /** Resolves true if the hub accepted the message, false if it was not sent (caller can fall back to REST). */
   const sendMessage = useCallback(async (receiverId: number, messageText: string): Promise<boolean> => {
@@ -129,10 +98,11 @@ export const useChatSignalR = (userId: number | null) => {
     }
   }, [connection, connected]);
 
-  const notifyTyping = useCallback(async (userId: number, receiverId: number) => {
+  /** The hub takes only the receiver (the sender comes from the token); it used to get both and refuse. */
+  const notifyTyping = useCallback(async (_userId: number, receiverId: number) => {
     if (connection && connected) {
       try {
-        await connection.invoke('UserTyping', userId, receiverId);
+        await connection.invoke('UserTyping', receiverId);
       } catch {
         // Best-effort: a dropped typing indicator is purely cosmetic.
       }

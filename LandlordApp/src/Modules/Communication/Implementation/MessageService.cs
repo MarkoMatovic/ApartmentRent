@@ -12,7 +12,6 @@ using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Models;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Notifications;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Hosting;
@@ -25,7 +24,7 @@ public partial class MessageService : IMessageService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IEmailService _emailService;
     private readonly IHubContext<ChatHub> _chatHubContext;
-    private readonly IHubContext<NotificationHub> _notificationHubContext;
+    private readonly IHubContext<ChatHub> _notificationHubContext;
     private readonly IWebHostEnvironment _webHostEnvironment;
     private readonly IFileStorageService _fileStorage;
     private readonly IdempotencyService _idempotencyService;
@@ -38,7 +37,7 @@ public partial class MessageService : IMessageService
         IHttpContextAccessor httpContextAccessor,
         IEmailService emailService,
         IHubContext<ChatHub> chatHubContext,
-        IHubContext<NotificationHub> notificationHubContext,
+        IHubContext<ChatHub> notificationHubContext,
         IWebHostEnvironment webHostEnvironment,
         IFileStorageService fileStorage,
         IdempotencyService idempotencyService,
@@ -172,7 +171,7 @@ public partial class MessageService : IMessageService
         await _chatHubContext.Clients.Group($"user_{receiverId}").SendAsync("ReceiveMessage", messageDto);
         await _chatHubContext.Clients.Group($"user_{senderId}").SendAsync("MessageSent", messageDto);
 
-        // Broadcast to NotificationHub (Global Notification Bell)
+        // The bell: the receiver's notification group (same hub and connection as the chat)
         // The 5th argument lets the browser show this in the user's language and open this chat on click.
         var descriptor = NotificationDescriptor.Create(
             "new_message",

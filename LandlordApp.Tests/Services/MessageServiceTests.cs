@@ -12,7 +12,6 @@ using Lander.src.Modules.Communication.Implementation;
 using Lander.src.Modules.Communication.Interfaces;
 using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Modules.Communication.Models;
-using Lander.src.Notifications.NotificationsHub;
 using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Modules.Communication.Dtos.InputDto;
 
@@ -26,7 +25,7 @@ public class MessageServiceTests : IDisposable
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly Mock<IHubContext<ChatHub>> _mockChatHub;
     private readonly Mock<Lander.src.Infrastructure.Services.IPresenceTracker> _mockPresence = new();
-    private readonly Mock<IHubContext<NotificationHub>> _mockNotificationHub;
+    private readonly Mock<IHubContext<ChatHub>> _mockNotificationHub;
     private readonly Mock<IWebHostEnvironment> _mockWebHostEnv;
     private readonly Mock<IClientProxy> _notificationProxy;
     private readonly MessageService _service;
@@ -68,7 +67,7 @@ public class MessageServiceTests : IDisposable
         _mockEmailService.Setup(x => x.SendNewMessageEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
 
         _mockChatHub         = new Mock<IHubContext<ChatHub>>();
-        _mockNotificationHub = new Mock<IHubContext<NotificationHub>>();
+        _mockNotificationHub = new Mock<IHubContext<ChatHub>>();
         _mockWebHostEnv      = new Mock<IWebHostEnvironment>();
 
         // Setup hub clients to not throw

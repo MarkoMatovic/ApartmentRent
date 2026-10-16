@@ -92,6 +92,13 @@ public class ReviewsContext : DbContext, IUnitOfWork
             entity.Property(e => e.IsAnonymous).HasDefaultValue(false);
             entity.Property(e => e.IsPublic).HasDefaultValue(true);
 
+            // Every listing page asks for the rating of its 20 apartments and every apartment page for its
+            // reviews, both by ApartmentId. Without this index the whole table was read each time (the
+            // most expensive query once there are tens of thousands of listings).
+            entity.HasIndex(e => e.ApartmentId)
+                  .IncludeProperties(e => new { e.Rating, e.IsPublic })
+                  .HasDatabaseName("IX_Reviews_ApartmentId");
+
             entity.HasOne(d => d.Landlord).WithMany(p => p.ReviewLandlords)
                 .HasForeignKey(d => d.LandlordId)
                 .HasConstraintName("FK__Reviews__Landlor__6E01572D")

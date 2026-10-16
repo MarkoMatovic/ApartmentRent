@@ -42,11 +42,11 @@ public static class ApartmentQueryBuilder
     public static IOrderedQueryable<Apartment> ApplySort(
         this IQueryable<Apartment> query, string? sortBy, string? sortOrder)
     {
-        // Featured listings bubble to the top only while their FeaturedUntil window is active.
-        // EF Core translates DateTime.UtcNow → SQL Server GETUTCDATE() at query time.
-        var now = DateTime.UtcNow;
-        var baseOrdered = query.OrderByDescending(a =>
-            a.IsFeatured && (a.FeaturedUntil == null || a.FeaturedUntil > now));
+        // Featured listings first. Sorting by the column itself (not by "featured and still valid") lets the
+        // IX_Apartments_List index return a page without sorting every match: with 100,000 listings that
+        // was seconds per search. Expired promotions are switched off every 15 minutes
+        // (ListingExpirationService.ExpireFeaturedAsync), so one stays on top at most that long.
+        var baseOrdered = query.OrderByDescending(a => a.IsFeatured);
         var by = sortBy?.ToLower() ?? "date";
         var order = sortOrder?.ToLower() ?? "desc";
 

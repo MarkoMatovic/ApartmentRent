@@ -75,6 +75,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IEmailTemplateRenderer, EmailTemplateRenderer>();
         services.AddSingleton<Lander.src.Modules.Communication.Services.IBrevoEmailClient, Lander.src.Modules.Communication.Services.BrevoEmailClient>();
         services.AddScoped<IEmailService, EmailService>();
+        // Sends the queued e-mails (Hangfire job).
+        services.AddScoped<Lander.src.Modules.Communication.Services.EmailDeliveryJob>();
 
         // --- Apartment notification service ---
         services.AddScoped<IApartmentNotificationService, ApartmentNotificationService>();

@@ -1,3 +1,4 @@
+using Lander.src.Modules.Communication.Hubs;
 using System;
 using System.Text.Json;
 using Lander.Helpers;
@@ -5,16 +6,15 @@ using Lander.src.Notifications.Dtos.Dto;
 using Lander.src.Notifications.Dtos.InputDto;
 using Lander.src.Notifications.Interfaces;
 using Lander.src.Notifications.Models;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 namespace Lander.src.Notifications.Implementation;
 public class NotificationService : INotificationService
 {
     private readonly NotificationContext _context;
-    private readonly IHubContext<NotificationHub> _hubContext;
+    private readonly IHubContext<ChatHub> _hubContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public NotificationService(NotificationContext context, IHubContext<NotificationHub> hubContext, IHttpContextAccessor httpContextAccessor)
+    public NotificationService(NotificationContext context, IHubContext<ChatHub> hubContext, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _hubContext = hubContext;

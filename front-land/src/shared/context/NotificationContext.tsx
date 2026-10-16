@@ -33,13 +33,21 @@ interface NotificationContextType {
   clearNotification: (id: string) => void;
   clearAll: () => void;
   showRejectionDialog: (apartmentTitle: string, apartmentId: number) => void;
+  /** The tab's one live connection (chat and notifications); null while nobody is signed in. */
+  liveConnection: signalR.HubConnection | null;
+  liveConnected: boolean;
+  /** Goes up after every reconnect, so whoever uses the connection can reload what may have been missed. */
+  liveReconnects: number;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 /** The bell keeps this many; the older ones stay on the server until they are marked read. */
 const MAX_NOTIFICATIONS = 50;
+/** While the connection is down the unread count is asked for this often... */
 const UNREAD_POLL_MS = 30_000;
+/** ...and while it is up only this often (new messages refresh it live; this catches reads in another tab). */
+const UNREAD_POLL_CONNECTED_MS = 5 * 60_000;
 
 const hubUrl = (path: string) => apiBaseUrl + path;
 
@@ -88,6 +96,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
   const [rejectionInfo, setRejectionInfo] = useState<{ apartmentTitle: string; apartmentId: number } | null>(null);
+  const [liveConnection, setLiveConnection] = useState<signalR.HubConnection | null>(null);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [liveReconnects, setLiveReconnects] = useState(0);
 
   // Broj nepročitanih poruka — memoised so consumers get a stable reference
   const refreshUnreadMessagesCount = useCallback(async () => {
@@ -134,11 +145,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           // The live ones still work; the stored ones are tried again at the next reconnect.
         });
 
-    const notificationHub = buildConnection(import.meta.env.VITE_SIGNALR_URL || hubUrl('/notificationHub'));
-    const chatHub = buildConnection(hubUrl('/chatHub'));
+    // One connection per tab for the bell and the chat (the chat page uses this one too): every extra
+    // connection is one more the server has to hold for each person on the site.
+    const hub = buildConnection(hubUrl('/chatHub'));
 
     // Handlers first, then start: nothing that arrives right after the connection opens is missed.
-    notificationHub.on('ReceiveNotification', (title: string, message: string, type: string, metadata?: string, descriptorJson?: string) => {
+    hub.on('ReceiveNotification', (title: string, message: string, type: string, metadata?: string, descriptorJson?: string) => {
       const descriptor = parseDescriptor(descriptorJson);
 
       // The other person answered a roommate proposal or shared an apartment: what this user sees is out of date now.
@@ -177,37 +189,48 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     });
 
     // Chat: the badge counts one-to-one and shared-conversation messages alike.
-    chatHub.on('ReceiveMessage', refreshUnreadMessagesCount);
-    chatHub.on('MessageSent', refreshUnreadMessagesCount);
-    chatHub.on('ReceiveGroupMessage', refreshUnreadMessagesCount);
+    hub.on('ReceiveMessage', refreshUnreadMessagesCount);
+    hub.on('MessageSent', refreshUnreadMessagesCount);
+    hub.on('ReceiveGroupMessage', refreshUnreadMessagesCount);
 
-    notificationHub
-      .start()
-      .then(() => notificationHub.invoke('JoinNotificationGroup', userId))
-      .catch(() => { });
-    chatHub
-      .start()
-      .then(() => chatHub.invoke('JoinChatRoom', userId))
-      .catch(() => { });
-
+    // "connected" follows the real state, so the chat page falls back to REST while the connection is down.
+    hub.onreconnecting(() => setLiveConnected(false));
+    hub.onclose(() => setLiveConnected(false));
     // A reconnect is a new connection: whatever came in the meantime is fetched, not guessed.
-    notificationHub.onreconnected(() => {
-      notificationHub.invoke('JoinNotificationGroup', userId).catch(() => { });
+    hub.onreconnected(() => {
+      setLiveConnected(true);
+      // The server puts a new connection into the user's room and group itself; asking again is harmless.
+      hub.invoke('JoinChatRoom', userId).catch(() => { });
       loadStored();
-    });
-    chatHub.onreconnected(() => {
-      chatHub.invoke('JoinChatRoom', userId).catch(() => { });
       refreshUnreadMessagesCount();
+      setLiveReconnects(count => count + 1);
     });
+
+    setLiveConnection(hub);
+    hub
+      .start()
+      .then(() => {
+        setLiveConnected(true);
+        return hub.invoke('JoinChatRoom', userId);
+      })
+      .catch(() => { });
 
     loadStored();
     refreshUnreadMessagesCount();
-    const interval = setInterval(refreshUnreadMessagesCount, UNREAD_POLL_MS);
+    let lastPoll = Date.now();
+    const interval = setInterval(() => {
+      const live = hub.state === signalR.HubConnectionState.Connected;
+      if (!live || Date.now() - lastPoll >= UNREAD_POLL_CONNECTED_MS) {
+        lastPoll = Date.now();
+        refreshUnreadMessagesCount();
+      }
+    }, UNREAD_POLL_MS);
 
     return () => {
       clearInterval(interval);
-      notificationHub.stop().catch(() => { });
-      chatHub.stop().catch(() => { });
+      setLiveConnection(null);
+      setLiveConnected(false);
+      hub.stop().catch(() => { });
     };
   }, [userId, queryClient, refreshUnreadMessagesCount]);
 
@@ -259,6 +282,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     clearNotification,
     clearAll,
     showRejectionDialog,
+    liveConnection,
+    liveConnected,
+    liveReconnects,
   };
 
   return (

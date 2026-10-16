@@ -138,8 +138,18 @@ public class ListingsContext : DbContext, IUnitOfWork
                   .HasDatabaseName("IX_Apartments_IsActive_IsDeleted");
             entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.CreatedDate })
                   .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_CreatedDate");
+            // The listing search filters by city (and rent, rooms...) and sorts by featured, then newest.
+            // With the filter columns included, a search in a small city reads only that city from this
+            // index; the next index serves wide searches in sort order, so only the page asked for is read.
             entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.City })
+                  .IncludeProperties(e => new { e.Rent, e.NumberOfRooms, e.ApartmentType, e.ListingType,
+                      e.IsImmediatelyAvailable, e.AvailableFrom, e.IsFeatured, e.CreatedDate })
                   .HasDatabaseName("IX_Apartments_IsActive_IsDeleted_City");
+            entity.HasIndex(e => new { e.IsActive, e.IsDeleted, e.IsFeatured, e.CreatedDate })
+                  .IsDescending(false, false, true, true)
+                  .IncludeProperties(e => new { e.City, e.Rent, e.NumberOfRooms, e.ApartmentType, e.ListingType,
+                      e.IsImmediatelyAvailable, e.AvailableFrom })
+                  .HasDatabaseName("IX_Apartments_List");
             // IsFeatured is used in ORDER BY on every listing query — needs its own index
             entity.HasIndex(e => new { e.IsFeatured, e.IsActive, e.IsDeleted, e.CreatedDate })
                   .HasDatabaseName("IX_Apartments_IsFeatured_IsActive_IsDeleted_CreatedDate");

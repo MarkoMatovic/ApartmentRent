@@ -112,31 +112,6 @@ public static class RateLimitingServiceExtensions
                         QueueLimit = 0
                     }));
 
-            // Globalni limit za sve ostale API pozive
-            options.AddFixedWindowLimiter("global", policy =>
-            {
-                policy.PermitLimit = 100;
-                policy.Window = TimeSpan.FromMinutes(1);
-                policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                policy.QueueLimit = 5;
-            });
-
-            options.AddFixedWindowLimiter("mutating", policy =>
-            {
-                policy.PermitLimit = 30;
-                policy.Window = TimeSpan.FromMinutes(1);
-                policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                policy.QueueLimit = 0;
-            });
-
-            options.AddFixedWindowLimiter("readonly", policy =>
-            {
-                policy.PermitLimit = 100;
-                policy.Window = TimeSpan.FromMinutes(1);
-                policy.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                policy.QueueLimit = 5;
-            });
-
             // ANALYTICS-TRACK: anonimni endpoint — max 60 događaja / minuta po IP-u
             // (sprječava botove da pumpaju analitičku tabelu i lažiraju "top viewed").
             options.AddPolicy<string>("analytics-track", httpContext =>

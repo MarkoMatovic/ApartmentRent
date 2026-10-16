@@ -1,3 +1,4 @@
+using Lander.src.Modules.Communication.Hubs;
 using Lander.src.Common.Exceptions;
 using Lander.src.Common.Validation;
 using FluentAssertions;
@@ -18,7 +19,6 @@ using Lander.src.Modules.Users.Domain.Aggregates.RolesAggregate;
 using Lander.src.Common;
 using Lander.src.Modules.Users.Dtos.InputDto;
 using Lander.src.Modules.Users.Implementation.UserImplementation;
-using Lander.src.Notifications.NotificationsHub;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -349,7 +349,7 @@ public class ApartmentServiceFeaturesTests : IDisposable
         mockClientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         mockHubClients.Setup(c => c.All).Returns(mockClientProxy.Object);
-        var mockHub = new Mock<IHubContext<NotificationHub>>();
+        var mockHub = new Mock<IHubContext<ChatHub>>();
         mockHub.Setup(h => h.Clients).Returns(mockHubClients.Object);
 
         var mockReviewStats2 = new Mock<IReviewStatsProvider>();
@@ -384,7 +384,8 @@ public class ApartmentServiceFeaturesTests : IDisposable
             new Mock<Microsoft.AspNetCore.OutputCaching.IOutputCacheStore>().Object,
             new ConfigurationBuilder().Build(),
             new Mock<Lander.src.Infrastructure.FileStorage.IImageUrlBuilder>().Object,
-            new Mock<Lander.src.Modules.Listings.Interfaces.IGeocodingService>().Object);
+            new Mock<Lander.src.Modules.Listings.Interfaces.IGeocodingService>().Object,
+            new Mock<Lander.src.Infrastructure.Services.IBackgroundScheduler>().Object);
     }
 
     public void Dispose()

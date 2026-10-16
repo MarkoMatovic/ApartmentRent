@@ -43,10 +43,33 @@ public partial class ApartmentService
                 var orderedQuery = query.ApplySort(filters.SortBy, filters.SortOrder);
 
                 var totalCount = await query.CountAsync(ct);
+                // Only what a listing card shows (ToDto): reading Description and DescriptionEmbedding for
+                // every result made the search much heavier than needed.
                 var apartments = await orderedQuery
-                    .Include(a => a.ApartmentImages)
                     .Skip((filters.Page - 1) * filters.PageSize)
                     .Take(filters.PageSize)
+                    .Select(a => new Lander.src.Modules.Listings.Models.Apartment
+                    {
+                        ApartmentId = a.ApartmentId,
+                        Title = a.Title,
+                        Rent = a.Rent,
+                        Price = a.Price,
+                        Address = a.Address,
+                        City = a.City,
+                        Latitude = a.Latitude,
+                        Longitude = a.Longitude,
+                        SizeSquareMeters = a.SizeSquareMeters,
+                        ApartmentType = a.ApartmentType,
+                        ListingType = a.ListingType,
+                        Features = a.Features,
+                        IsImmediatelyAvailable = a.IsImmediatelyAvailable,
+                        IsLookingForRoommate = a.IsLookingForRoommate,
+                        IsFeatured = a.IsFeatured,
+                        FeaturedUntil = a.FeaturedUntil,
+                        // All images of these 20 apartments (ToDto keeps the first five). A Take(5) here
+                        // became a ROW_NUMBER over the whole images table on every search.
+                        ApartmentImages = a.ApartmentImages.ToList(),
+                    })
                     .ToListAsync(ct);
 
                 _logger.LogInformation("Apartment search: Page={Page}, PageSize={PageSize}, TotalCount={TotalCount}",

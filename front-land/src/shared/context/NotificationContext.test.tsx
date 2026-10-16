@@ -13,6 +13,8 @@ interface FakeConnection {
   stopped: boolean;
   invoked: Array<[string, ...unknown[]]>;
   onReconnected?: () => void;
+  onReconnecting?: () => void;
+  state: string;
 }
 
 const hub = vi.hoisted(() => ({ connections: [] as FakeConnection[] }));
@@ -32,18 +34,27 @@ vi.mock('@microsoft/signalr', () => {
     withUrl(url: string) { this.url = url; return this; }
     withAutomaticReconnect() { return this; }
     build() {
-      const connection: FakeConnection = { url: this.url, handlers: {}, started: false, handlersAtStart: [], stopped: false, invoked: [] };
+      const connection: FakeConnection = { url: this.url, handlers: {}, started: false, handlersAtStart: [], stopped: false, invoked: [], state: 'Disconnected' };
       hub.connections.push(connection);
       return {
         on: (name: string, handler: Handler) => { connection.handlers[name] = handler; },
+        off: (name: string) => { delete connection.handlers[name]; },
         onreconnected: (callback: () => void) => { connection.onReconnected = callback; },
-        start: () => { connection.started = true; connection.handlersAtStart = Object.keys(connection.handlers); return Promise.resolve(); },
-        stop: () => { connection.stopped = true; return Promise.resolve(); },
+        onreconnecting: (callback: () => void) => { connection.onReconnecting = callback; },
+        onclose: () => { },
+        get state() { return connection.state; },
+        start: () => {
+          connection.started = true;
+          connection.state = 'Connected';
+          connection.handlersAtStart = Object.keys(connection.handlers);
+          return Promise.resolve();
+        },
+        stop: () => { connection.stopped = true; connection.state = 'Disconnected'; return Promise.resolve(); },
         invoke: (method: string, ...args: unknown[]) => { connection.invoked.push([method, ...args]); return Promise.resolve(); },
       };
     }
   }
-  return { HubConnectionBuilder };
+  return { HubConnectionBuilder, HubConnectionState: { Connected: 'Connected', Disconnected: 'Disconnected' } };
 });
 vi.mock('../../api/messagesApi', () => ({ messagesApi: messages }));
 vi.mock('../api/notifications', () => ({ notificationsApi: stored }));
@@ -84,9 +95,9 @@ const tree = () => (
 const signIn = (userId = 7) => { session.value = { user: { userId }, token: `token-${userId}` }; };
 const signOut = () => { session.value = { user: null, token: null }; };
 
-const notificationHub = () => hub.connections.filter(c => c.url.endsWith('/notificationHub')).at(-1)!;
-const chatHub = () => hub.connections.filter(c => c.url.endsWith('/chatHub')).at(-1)!;
-const push = (...args: unknown[]) => act(() => { notificationHub().handlers.ReceiveNotification(...args); });
+/** The tab's one connection: chat and the bell share it. */
+const live = () => hub.connections.at(-1)!;
+const push = (...args: unknown[]) => act(() => { live().handlers.ReceiveNotification(...args); });
 
 const storedItem = (over: Partial<StoredNotification> = {}): StoredNotification => ({
   id: 11, title: 'Cimerstvo potvrđeno', message: 'Marko je prihvatio/la.', actionType: 'pairing_accepted',
@@ -119,11 +130,10 @@ describe('NotificationProvider - connecting', () => {
     signIn(7);
     view.rerender(tree());
 
-    await waitFor(() => expect(hub.connections).toHaveLength(2));
-    expect(notificationHub().started).toBe(true);
-    expect(chatHub().started).toBe(true);
-    expect(notificationHub().invoked).toContainEqual(['JoinNotificationGroup', 7]);
-    expect(chatHub().invoked).toContainEqual(['JoinChatRoom', 7]);
+    await waitFor(() => expect(hub.connections).toHaveLength(1));
+    expect(live().url).toBe('http://api.test/chatHub');
+    expect(live().started).toBe(true);
+    await waitFor(() => expect(live().invoked).toContainEqual(['JoinChatRoom', 7]));
     expect(stored.getUserNotifications).toHaveBeenCalledWith(7);
   });
 
@@ -132,7 +142,7 @@ describe('NotificationProvider - connecting', () => {
 
     render(tree());
 
-    await waitFor(() => expect(notificationHub()?.started).toBe(true));
+    await waitFor(() => expect(live()?.started).toBe(true));
   });
 
   it('registers its handlers before it starts, so nothing arriving right after the connection opens is lost', () => {
@@ -140,22 +150,23 @@ describe('NotificationProvider - connecting', () => {
 
     render(tree());
 
-    expect(notificationHub().handlersAtStart).toContain('ReceiveNotification');
-    expect(chatHub().handlersAtStart).toEqual(expect.arrayContaining(['ReceiveMessage', 'MessageSent', 'ReceiveGroupMessage']));
+    expect(hub.connections).toHaveLength(1);
+    expect(live().handlersAtStart).toEqual(
+      expect.arrayContaining(['ReceiveNotification', 'ReceiveMessage', 'MessageSent', 'ReceiveGroupMessage']));
   });
 
   it('disconnects and forgets the notifications when the user signs out', async () => {
     signIn(7);
     const view = render(tree());
-    await waitFor(() => expect(hub.connections).toHaveLength(2));
+    await waitFor(() => expect(hub.connections).toHaveLength(1));
     await push('Naslov', 'Tekst', 'info');
     expect(screen.getByText('Naslov|Tekst')).toBeInTheDocument();
-    const [first, second] = hub.connections;
+    const [first] = hub.connections;
 
     signOut();
     view.rerender(tree());
 
-    await waitFor(() => expect(first.stopped && second.stopped).toBe(true));
+    await waitFor(() => expect(first.stopped).toBe(true));
     expect(screen.queryByText('Naslov|Tekst')).not.toBeInTheDocument();
     expect(screen.getByTestId('unread-messages')).toHaveTextContent('0');
   });
@@ -163,14 +174,14 @@ describe('NotificationProvider - connecting', () => {
   it('connects again, and shows nothing of the previous user, when somebody else signs in', async () => {
     signIn(7);
     const view = render(tree());
-    await waitFor(() => expect(hub.connections).toHaveLength(2));
+    await waitFor(() => expect(hub.connections).toHaveLength(1));
     await push('Za prvog korisnika', 'Tekst', 'info');
 
     signIn(8);
     view.rerender(tree());
 
-    await waitFor(() => expect(hub.connections).toHaveLength(4));
-    expect(notificationHub().invoked).toContainEqual(['JoinNotificationGroup', 8]);
+    await waitFor(() => expect(hub.connections).toHaveLength(2));
+    await waitFor(() => expect(live().invoked).toContainEqual(['JoinChatRoom', 8]));
     expect(stored.getUserNotifications).toHaveBeenLastCalledWith(8);
     expect(screen.queryByText('Za prvog korisnika|Tekst')).not.toBeInTheDocument();
   });
@@ -178,14 +189,17 @@ describe('NotificationProvider - connecting', () => {
   it('fetches what it missed when the connection comes back', async () => {
     signIn(7);
     render(tree());
-    await waitFor(() => expect(notificationHub()?.onReconnected).toBeDefined());
+    await waitFor(() => expect(live()?.invoked).toContainEqual(['JoinChatRoom', 7]));
     stored.getUserNotifications.mockClear();
     stored.getUserNotifications.mockResolvedValue([storedItem({ id: 55, title: 'Stiglo dok je veza bila prekinuta' })]);
+    messages.getUnreadCount.mockClear();
 
-    act(() => notificationHub().onReconnected!());
+    act(() => live().onReconnected!());
 
     expect(await screen.findByText('Stiglo dok je veza bila prekinuta|Marko je prihvatio/la.')).toBeInTheDocument();
-    expect(notificationHub().invoked.filter(([m]) => m === 'JoinNotificationGroup')).toHaveLength(2);
+    expect(live().invoked.filter(([m]) => m === 'JoinChatRoom')).toHaveLength(2);
+    expect(messages.getUnreadCount).toHaveBeenCalledWith(7);
+    expect(api.liveReconnects).toBe(1);
   });
 });
 
@@ -224,7 +238,7 @@ describe('NotificationProvider - the notifications', () => {
 
   it('keeps the key, the values and the route that come with a live notification', async () => {
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
 
     push(
       'Novi stan na zajedničkoj listi', 'Ana je podelila stan.', 'info', '/my-roommate',
@@ -247,7 +261,7 @@ describe('NotificationProvider - the notifications', () => {
       JSON.stringify({ id: 31, key: 'pairing_accepted', params: { name: 'Marko' }, link: '/my-roommate' }));
     // and a reconnect fetches the same list again
     stored.getUserNotifications.mockResolvedValue([storedItem({ id: 31 })]);
-    act(() => notificationHub().onReconnected!());
+    act(() => live().onReconnected!());
 
     await waitFor(() => expect(stored.getUserNotifications).toHaveBeenCalledTimes(2));
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
@@ -255,7 +269,7 @@ describe('NotificationProvider - the notifications', () => {
 
   it('still shows a notification from an older server that sends no descriptor', async () => {
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
 
     push('Nova poruka', 'Imate novu poruku', 'info');
 
@@ -266,7 +280,7 @@ describe('NotificationProvider - the notifications', () => {
 
   it('drops a link that is not an in-app route', async () => {
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
 
     push('Naslov', 'Tekst', 'info', '', JSON.stringify({ key: 'new_message', link: 'https://evil.example' }));
 
@@ -289,7 +303,7 @@ describe('NotificationProvider - the notifications', () => {
 
   it('does not bother the server about a notification that was never stored', async () => {
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
     act(() => api.addNotification({ title: 'Lokalno', message: 'samo u pregledaču', type: 'success' }));
 
     const local = api.notifications[0];
@@ -312,7 +326,7 @@ describe('NotificationProvider - the notifications', () => {
   it('keeps working when the stored ones cannot be loaded', async () => {
     stored.getUserNotifications.mockRejectedValue(new Error('network'));
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
 
     push('Uživo', 'ipak stiže', 'info');
 
@@ -322,7 +336,7 @@ describe('NotificationProvider - the notifications', () => {
   it('refreshes the roommate state and the shared list when the other person answers or shares', async () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
 
     push('Cimerstvo potvrđeno', 'Marko je prihvatio.', 'info', '/my-roommate',
       JSON.stringify({ id: 5, key: 'pairing_accepted', params: { name: 'Marko' }, link: '/my-roommate' }));
@@ -334,7 +348,7 @@ describe('NotificationProvider - the notifications', () => {
   it('leaves the roommate state alone for other notifications', async () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     render(tree());
-    await waitFor(() => expect(notificationHub()?.handlers.ReceiveNotification).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveNotification).toBeDefined());
     invalidate.mockClear();
 
     push('Nova poruka', 'Tekst', 'info', '', JSON.stringify({ key: 'new_message', params: { name: 'Ana' }, link: '/chat?userId=3' }));
@@ -346,13 +360,39 @@ describe('NotificationProvider - the notifications', () => {
 describe('NotificationProvider - the unread message badge', () => {
   beforeEach(() => signIn(7));
 
+  it('does not ask for the unread count every 30 s while the connection is up, but does while it is down', async () => {
+    vi.useFakeTimers();
+    try {
+      render(tree());
+      await act(async () => { await Promise.resolve(); });
+      messages.getUnreadCount.mockClear();
+
+      await act(async () => { vi.advanceTimersByTime(60_000); });
+      expect(messages.getUnreadCount).not.toHaveBeenCalled();
+
+      live().state = 'Reconnecting';
+      await act(async () => { vi.advanceTimersByTime(30_000); });
+      expect(messages.getUnreadCount).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shares its connection with the chat page', async () => {
+    render(tree());
+
+    await waitFor(() => expect(api.liveConnected).toBe(true));
+    expect(api.liveConnection).not.toBeNull();
+    expect(hub.connections).toHaveLength(1);
+  });
+
   it('counts a message in a shared conversation towards the badge', async () => {
     render(tree());
-    await waitFor(() => expect(chatHub()?.handlers.ReceiveGroupMessage).toBeDefined());
+    await waitFor(() => expect(live()?.handlers.ReceiveGroupMessage).toBeDefined());
     messages.getUnreadCount.mockClear();
     messages.getUnreadCount.mockResolvedValue(3);
 
-    act(() => { chatHub().handlers.ReceiveGroupMessage({ messageId: 1, groupId: 2 }); });
+    act(() => { live().handlers.ReceiveGroupMessage({ messageId: 1, groupId: 2 }); });
 
     await waitFor(() => expect(screen.getByTestId('unread-messages')).toHaveTextContent('3'));
     expect(messages.getUnreadCount).toHaveBeenCalledWith(7);
@@ -365,7 +405,7 @@ describe('NotificationProvider - the unread message badge', () => {
     await waitFor(() => expect(screen.getByTestId('unread-messages')).toHaveTextContent('2'));
 
     messages.getUnreadCount.mockResolvedValue(4);
-    act(() => { chatHub().handlers.ReceiveMessage({ messageId: 9 }); });
+    act(() => { live().handlers.ReceiveMessage({ messageId: 9 }); });
     await waitFor(() => expect(screen.getByTestId('unread-messages')).toHaveTextContent('4'));
   });
 });
